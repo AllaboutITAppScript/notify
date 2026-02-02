@@ -3,98 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📱 แอปแจ้งเตือนอัจฉริยะ</title>
-    
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+    <title>🔔 แอปแจ้งเตือนอัจฉริยะ</title>
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>">
     
     <style>
         :root {
             --primary: #2196F3;
-            --secondary: #1976D2;
+            --primary-dark: #1976D2;
+            --secondary: #FF4081;
             --success: #4CAF50;
             --warning: #FF9800;
             --danger: #f44336;
             --dark: #2C3E50;
-            --light: #ECF0F1;
-            --notification-badge: #FF5252;
+            --light: #F5F7FA;
+            --gray: #78909C;
+            --badge: #FF5252;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+            --radius: 16px;
         }
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Kanit', sans-serif;
+            font-family: 'Segoe UI', 'Prompt', 'Sarabun', sans-serif;
         }
         
         body {
-            background: linear-gradient(135deg, var(--dark) 0%, #34495E 100%);
-            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--dark);
             min-height: 100vh;
+            padding: 0;
         }
         
         /* Header with Notification Bell */
-        .app-header {
-            background: white;
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow);
             position: sticky;
             top: 0;
             z-index: 1000;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
         }
         
-        .header-left {
+        .logo-container {
             display: flex;
             align-items: center;
             gap: 15px;
         }
         
-        .app-logo {
-            width: 40px;
-            height: 40px;
-            background: var(--primary);
-            border-radius: 10px;
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 1.5rem;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
         }
         
-        .app-title h1 {
+        .title h1 {
             color: var(--dark);
-            font-size: 1.5rem;
+            font-size: 1.4rem;
+            margin-bottom: 5px;
         }
         
-        .app-title p {
-            color: #666;
+        .title p {
+            color: var(--gray);
             font-size: 0.9rem;
         }
         
         /* Notification Bell */
-        .notification-bell {
+        .notification-bell-container {
             position: relative;
+        }
+        
+        .notification-bell {
+            width: 50px;
+            height: 50px;
+            background: var(--light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .notification-bell:hover {
+            background: white;
+            border-color: var(--primary);
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(33, 150, 243, 0.2);
         }
         
         .bell-icon {
-            font-size: 1.8rem;
-            color: var(--dark);
-            transition: transform 0.3s;
-        }
-        
-        .bell-icon:hover {
-            transform: scale(1.1);
+            font-size: 22px;
             color: var(--primary);
         }
         
@@ -102,95 +121,163 @@
             position: absolute;
             top: -5px;
             right: -5px;
-            background: var(--notification-badge);
+            background: var(--badge);
             color: white;
-            font-size: 0.7rem;
+            font-size: 12px;
             font-weight: bold;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
+            min-width: 24px;
+            height: 24px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: pulse 1.5s infinite;
+            padding: 0 6px;
+            border: 3px solid white;
+            animation: pulse 2s infinite;
+            z-index: 1001;
         }
         
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
         }
         
         /* Notification Panel */
         .notification-panel {
             position: fixed;
-            top: 70px;
+            top: 80px;
             right: 20px;
-            width: 350px;
+            width: 380px;
+            max-height: 500px;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
             z-index: 999;
             display: none;
-            max-height: 500px;
-            overflow-y: auto;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.1);
         }
         
         .notification-panel.show {
-            display: block;
-            animation: slideDown 0.3s;
+            display: flex;
+            animation: slideDown 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
         
         @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
         
         .panel-header {
             padding: 20px;
-            border-bottom: 1px solid #eee;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
         .panel-header h3 {
-            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
         }
         
-        .notification-list {
-            padding: 10px;
+        .panel-actions {
+            display: flex;
+            gap: 10px;
         }
         
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+        
+        .empty-notifications {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--gray);
+        }
+        
+        .empty-notifications i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #E0E0E0;
+            display: block;
+        }
+        
+        /* Notification Items */
         .notification-item {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            background: var(--light);
-            border-left: 4px solid var(--primary);
+            padding: 18px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            gap: 15px;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
         }
         
         .notification-item:hover {
-            background: #e3f2fd;
-            transform: translateX(5px);
+            background: #f8f9fa;
         }
         
         .notification-item.unread {
-            background: #e8f5e8;
-            border-left-color: var(--success);
+            background: #f0f7ff;
         }
         
-        .notification-item.important {
-            background: #ffebee;
-            border-left-color: var(--danger);
+        .notification-item.unread::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary);
+            border-radius: 0 2px 2px 0;
+        }
+        
+        .notification-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            flex-shrink: 0;
+        }
+        
+        .notification-icon.info { background: var(--primary); }
+        .notification-icon.success { background: var(--success); }
+        .notification-icon.warning { background: var(--warning); }
+        .notification-icon.danger { background: var(--danger); }
+        
+        .notification-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 5px;
+            font-size: 1rem;
+        }
+        
+        .notification-message {
+            color: var(--gray);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 8px;
         }
         
         .notification-time {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
+            font-size: 0.75rem;
+            color: #90A4AE;
         }
         
         /* Main Container */
@@ -201,7 +288,7 @@
         }
         
         /* Status Cards */
-        .status-grid {
+        .status-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
@@ -210,14 +297,15 @@
         
         .card {
             background: white;
-            border-radius: 15px;
+            border-radius: var(--radius);
             padding: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-            transition: transform 0.3s;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
         }
         
         .card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
         
         .card h2 {
@@ -225,18 +313,19 @@
             margin-bottom: 20px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-size: 1.3rem;
         }
         
         .card h2 i {
-            background: var(--primary);
-            color: white;
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            color: white;
         }
         
         .status-item {
@@ -255,12 +344,13 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
+            display: inline-block;
             margin-right: 10px;
         }
         
         .status-dot.active {
             background: var(--success);
-            animation: blink 2s infinite;
+            animation: blink 1.5s infinite;
         }
         
         .status-dot.inactive {
@@ -273,49 +363,57 @@
         
         @keyframes blink {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.3; }
         }
         
         /* Notification Form */
         .notification-form {
             background: white;
-            border-radius: 15px;
+            border-radius: var(--radius);
             padding: 30px;
             margin: 25px 0;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            box-shadow: var(--shadow);
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         
-        .form-group label {
+        .form-label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: 600;
             color: var(--dark);
+            font-size: 1rem;
+        }
+        
+        .form-label i {
+            margin-right: 8px;
+            color: var(--primary);
         }
         
         .form-control {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
+            padding: 16px;
+            border: 2px solid #E3F2FD;
+            border-radius: 12px;
             font-size: 1rem;
             transition: all 0.3s;
+            background: #F8F9FA;
         }
         
         .form-control:focus {
             outline: none;
             border-color: var(--primary);
+            background: white;
             box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
         }
         
         /* Buttons */
         .btn {
-            padding: 15px 25px;
+            padding: 16px 28px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -327,44 +425,43 @@
         }
         
         .btn-primary {
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
         }
         
         .btn-primary:hover {
-            background: var(--secondary);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+            box-shadow: 0 8px 25px rgba(33, 150, 243, 0.3);
         }
         
         .btn-success {
-            background: var(--success);
+            background: linear-gradient(135deg, var(--success), #45a049);
             color: white;
         }
         
         .btn-success:hover {
-            background: #45a049;
             transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
         }
         
         .btn-danger {
-            background: var(--danger);
+            background: linear-gradient(135deg, var(--danger), #d32f2f);
             color: white;
         }
         
         .btn-danger:hover {
-            background: #d32f2f;
             transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(244, 67, 54, 0.3);
         }
         
         .btn-warning {
-            background: var(--warning);
+            background: linear-gradient(135deg, var(--warning), #e68900);
             color: white;
         }
         
         .btn-warning:hover {
-            background: #e68900;
             transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 152, 0, 0.3);
         }
         
         .btn-group {
@@ -374,91 +471,144 @@
             margin-top: 25px;
         }
         
-        /* Notification History */
-        .notification-history {
+        /* History */
+        .history-section {
             background: white;
-            border-radius: 15px;
+            border-radius: var(--radius);
             padding: 30px;
             margin: 25px 0;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            box-shadow: var(--shadow);
             max-height: 500px;
             overflow-y: auto;
         }
         
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
         .history-item {
-            padding: 15px;
+            padding: 18px;
             background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             border-left: 4px solid var(--primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .history-item.sent {
             border-left-color: var(--success);
+            background: #f1f8e9;
+        }
+        
+        .history-item.pending {
+            border-left-color: var(--warning);
+            background: #fff8e1;
         }
         
         .history-item.failed {
             border-left-color: var(--danger);
+            background: #ffebee;
         }
         
-        /* Toast Notifications */
+        /* Instructions */
+        .instructions {
+            background: white;
+            border-radius: var(--radius);
+            padding: 30px;
+            margin: 25px 0;
+            box-shadow: var(--shadow);
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .step {
+            text-align: center;
+            padding: 25px;
+            background: linear-gradient(135deg, #f5f7fa, #e4e8f0);
+            border-radius: 12px;
+            transition: transform 0.3s;
+        }
+        
+        .step:hover {
+            transform: translateY(-5px);
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto 15px;
+        }
+        
+        /* Toast */
         .toast-container {
             position: fixed;
             bottom: 20px;
             right: 20px;
             z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
         }
         
         .toast {
             background: white;
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 20px;
-            margin-top: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             display: flex;
             align-items: center;
             gap: 15px;
-            animation: slideUp 0.3s;
+            animation: slideInRight 0.3s;
             border-left: 5px solid var(--success);
-            min-width: 300px;
+            min-width: 320px;
+            max-width: 400px;
         }
         
-        .toast.error {
-            border-left-color: var(--danger);
-        }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.warning { border-left-color: var(--warning); }
+        .toast.info { border-left-color: var(--primary); }
         
-        .toast.warning {
-            border-left-color: var(--warning);
-        }
-        
-        .toast.info {
-            border-left-color: var(--primary);
-        }
-        
-        @keyframes slideUp {
-            from { transform: translateY(100px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
         /* Footer */
-        .app-footer {
+        .footer {
             text-align: center;
             color: white;
             padding: 30px 20px;
             margin-top: 40px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 15px;
         }
         
         /* Responsive */
         @media (max-width: 768px) {
             .container {
-                padding: 10px;
+                padding: 15px;
             }
             
             .notification-panel {
                 width: calc(100% - 40px);
                 right: 10px;
+                top: 70px;
             }
             
             .btn-group {
@@ -468,40 +618,87 @@
             .btn {
                 width: 100%;
             }
+            
+            .status-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                padding: 12px 15px;
+            }
+            
+            .logo {
+                width: 45px;
+                height: 45px;
+                font-size: 20px;
+            }
+            
+            .title h1 {
+                font-size: 1.2rem;
+            }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
         }
     </style>
 </head>
 <body>
     <!-- Header with Notification Bell -->
-    <header class="app-header">
-        <div class="header-left">
-            <div class="app-logo">
+    <header class="header">
+        <div class="logo-container">
+            <div class="logo">
                 <i class="fas fa-bell"></i>
             </div>
-            <div class="app-title">
+            <div class="title">
                 <h1>แอปแจ้งเตือนอัจฉริยะ</h1>
                 <p>แจ้งเตือนได้แม้ปิดเบราว์เซอร์</p>
             </div>
         </div>
         
-        <div class="notification-bell" id="notificationBell">
-            <i class="fas fa-bell bell-icon"></i>
-            <div class="notification-badge" id="notificationBadge">0</div>
-        </div>
-        
-        <!-- Notification Panel -->
-        <div class="notification-panel" id="notificationPanel">
-            <div class="panel-header">
-                <h3><i class="fas fa-bell"></i> การแจ้งเตือนล่าสุด</h3>
-                <button class="btn btn-danger" id="clearAllBtn" style="padding: 5px 10px; font-size: 0.9rem;">
-                    <i class="fas fa-trash"></i> ล้างทั้งหมด
-                </button>
+        <div class="notification-bell-container">
+            <div class="notification-bell" id="notificationBell">
+                <i class="fas fa-bell bell-icon"></i>
+                <div class="notification-badge" id="notificationBadge">0</div>
             </div>
-            <div class="notification-list" id="notificationList">
-                <div class="notification-item unread">
-                    <strong>ยินดีต้อนรับสู่แอปแจ้งเตือน!</strong>
-                    <p>ระบบพร้อมใช้งานแล้ว คลิกที่กระดิ่งเพื่อดูการแจ้งเตือน</p>
-                    <div class="notification-time">เมื่อสักครู่</div>
+            
+            <!-- Notification Panel -->
+            <div class="notification-panel" id="notificationPanel">
+                <div class="panel-header">
+                    <h3>
+                        <i class="fas fa-bell"></i>
+                        <span>การแจ้งเตือน</span>
+                    </h3>
+                    <div class="panel-actions">
+                        <button class="btn btn-danger" id="markAllReadBtn" style="padding: 8px 12px; font-size: 0.9rem;">
+                            <i class="fas fa-check-double"></i> อ่านทั้งหมด
+                        </button>
+                        <button class="btn btn-danger" id="clearAllBtn" style="padding: 8px 12px; font-size: 0.9rem;">
+                            <i class="fas fa-trash"></i> ล้าง
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-body" id="notificationList">
+                    <div class="empty-notifications">
+                        <i class="fas fa-bell-slash"></i>
+                        <h4>ยังไม่มีการแจ้งเตือน</h4>
+                        <p>สร้างการแจ้งเตือนแรกของคุณ!</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -510,29 +707,29 @@
     <!-- Main Content -->
     <div class="container">
         <!-- Status Cards -->
-        <div class="status-grid">
+        <div class="status-cards">
             <div class="card">
                 <h2><i class="fas fa-cogs"></i> สถานะระบบ</h2>
                 <div class="status-item">
                     <span>การแจ้งเตือน:</span>
-                    <div style="display: flex; align-items: center;">
-                        <div class="status-dot" id="notificationStatus"></div>
+                    <span>
+                        <span class="status-dot" id="notificationStatus"></span>
                         <span id="notificationStatusText">กำลังตรวจสอบ...</span>
-                    </div>
+                    </span>
                 </div>
                 <div class="status-item">
-                    <span>เซิร์ฟเวอร์:</span>
-                    <div style="display: flex; align-items: center;">
-                        <div class="status-dot" id="serverStatus"></div>
-                        <span id="serverStatusText">กำลังตรวจสอบ...</span>
-                    </div>
+                    <span>Service Worker:</span>
+                    <span>
+                        <span class="status-dot" id="swStatus"></span>
+                        <span id="swStatusText">กำลังตรวจสอบ...</span>
+                    </span>
                 </div>
                 <div class="status-item">
-                    <span>Firebase:</span>
-                    <div style="display: flex; align-items: center;">
-                        <div class="status-dot" id="firebaseStatus"></div>
-                        <span id="firebaseStatusText">กำลังตรวจสอบ...</span>
-                    </div>
+                    <span>การทำงานพื้นหลัง:</span>
+                    <span>
+                        <span class="status-dot" id="bgStatus"></span>
+                        <span id="bgStatusText">กำลังตรวจสอบ...</span>
+                    </span>
                 </div>
             </div>
             
@@ -558,27 +755,33 @@
             <h2><i class="fas fa-plus-circle"></i> สร้างการแจ้งเตือนใหม่</h2>
             
             <div class="form-group">
-                <label for="notificationTitle"><i class="fas fa-heading"></i> หัวข้อ:</label>
+                <label class="form-label" for="notificationTitle">
+                    <i class="fas fa-heading"></i> หัวข้อ:
+                </label>
                 <input type="text" id="notificationTitle" class="form-control" 
                        placeholder="เช่น: การนัดหมายสำคัญ" 
                        value="ทดสอบแจ้งเตือน">
             </div>
             
             <div class="form-group">
-                <label for="notificationMessage"><i class="fas fa-comment-alt"></i> ข้อความ:</label>
-                <textarea id="notificationMessage" class="form-control" rows="3" 
+                <label class="form-label" for="notificationMessage">
+                    <i class="fas fa-comment-alt"></i> ข้อความ:
+                </label>
+                <textarea id="notificationMessage" class="form-control" rows="4" 
                           placeholder="กรอกข้อความการแจ้งเตือนที่นี่...">
 นี่คือการทดสอบแจ้งเตือนจากแอปพลิเคชัน จะแจ้งเตือนแม้ปิดเบราว์เซอร์แล้ว</textarea>
             </div>
             
             <div class="form-group">
-                <label for="scheduleTime"><i class="fas fa-clock"></i> ตั้งเวลา (นาที):</label>
+                <label class="form-label" for="scheduleTime">
+                    <i class="fas fa-clock"></i> ตั้งเวลา (นาที):
+                </label>
                 <input type="number" id="scheduleTime" class="form-control" 
                        min="1" max="10080" value="2" 
                        placeholder="ระบุเวลาเป็นนาที">
-                <small style="color: #666; margin-top: 5px; display: block;">
-                    <i class="fas fa-info-circle"></i> แนะนำ: 2 นาทีสำหรับทดสอบ
-                </small>
+                <div style="margin-top: 8px; font-size: 0.9rem; color: var(--gray);">
+                    <i class="fas fa-info-circle"></i> แนะนำ: ตั้งเวลา 2 นาทีสำหรับทดสอบ
+                </div>
             </div>
             
             <div class="btn-group">
@@ -591,76 +794,89 @@
                 <button class="btn btn-warning" id="requestPermissionBtn">
                     <i class="fas fa-hand-paper"></i> ขออนุญาต
                 </button>
+                <button class="btn btn-danger" id="testNotificationBtn">
+                    <i class="fas fa-bell"></i> ทดสอบ
+                </button>
             </div>
         </div>
 
-        <!-- Notification History -->
-        <div class="notification-history">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <!-- History -->
+        <div class="history-section">
+            <div class="history-header">
                 <h2><i class="fas fa-history"></i> ประวัติการแจ้งเตือน</h2>
-                <button class="btn btn-danger" id="clearHistoryBtn" style="padding: 8px 15px;">
+                <button class="btn btn-danger" id="clearHistoryBtn" style="padding: 10px 20px;">
                     <i class="fas fa-trash-alt"></i> ล้างประวัติ
                 </button>
             </div>
             
             <div id="notificationHistory">
                 <!-- History items will be added here -->
+                <div style="text-align: center; padding: 40px; color: var(--gray);">
+                    <i class="fas fa-history fa-3x" style="margin-bottom: 15px; display: block; opacity: 0.5;"></i>
+                    ยังไม่มีประวัติการแจ้งเตือน
+                </div>
             </div>
         </div>
 
         <!-- Instructions -->
-        <div class="card">
-            <h2><i class="fas fa-graduation-cap"></i> วิธีทดสอบแจ้งเตือนหลังปิด Browser</h2>
-            <div style="margin-top: 15px;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <div style="width: 30px; height: 30px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">1</div>
-                    <span>คลิก "ขออนุญาต" เพื่ออนุญาตการแจ้งเตือน</span>
+        <div class="instructions">
+            <h2><i class="fas fa-graduation-cap"></i> วิธีทดสอบให้แจ้งเตือนหลังปิด Browser</h2>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>ขออนุญาต</h3>
+                    <p>คลิกปุ่ม "ขออนุญาต" เพื่ออนุญาตการแจ้งเตือน</p>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <div style="width: 30px; height: 30px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">2</div>
-                    <span>ตั้งเวลาแจ้งเตือน 2 นาทีจากนี้</span>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>ตั้งเวลา</h3>
+                    <p>ตั้งเวลาแจ้งเตือน 2 นาทีจากนี้</p>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <div style="width: 30px; height: 30px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">3</div>
-                    <span><strong>ปิดเบราว์เซอร์ทั้งหมด</strong> (ทุกแท็บและหน้าต่าง)</span>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>ปิด Browser</h3>
+                    <p><strong>ปิดทุกแท็บและหน้าต่าง</strong> ของเบราว์เซอร์</p>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 30px; height: 30px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">4</div>
-                    <span>รอ 2 นาที จะได้รับแจ้งเตือนแม้ปิด Browser แล้ว!</span>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>รับการแจ้งเตือน</h3>
+                    <p>รอ 2 นาที จะได้รับแจ้งเตือนอัตโนมัติ!</p>
                 </div>
+            </div>
+            
+            <div style="margin-top: 25px; padding: 20px; background: #E3F2FD; border-radius: 12px; border-left: 4px solid var(--primary);">
+                <h4><i class="fas fa-lightbulb"></i> เทคนิคพิเศษที่ใช้:</h4>
+                <p>ระบบนี้ใช้ <strong>Service Worker</strong> และ <strong>Background Sync</strong> เพื่อทำงานในพื้นหลังได้แม้ปิดเบราว์เซอร์</p>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="app-footer">
+        <footer class="footer">
             <h3>แอปแจ้งเตือนอัจฉริยะ</h3>
-            <p>ระบบแจ้งเตือนที่ทำงานได้แม้ปิดเบราว์เซอร์ • ใช้ Firebase Cloud Messaging</p>
-            <p style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">
-                <i class="fas fa-info-circle"></i> ต้องใช้ HTTPS และอนุญาตการแจ้งเตือน
-            </p>
+            <p>ทำงานได้แม้ปิดเบราว์เซอร์ • มีกระดิ่งแสดงจำนวน • ไม่ต้องใช้เซิร์ฟเวอร์</p>
+            <div style="margin-top: 15px; font-size: 0.9rem; opacity: 0.8;">
+                <i class="fas fa-code"></i> สร้างด้วย HTML5, Service Workers, และ IndexedDB
+            </div>
         </footer>
     </div>
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Audio for Notification -->
-    <audio id="notificationSound">
+    <!-- Audio for Notification Sound -->
+    <audio id="notificationSound" preload="auto">
         <source src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" type="audio/mpeg">
     </audio>
-
-    <!-- Firebase Config -->
-    <script src="firebase-config.js"></script>
 
     <!-- Main JavaScript -->
     <script>
         // Global Variables
         let notifications = [];
-        let unreadCount = 0;
-        let firebaseMessaging = null;
         let serviceWorkerRegistration = null;
+        let isPanelOpen = false;
         
-        // Initialize when page loads
+        // Initialize App
         document.addEventListener('DOMContentLoaded', initializeApp);
         
         async function initializeApp() {
@@ -670,10 +886,10 @@
             setupEventListeners();
             
             // Check notification permission
-            await checkNotificationPermission();
+            checkNotificationPermission();
             
-            // Initialize Firebase
-            await initializeFirebase();
+            // Register Service Worker
+            await registerServiceWorker();
             
             // Load notifications from storage
             await loadNotifications();
@@ -681,42 +897,42 @@
             // Update UI
             updateNotificationUI();
             
-            // Register service worker
-            await registerServiceWorker();
+            // Check system capabilities
+            checkSystemCapabilities();
             
-            // Start checking for server status
-            checkServerStatus();
+            // Start checking for scheduled notifications
+            startNotificationChecker();
             
-            // Update badge count
-            updateBadgeCount();
-            
-            // Test sound
-            setTimeout(() => {
-                playNotificationSound();
-            }, 1000);
+            // Play welcome sound
+            setTimeout(() => playNotificationSound(), 500);
             
             console.log('✅ แอปพร้อมใช้งานแล้ว');
-            showToast('ยินดีต้อนรับ!', 'success', 'แอปแจ้งเตือนพร้อมใช้งานแล้ว');
+            showToast('ยินดีต้อนรับสู่แอปแจ้งเตือน!', 'success', 'ระบบพร้อมใช้งานแล้ว');
         }
         
         function setupEventListeners() {
             // Notification bell
             document.getElementById('notificationBell').addEventListener('click', toggleNotificationPanel);
             
-            // Buttons
+            // Form buttons
             document.getElementById('scheduleBtn').addEventListener('click', scheduleNotification);
             document.getElementById('sendNowBtn').addEventListener('click', sendImmediateNotification);
             document.getElementById('requestPermissionBtn').addEventListener('click', requestNotificationPermission);
+            document.getElementById('testNotificationBtn').addEventListener('click', testNotification);
+            
+            // Panel buttons
+            document.getElementById('markAllReadBtn').addEventListener('click', markAllAsRead);
             document.getElementById('clearAllBtn').addEventListener('click', clearAllNotifications);
             document.getElementById('clearHistoryBtn').addEventListener('click', clearHistory);
             
-            // Close notification panel when clicking outside
-            document.addEventListener('click', (e) => {
+            // Close panel when clicking outside
+            document.addEventListener('click', (event) => {
                 const panel = document.getElementById('notificationPanel');
                 const bell = document.getElementById('notificationBell');
                 
-                if (!panel.contains(e.target) && !bell.contains(e.target)) {
+                if (!panel.contains(event.target) && !bell.contains(event.target)) {
                     panel.classList.remove('show');
+                    isPanelOpen = false;
                 }
             });
         }
@@ -724,16 +940,19 @@
         // Toggle notification panel
         function toggleNotificationPanel() {
             const panel = document.getElementById('notificationPanel');
-            panel.classList.toggle('show');
+            isPanelOpen = !isPanelOpen;
             
-            // Mark all as read when opening panel
-            if (panel.classList.contains('show')) {
+            if (isPanelOpen) {
+                panel.classList.add('show');
+                // Mark all as read when opening panel
                 markAllAsRead();
+            } else {
+                panel.classList.remove('show');
             }
         }
         
         // Check notification permission
-        async function checkNotificationPermission() {
+        function checkNotificationPermission() {
             const statusDot = document.getElementById('notificationStatus');
             const statusText = document.getElementById('notificationStatusText');
             
@@ -772,15 +991,13 @@
                 const permission = await Notification.requestPermission();
                 
                 // Update UI
-                await checkNotificationPermission();
+                checkNotificationPermission();
                 
                 if (permission === 'granted') {
                     showToast('อนุญาตการแจ้งเตือนแล้ว!', 'success');
                     
-                    // Initialize Firebase messaging
-                    if (firebaseMessaging) {
-                        await setupFirebaseMessaging();
-                    }
+                    // Register Service Worker again
+                    await registerServiceWorker();
                     
                     return true;
                 } else {
@@ -794,79 +1011,69 @@
             }
         }
         
-        // Initialize Firebase
-        async function initializeFirebase() {
-            try {
-                const firebaseStatus = document.getElementById('firebaseStatus');
-                const firebaseStatusText = document.getElementById('firebaseStatusText');
-                
-                if (!firebaseConfig) {
-                    firebaseStatus.className = 'status-dot inactive';
-                    firebaseStatusText.textContent = 'ไม่ได้ตั้งค่า';
-                    showToast('ไม่ได้ตั้งค่า Firebase', 'warning');
-                    return;
-                }
-                
-                // Initialize Firebase
-                firebase.initializeApp(firebaseConfig);
-                
-                // Get messaging instance
-                firebaseMessaging = firebase.messaging();
-                
-                firebaseStatus.className = 'status-dot active';
-                firebaseStatusText.textContent = 'พร้อมใช้งาน';
-                
-                console.log('✅ Firebase เริ่มต้นสำเร็จ');
-                
-                // Setup Firebase messaging
-                await setupFirebaseMessaging();
-                
-            } catch (error) {
-                console.error('Firebase initialization error:', error);
-                const firebaseStatus = document.getElementById('firebaseStatus');
-                const firebaseStatusText = document.getElementById('firebaseStatusText');
-                firebaseStatus.className = 'status-dot inactive';
-                firebaseStatusText.textContent = 'ข้อผิดพลาด';
+        // Register Service Worker
+        async function registerServiceWorker() {
+            const statusDot = document.getElementById('swStatus');
+            const statusText = document.getElementById('swStatusText');
+            
+            if (!('serviceWorker' in navigator)) {
+                statusDot.className = 'status-dot inactive';
+                statusText.textContent = 'ไม่รองรับ';
+                return;
             }
-        }
-        
-        // Setup Firebase Messaging
-        async function setupFirebaseMessaging() {
-            if (!firebaseMessaging) return;
             
             try {
-                // Request permission and get token
-                const token = await firebaseMessaging.getToken({
-                    vapidKey: firebaseConfig.vapidKey
+                serviceWorkerRegistration = await navigator.serviceWorker.register('sw.js', {
+                    scope: './'
                 });
                 
-                if (token) {
-                    console.log('Firebase Token:', token);
-                    
-                    // Save token to server (in real app)
-                    await saveTokenToServer(token);
-                    
-                    // Listen for messages
-                    firebaseMessaging.onMessage((payload) => {
-                        console.log('Message received:', payload);
-                        handlePushNotification(payload);
+                console.log('Service Worker registered:', serviceWorkerRegistration);
+                
+                statusDot.className = 'status-dot active';
+                statusText.textContent = 'ทำงานอยู่';
+                
+                // Listen for updates
+                serviceWorkerRegistration.addEventListener('updatefound', () => {
+                    console.log('Service Worker update found');
+                });
+                
+                // Send message to Service Worker
+                if (serviceWorkerRegistration.active) {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'APP_READY',
+                        data: { timestamp: Date.now() }
                     });
-                    
-                    return token;
                 }
+                
             } catch (error) {
-                console.error('Firebase Messaging error:', error);
+                console.error('Service Worker registration failed:', error);
+                statusDot.className = 'status-dot inactive';
+                statusText.textContent = 'ล้มเหลว';
             }
         }
         
-        // Save token to server
-        async function saveTokenToServer(token) {
-            try {
-                // In production, send to your server
-                localStorage.setItem('fcm_token', token);
-                console.log('Token saved:', token);
-            } catch (error) {
-                console.error('Save token error:', error);
+        // Check system capabilities
+        function checkSystemCapabilities() {
+            const bgDot = document.getElementById('bgStatus');
+            const bgText = document.getElementById('bgStatusText');
+            
+            const capabilities = {
+                serviceWorker: 'serviceWorker' in navigator,
+                notifications: 'Notification' in window,
+                push: 'PushManager' in window,
+                sync: 'SyncManager' in window,
+                periodicSync: 'periodicSync' in navigator,
+                indexedDB: 'indexedDB' in window
+            };
+            
+            console.log('System capabilities:', capabilities);
+            
+            if (capabilities.serviceWorker && capabilities.notifications) {
+                bgDot.className = 'status-dot active';
+                bgText.textContent = 'พร้อมใช้งาน';
+            } else {
+                bgDot.className = 'status-dot inactive';
+                bgText.textContent = 'จำกัด';
             }
         }
         
@@ -923,15 +1130,20 @@
             
             // Add to history
             addToHistory({
-                id: notification.id,
-                title: 'ตั้งเวลาแจ้งเตือน',
-                message: `"${title}" ในอีก ${minutes} นาที`,
+                type: 'scheduled',
+                title: notification.title,
+                message: `ตั้งเวลาในอีก ${minutes} นาที`,
                 time: new Date().toLocaleTimeString('th-TH'),
-                status: 'scheduled'
+                status: 'pending'
             });
             
-            // Send to server for scheduling (in production)
-            await sendToServer(notification);
+            // Send to Service Worker for background scheduling
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                serviceWorkerRegistration.active.postMessage({
+                    type: 'SCHEDULE_NOTIFICATION',
+                    notification: notification
+                });
+            }
         }
         
         // Send immediate notification
@@ -945,7 +1157,7 @@
                 if (!granted) return;
             }
             
-            // Create notification
+            // Create notification object
             const notification = {
                 id: 'immediate-' + Date.now(),
                 title: title,
@@ -966,8 +1178,8 @@
             updateNotificationUI();
             
             // Send notification
-            if (serviceWorkerRegistration) {
-                // Send through service worker
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                // Send through Service Worker
                 serviceWorkerRegistration.showNotification(title, {
                     body: message,
                     icon: '/icons/icon-192x192.png',
@@ -1001,49 +1213,36 @@
             
             // Add to history
             addToHistory({
-                id: notification.id,
-                title: 'ส่งการแจ้งเตือนทันที',
-                message: `"${title}"`,
+                type: 'immediate',
+                title: notification.title,
+                message: 'ส่งการแจ้งเตือนทันที',
                 time: new Date().toLocaleTimeString('th-TH'),
                 status: 'sent'
             });
         }
         
-        // Handle push notification
-        function handlePushNotification(payload) {
-            console.log('Received push:', payload);
+        // Test notification
+        async function testNotification() {
+            // Check permission first
+            if (Notification.permission !== 'granted') {
+                await requestNotificationPermission();
+                return;
+            }
             
-            const notification = {
-                id: payload.data?.id || 'push-' + Date.now(),
-                title: payload.notification?.title || 'การแจ้งเตือนใหม่',
-                message: payload.notification?.body || 'คุณมีการแจ้งเตือนใหม่',
-                type: 'push',
-                createdAt: Date.now(),
-                status: 'received',
-                read: false
-            };
-            
-            // Add to notifications
-            notifications.unshift(notification);
-            
-            // Save
-            saveNotifications();
-            
-            // Update UI
-            updateNotificationUI();
-            
-            // Play sound
-            playNotificationSound();
-            
-            // Show toast
-            showToast(notification.title, 'info', notification.message);
-            
-            // Update badge
-            updateBadgeCount();
-            
-            // Vibrate if supported
-            if ('vibrate' in navigator) {
-                navigator.vibrate([200, 100, 200]);
+            // Send test notification
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                serviceWorkerRegistration.showNotification('ทดสอบการแจ้งเตือน', {
+                    body: 'นี่คือการทดสอบการแจ้งเตือนจากแอป',
+                    icon: '/icons/icon-192x192.png',
+                    tag: 'test-' + Date.now(),
+                    requireInteraction: true
+                });
+                
+                // Play sound
+                playNotificationSound();
+                
+                // Show toast
+                showToast('ทดสอบการแจ้งเตือน', 'info');
             }
         }
         
@@ -1052,80 +1251,60 @@
             updateNotificationList();
             updateNotificationStats();
             updateBadgeCount();
+            updateHistory();
         }
         
         // Update notification list
         function updateNotificationList() {
             const list = document.getElementById('notificationList');
-            const history = document.getElementById('notificationHistory');
             
-            // Clear lists
-            list.innerHTML = '';
-            history.innerHTML = '';
+            // Filter notifications (show max 10)
+            const displayNotifications = notifications.slice(0, 10);
             
-            if (notifications.length === 0) {
+            if (displayNotifications.length === 0) {
                 list.innerHTML = `
-                    <div class="notification-item">
-                        <strong>ยังไม่มีการแจ้งเตือน</strong>
+                    <div class="empty-notifications">
+                        <i class="fas fa-bell-slash"></i>
+                        <h4>ยังไม่มีการแจ้งเตือน</h4>
                         <p>สร้างการแจ้งเตือนแรกของคุณ!</p>
                     </div>
                 `;
-                
-                history.innerHTML = `
-                    <div style="text-align: center; padding: 30px; color: #666;">
-                        <i class="fas fa-history fa-2x" style="margin-bottom: 10px; display: block;"></i>
-                        ยังไม่มีประวัติการแจ้งเตือน
-                    </div>
-                `;
-                
                 return;
             }
             
-            // Show last 10 notifications in panel
-            const recentNotifications = notifications.slice(0, 10);
+            let html = '';
             
-            recentNotifications.forEach(notification => {
+            displayNotifications.forEach(notification => {
                 const time = new Date(notification.createdAt).toLocaleTimeString('th-TH', {
                     hour: '2-digit',
                     minute: '2-digit'
                 });
                 
-                const item = document.createElement('div');
-                item.className = `notification-item ${notification.read ? '' : 'unread'}`;
-                item.innerHTML = `
-                    <strong>${notification.title}</strong>
-                    <p>${notification.message}</p>
-                    <div class="notification-time">${time}</div>
-                `;
+                const iconClass = notification.type === 'scheduled' ? 'warning' : 
+                                notification.status === 'sent' ? 'success' : 'info';
                 
-                item.addEventListener('click', () => {
-                    markAsRead(notification.id);
-                });
-                
-                list.appendChild(item);
-            });
-            
-            // Show all in history
-            notifications.forEach(notification => {
-                const time = new Date(notification.createdAt).toLocaleTimeString('th-TH', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-                
-                const item = document.createElement('div');
-                item.className = `history-item ${notification.status}`;
-                item.innerHTML = `
-                    <strong>${notification.title}</strong>
-                    <p>${notification.message}</p>
-                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                        <span style="font-size: 0.8rem; color: #666;">${time}</span>
-                        <span style="font-size: 0.8rem; color: ${notification.status === 'sent' ? 'green' : 'orange'};">
-                            ${notification.status === 'scheduled' ? 'รอดำเนินการ' : 'ส่งแล้ว'}
-                        </span>
+                html += `
+                    <div class="notification-item ${notification.read ? '' : 'unread'}" data-id="${notification.id}">
+                        <div class="notification-icon ${iconClass}">
+                            <i class="fas ${notification.type === 'scheduled' ? 'fa-clock' : 'fa-bell'}"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">${notification.title}</div>
+                            <div class="notification-message">${notification.message}</div>
+                            <div class="notification-time">${time}</div>
+                        </div>
                     </div>
                 `;
-                
-                history.appendChild(item);
+            });
+            
+            list.innerHTML = html;
+            
+            // Add click event to notification items
+            document.querySelectorAll('.notification-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = item.dataset.id;
+                    markAsRead(id);
+                });
             });
         }
         
@@ -1146,6 +1325,7 @@
             const badge = document.getElementById('notificationBadge');
             
             badge.textContent = unread > 99 ? '99+' : unread;
+            badge.style.display = unread > 0 ? 'flex' : 'none';
             
             // Update browser badge if supported
             if ('setAppBadge' in navigator) {
@@ -1154,6 +1334,58 @@
             
             // Update title
             document.title = unread > 0 ? `(${unread}) แอปแจ้งเตือน` : 'แอปแจ้งเตือน';
+        }
+        
+        // Update history
+        function updateHistory() {
+            const history = document.getElementById('notificationHistory');
+            
+            // Filter for history (all notifications)
+            if (notifications.length === 0) {
+                history.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: var(--gray);">
+                        <i class="fas fa-history fa-3x" style="margin-bottom: 15px; display: block; opacity: 0.5;"></i>
+                        ยังไม่มีประวัติการแจ้งเตือน
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            notifications.forEach(notification => {
+                const time = new Date(notification.createdAt).toLocaleTimeString('th-TH', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const statusClass = notification.status === 'sent' ? 'sent' : 
+                                  notification.status === 'scheduled' ? 'pending' : 'failed';
+                
+                const statusText = notification.status === 'sent' ? 'ส่งแล้ว' : 
+                                 notification.status === 'scheduled' ? 'รอดำเนินการ' : 'ล้มเหลว';
+                
+                html += `
+                    <div class="history-item ${statusClass}">
+                        <div>
+                            <strong>${notification.title}</strong>
+                            <div style="margin-top: 5px; color: var(--gray); font-size: 0.9rem;">
+                                ${notification.message}
+                            </div>
+                            <div style="margin-top: 5px; font-size: 0.8rem; color: #78909C;">
+                                <i class="fas fa-clock"></i> ${time}
+                            </div>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.8rem; padding: 4px 8px; background: rgba(0,0,0,0.1); border-radius: 10px;">
+                                ${statusText}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            history.innerHTML = html;
         }
         
         // Mark notification as read
@@ -1168,12 +1400,20 @@
         
         // Mark all as read
         function markAllAsRead() {
+            let updated = false;
+            
             notifications.forEach(notification => {
-                notification.read = true;
+                if (!notification.read) {
+                    notification.read = true;
+                    updated = true;
+                }
             });
             
-            saveNotifications();
-            updateNotificationUI();
+            if (updated) {
+                saveNotifications();
+                updateNotificationUI();
+                showToast('ทำเครื่องหมายว่าอ่านทั้งหมดแล้ว', 'success');
+            }
         }
         
         // Clear all notifications
@@ -1200,74 +1440,61 @@
             }
         }
         
-        // Add to history
+        // Add to history (for logging)
         function addToHistory(data) {
-            const historyItem = {
-                id: data.id,
-                title: data.title,
-                message: data.message,
-                time: data.time,
-                status: data.status
-            };
+            console.log('History added:', data);
+            // In production, you might want to save this separately
+        }
+        
+        // Start notification checker
+        function startNotificationChecker() {
+            // Check every 30 seconds for scheduled notifications
+            setInterval(checkScheduledNotifications, 30000);
             
-            // In production, save to server
-            console.log('Added to history:', historyItem);
+            // Initial check
+            setTimeout(checkScheduledNotifications, 1000);
         }
         
-        // Send to server
-        async function sendToServer(notification) {
-            try {
-                // In production, send to your Node.js server
-                const response = await fetch('http://localhost:3000/api/schedule', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(notification)
-                });
-                
-                if (response.ok) {
-                    console.log('Notification scheduled on server');
-                }
-            } catch (error) {
-                console.error('Send to server error:', error);
-            }
-        }
-        
-        // Check server status
-        async function checkServerStatus() {
-            const statusDot = document.getElementById('serverStatus');
-            const statusText = document.getElementById('serverStatusText');
+        // Check scheduled notifications
+        function checkScheduledNotifications() {
+            const now = Date.now();
+            const scheduled = notifications.filter(n => 
+                n.status === 'scheduled' && n.scheduledTime <= now
+            );
             
-            try {
-                // Check if server is running
-                const response = await fetch('http://localhost:3000/health', {
-                    method: 'GET',
-                    mode: 'no-cors'
-                });
+            scheduled.forEach(async (notification) => {
+                console.log('Sending scheduled notification:', notification.title);
                 
-                statusDot.className = 'status-dot active';
-                statusText.textContent = 'พร้อมใช้งาน';
-            } catch (error) {
-                statusDot.className = 'status-dot inactive';
-                statusText.textContent = 'ไม่พร้อมใช้งาน';
-            }
-        }
-        
-        // Register service worker
-        async function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                try {
-                    serviceWorkerRegistration = await navigator.serviceWorker.register('service-worker.js');
-                    console.log('Service Worker registered');
+                // Update status
+                notification.status = 'sent';
+                await saveNotifications();
+                
+                // Send notification
+                if (Notification.permission === 'granted') {
+                    if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                        serviceWorkerRegistration.showNotification(notification.title, {
+                            body: `[ตามเวลา] ${notification.message}`,
+                            icon: '/icons/icon-192x192.png',
+                            tag: notification.id
+                        });
+                    } else {
+                        new Notification(notification.title, {
+                            body: `[ตามเวลา] ${notification.message}`,
+                            icon: '/icons/icon-192x192.png'
+                        });
+                    }
                     
-                    // Also register Firebase service worker
-                    await navigator.serviceWorker.register('firebase-messaging-sw.js');
-                    console.log('Firebase Service Worker registered');
+                    // Play sound
+                    playNotificationSound();
                     
-                } catch (error) {
-                    console.error('Service Worker registration failed:', error);
+                    // Show toast
+                    showToast(notification.title, 'info', 'แจ้งเตือนตามเวลาที่ตั้งไว้');
                 }
+            });
+            
+            // Update UI
+            if (scheduled.length > 0) {
+                updateNotificationUI();
             }
         }
         
@@ -1277,6 +1504,12 @@
                 const saved = localStorage.getItem('notifications');
                 if (saved) {
                     notifications = JSON.parse(saved);
+                    
+                    // Filter out old scheduled notifications (older than 1 day)
+                    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+                    notifications = notifications.filter(n => 
+                        n.status !== 'scheduled' || n.scheduledTime > oneDayAgo
+                    );
                 }
             } catch (error) {
                 console.error('Load notifications error:', error);
@@ -1319,14 +1552,16 @@
             };
             
             toast.innerHTML = `
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--${type}); display: flex; align-items: center; justify-content: center; color: white;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--${type}); display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
                     <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
                 </div>
                 <div style="flex: 1;">
-                    <strong>${title}</strong>
-                    ${message ? `<div style="font-size: 0.9rem; margin-top: 5px; color: #666;">${message}</div>` : ''}
+                    <strong style="display: block; margin-bottom: 5px;">${title}</strong>
+                    ${message ? `<div style="font-size: 0.9rem; color: var(--gray);">${message}</div>` : ''}
                 </div>
-                <button class="toast-close" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; padding: 5px;">&times;</button>
+                <button class="toast-close" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; padding: 5px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                    &times;
+                </button>
             `;
             
             container.appendChild(toast);
@@ -1335,6 +1570,7 @@
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100px)';
                     setTimeout(() => {
                         if (toast.parentNode) toast.parentNode.removeChild(toast);
                     }, 300);
@@ -1344,6 +1580,7 @@
             // Close button
             toast.querySelector('.toast-close').addEventListener('click', () => {
                 toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100px)';
                 setTimeout(() => {
                     if (toast.parentNode) toast.parentNode.removeChild(toast);
                 }, 300);
