@@ -73,4 +73,10 @@
     },
     {
       "name": "ดูการแจ้งเตือน",
-      "
+      "short_name": "ดู",
+      "description": "ดูการแจ้งเตือนทั้งหมด",
+      "url": "/?action=notifications",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ]
+}
