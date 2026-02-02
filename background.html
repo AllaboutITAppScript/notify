@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Background Trigger</title>
+    <script>
+        // This file is used to trigger background tasks
+        
+        console.log('Background trigger page loaded');
+        
+        // Listen for messages from main page
+        window.addEventListener('message', async (event) => {
+            console.log('Background page received message:', event.data);
+            
+            if (event.data.type === 'START_BACKGROUND_CHECK') {
+                const notification = event.data.notification;
+                console.log('Starting background check for:', notification.id);
+                
+                // Calculate delay
+                const delay = notification.scheduledTime - Date.now();
+                
+                if (delay > 0) {
+                    console.log(`Will send notification in ${Math.round(delay/1000)} seconds`);
+                    
+                    // Wait and send notification
+                    setTimeout(() => {
+                        sendBackgroundNotification(notification);
+                    }, delay);
+                    
+                    // Also save to localStorage as backup
+                    localStorage.setItem('pending_notification', JSON.stringify(notification));
+                }
+            }
+        });
+        
+        // Send background notification
+        function sendBackgroundNotification(notification) {
+            console.log('Sending background notification:', notification.title);
+            
+            // Check if we have notification permission
+            if ('Notification' in window && Notification.permission === 'granted') {
+                // Send notification
+                const notif = new Notification(notification.title, {
+                    body: '[จากพื้นหลัง] ' + notification.message,
+                    icon: 'https://img.icons8.com/color/96/000000/appointment-reminders.png',
+                    tag: notification.id + '-background',
+                    requireInteraction: true
+                });
+                
+                // Send message back to parent
+                window.parent.postMessage({
+                    type: 'BACKGROUND_NOTIFICATION_SENT',
+                    notification: notification
+                }, '*');
+                
+                console.log('Background notification sent successfully');
+                
+                // Play sound using AudioContext (works even when tab is background)
+                playNotificationSound();
+                
+            } else {
+                console.log('No notification permission in background page');
+            }
+        }
+        
+        // Play notification sound
+        function playNotificationSound() {
+            try {
+                // Create audio context
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+            } catch (error) {
+                console.log('Could not play sound:', error);
+            }
+        }
+        
+        // Check for pending notifications on load
+        window.addEventListener('load', () => {
+            console.log('Background page loaded, checking pending notifications...');
+            
+            // Check localStorage for pending notifications
+            const pending = localStorage.getItem('pending_notification');
+            if (pending) {
+                try {
+                    const notification = JSON.parse(pending);
+                    const now = Date.now();
+                    
+                    if (notification.scheduledTime <= now) {
+                        // Notification is due, send it
+                        sendBackgroundNotification(notification);
+                        localStorage.removeItem('pending_notification');
+                    }
+                } catch (error) {
+                    console.error('Error parsing pending notification:', error);
+                }
+            }
+            
+            // Also check every 30 seconds
+            setInterval(() => {
+                const pending = localStorage.getItem('pending_notification');
+                if (pending) {
+                    try {
+                        const notification = JSON.parse(pending);
+                        const now = Date.now();
+                        
+                        if (notification.scheduledTime <= now) {
+                            sendBackgroundNotification(notification);
+                            localStorage.removeItem('pending_notification');
+                        }
+                    } catch (error) {
+                        console.error('Error in interval check:', error);
+                    }
+                }
+            }, 30000);
+        });
+        
+        // Request notification permission if needed
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+                console.log('Background page notification permission:', permission);
+            });
+        }
+    </script>
+</head>
+<body style="display: none;">
+    <!-- This page is hidden, used only for background tasks -->
+</body>
+</html>
