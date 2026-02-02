@@ -3,49 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>แอปแจ้งเตือน - ทำงานในพื้นหลังได้</title>
-    <meta name="description" content="เว็บแอปแจ้งเตือนแบบมือถือ สามารถทำงานในพื้นหลังและแจ้งเตือนแม้ปิดเบราว์เซอร์">
-    <meta name="theme-color" content="#2196F3">
+    <title>แอปแจ้งเตือน - ทำงานแม้ปิด Browser</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="icons/icon-192x192.png" type="image/png">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="icon" href="icons/icon-192x192.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #2196F3;
+            --secondary: #1976D2;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --danger: #f44336;
+            --dark: #333;
+            --light: #f5f5f5;
+        }
+        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Prompt', 'Sukhumvit Set', sans-serif;
+            font-family: 'Segoe UI', 'Prompt', sans-serif;
         }
         
         body {
-            background: linear-gradient(135deg, #2196F3 0%, #21CBF3 100%);
-            color: #333;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--dark);
             min-height: 100vh;
             padding: 20px;
-            line-height: 1.6;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
         }
         
         /* Header */
         .app-header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
             text-align: center;
             margin-bottom: 30px;
-            color: white;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         
         .app-header h1 {
+            color: var(--primary);
             font-size: 2.5rem;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -53,67 +58,46 @@
         }
         
         .app-header p {
+            color: #666;
             font-size: 1.1rem;
-            opacity: 0.9;
             max-width: 800px;
             margin: 0 auto;
-        }
-        
-        /* Install Banner */
-        .install-banner {
-            background: linear-gradient(to right, #4CAF50, #45a049);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            display: none;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .install-banner.show {
-            display: flex;
+            line-height: 1.6;
         }
         
         /* Status Cards */
-        .status-grid {
+        .status-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
         
-        .status-card {
+        .card {
             background: white;
-            border-radius: 16px;
+            border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            transition: transform 0.3s;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
         }
         
-        .status-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .status-card h3 {
-            color: #2196F3;
-            margin-bottom: 15px;
+        .card h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
             font-size: 1.3rem;
         }
         
-        .status-card h3 i {
+        .card h2 i {
+            background: var(--primary);
+            color: white;
             width: 40px;
             height: 40px;
-            background: #2196F3;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
         }
         
         .status-item {
@@ -140,29 +124,19 @@
             border-radius: 50%;
         }
         
-        .status-dot.active {
-            background: #4CAF50;
-            animation: pulse 2s infinite;
-        }
-        
-        .status-dot.inactive {
-            background: #f44336;
-        }
-        
-        .status-dot.waiting {
-            background: #FF9800;
-        }
+        .active { background: var(--success); animation: pulse 2s infinite; }
+        .inactive { background: var(--danger); }
+        .waiting { background: var(--warning); }
         
         @keyframes pulse {
-            0% { opacity: 1; }
+            0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
-            100% { opacity: 1; }
         }
         
         /* Main Content */
         .main-content {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 2fr 1fr;
             gap: 25px;
             margin-bottom: 30px;
         }
@@ -173,62 +147,7 @@
             }
         }
         
-        .control-panel {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        }
-        
-        .notification-log {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        
-        .log-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .log-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        .log-item {
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #2196F3;
-            animation: fadeIn 0.5s;
-        }
-        
-        .log-item.success {
-            border-left-color: #4CAF50;
-        }
-        
-        .log-item.error {
-            border-left-color: #f44336;
-        }
-        
-        .log-item.warning {
-            border-left-color: #FF9800;
-        }
-        
-        .log-time {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
-        }
-        
-        /* Form Controls */
+        /* Form */
         .form-group {
             margin-bottom: 20px;
         }
@@ -246,23 +165,16 @@
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             font-size: 1rem;
-            transition: border-color 0.3s;
+            transition: all 0.3s;
         }
         
         .form-control:focus {
             outline: none;
-            border-color: #2196F3;
+            border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
         }
         
         /* Buttons */
-        .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 25px;
-        }
-        
         .btn {
             padding: 14px 24px;
             border: none;
@@ -275,67 +187,90 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            flex: 1;
-            min-width: 140px;
         }
         
         .btn-primary {
-            background: #2196F3;
+            background: var(--primary);
             color: white;
         }
         
         .btn-primary:hover {
-            background: #0d8bf2;
+            background: var(--secondary);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
         }
         
         .btn-success {
-            background: #4CAF50;
+            background: var(--success);
             color: white;
         }
         
         .btn-success:hover {
             background: #45a049;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
         }
         
         .btn-warning {
-            background: #FF9800;
+            background: var(--warning);
             color: white;
         }
         
         .btn-warning:hover {
-            background: #f57c00;
+            background: #e68900;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
         }
         
         .btn-danger {
-            background: #f44336;
+            background: var(--danger);
             color: white;
         }
         
         .btn-danger:hover {
-            background: #e53935;
+            background: #d32f2f;
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
         }
         
-        .btn-secondary {
-            background: #757575;
-            color: white;
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
         }
         
-        .btn-secondary:hover {
-            background: #616161;
-            transform: translateY(-2px);
+        /* Notification Log */
+        .notification-log {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .log-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .log-item.success { border-left-color: var(--success); }
+        .log-item.error { border-left-color: var(--danger); }
+        .log-item.warning { border-left-color: var(--warning); }
+        
+        .log-time {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+            display: block;
         }
         
         /* Scheduled List */
         .scheduled-list {
-            margin-top: 30px;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 25px;
         }
         
         .scheduled-item {
@@ -343,115 +278,61 @@
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 10px;
+            border-left: 4px solid var(--primary);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-left: 4px solid #2196F3;
         }
         
         .scheduled-item.soon {
-            border-left-color: #FF9800;
+            border-left-color: var(--warning);
             background: #fff8e1;
         }
         
-        /* Toast Notifications */
+        /* Toast */
         .toast-container {
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 10000;
+            z-index: 1000;
             max-width: 400px;
         }
         
         .toast {
             background: white;
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 20px;
             margin-bottom: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
             display: flex;
             align-items: center;
             gap: 15px;
-            animation: slideInRight 0.3s;
-            border-left: 5px solid #4CAF50;
+            animation: slideIn 0.3s;
+            border-left: 5px solid var(--success);
         }
         
-        .toast.error {
-            border-left-color: #f44336;
+        .toast.error { border-left-color: var(--danger); }
+        .toast.warning { border-left-color: var(--warning); }
+        .toast.info { border-left-color: var(--primary); }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
-        .toast.warning {
-            border-left-color: #FF9800;
+        /* Server Simulation */
+        .server-simulation {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
         }
         
-        .toast.info {
-            border-left-color: #2196F3;
-        }
-        
-        .toast-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+        .server-controls {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 1.2rem;
-        }
-        
-        .toast.success .toast-icon {
-            background: #4CAF50;
-        }
-        
-        .toast.error .toast-icon {
-            background: #f44336;
-        }
-        
-        .toast.warning .toast-icon {
-            background: #FF9800;
-        }
-        
-        .toast.info .toast-icon {
-            background: #2196F3;
-        }
-        
-        .toast-content {
-            flex: 1;
-        }
-        
-        .toast-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #999;
-            padding: 5px;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .toast-close:hover {
-            background: #f5f5f5;
-        }
-        
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
         }
         
         /* Footer */
@@ -461,44 +342,34 @@
             margin-top: 40px;
             padding-top: 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
-            font-size: 0.9rem;
         }
         
         /* Instructions */
         .instructions {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
             padding: 25px;
             margin-top: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        }
-        
-        .instructions h3 {
-            color: #2196F3;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
         
         .steps {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-top: 20px;
         }
         
         .step {
-            background: #f0f7ff;
-            padding: 20px;
-            border-radius: 10px;
             text-align: center;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 10px;
         }
         
         .step-number {
             width: 40px;
             height: 40px;
-            background: #2196F3;
+            background: var(--primary);
             color: white;
             border-radius: 50%;
             display: flex;
@@ -510,56 +381,41 @@
         
         /* Responsive */
         @media (max-width: 768px) {
-            .container {
-                padding: 10px;
-            }
-            
-            .app-header h1 {
-                font-size: 2rem;
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .btn {
-                min-width: 100%;
-            }
-            
-            .btn-group {
-                flex-direction: column;
-            }
-            
-            .status-grid {
-                grid-template-columns: 1fr;
-            }
+            .container { padding: 10px; }
+            .app-header h1 { font-size: 2rem; flex-direction: column; }
+            .btn-group { flex-direction: column; }
+            .btn { width: 100%; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Install Banner -->
-        <div class="install-banner" id="installBanner">
-            <div>
-                <strong>ติดตั้งแอปนี้บนอุปกรณ์ของคุณ!</strong>
-                <div style="font-size: 0.9rem; margin-top: 5px;">รับการแจ้งเตือนแม้ปิดเบราว์เซอร์</div>
+        <div class="card" id="installBanner" style="display: none; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: var(--primary);">ติดตั้งแอปนี้บนอุปกรณ์ของคุณ!</strong>
+                    <div style="color: #666; margin-top: 5px;">รับการแจ้งเตือนแม้ปิดเบราว์เซอร์</div>
+                </div>
+                <button class="btn btn-success" id="installBtn">
+                    <i class="fas fa-download"></i> ติดตั้งแอป
+                </button>
             </div>
-            <button class="btn btn-success" id="installBtn">
-                <i class="fas fa-download"></i> ติดตั้งแอป
-            </button>
         </div>
 
         <!-- Header -->
         <header class="app-header">
             <h1>
                 <i class="fas fa-bell"></i>
-                <span>ระบบแจ้งเตือนอัจฉริยะ</span>
+                <span>ระบบแจ้งเตือนแม้ปิด Browser</span>
             </h1>
-            <p>เว็บแอปพลิเคชันที่สามารถแจ้งเตือนได้แม้ปิดเบราว์เซอร์หรือปิดแท็บ ทำงานในพื้นหลังเหมือนแอปมือถือ</p>
+            <p>เว็บแอปพลิเคชันที่สามารถแจ้งเตือนได้แม้ปิดเบราว์เซอร์แล้ว ใช้เทคโนโลยี Push Notifications และเซิร์ฟเวอร์</p>
         </header>
 
-        <!-- Status Overview -->
-        <div class="status-grid">
-            <div class="status-card">
-                <h3><i class="fas fa-cogs"></i> สถานะระบบ</h3>
+        <!-- Status -->
+        <div class="status-container">
+            <div class="card">
+                <h2><i class="fas fa-cogs"></i> สถานะระบบ</h2>
                 <div class="status-item">
                     <span>Service Worker:</span>
                     <div class="status-indicator">
@@ -575,18 +431,18 @@
                     </div>
                 </div>
                 <div class="status-item">
-                    <span>การทำงานพื้นหลัง:</span>
+                    <span>เซิร์ฟเวอร์:</span>
                     <div class="status-indicator">
-                        <div class="status-dot" id="backgroundStatus"></div>
-                        <span id="backgroundStatusText">กำลังตรวจสอบ...</span>
+                        <div class="status-dot" id="serverStatus"></div>
+                        <span id="serverStatusText">กำลังตรวจสอบ...</span>
                     </div>
                 </div>
             </div>
 
-            <div class="status-card">
-                <h3><i class="fas fa-chart-bar"></i> สถิติ</h3>
+            <div class="card">
+                <h2><i class="fas fa-chart-bar"></i> สถิติ</h2>
                 <div class="status-item">
-                    <span>แจ้งเตือนที่ตั้งเวลาไว้:</span>
+                    <span>แจ้งเตือนที่ตั้งเวลา:</span>
                     <span id="scheduledCount">0</span>
                 </div>
                 <div class="status-item">
@@ -602,66 +458,74 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Control Panel -->
-            <div class="control-panel">
-                <h3><i class="fas fa-sliders-h"></i> ตั้งค่าการแจ้งเตือน</h3>
-                
-                <div class="form-group">
-                    <label for="notificationTitle"><i class="fas fa-heading"></i> หัวข้อการแจ้งเตือน:</label>
-                    <input type="text" id="notificationTitle" class="form-control" 
-                           placeholder="เช่น: การนัดหมายสำคัญ" 
-                           value="การแจ้งเตือนจากเว็บแอป">
-                </div>
-                
-                <div class="form-group">
-                    <label for="notificationMessage"><i class="fas fa-comment-alt"></i> ข้อความ:</label>
-                    <textarea id="notificationMessage" class="form-control" rows="3" 
-                              placeholder="กรอกข้อความการแจ้งเตือนที่นี่...">
-แจ้งเตือนทดสอบจากเว็บแอปพลิเคชัน ที่ทำงานในพื้นหลังได้แม้ปิดเบราว์เซอร์</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="scheduleTime"><i class="fas fa-clock"></i> ตั้งเวลา (นาที):</label>
-                    <input type="number" id="scheduleTime" class="form-control" 
-                           min="1" max="10080" value="5" 
-                           placeholder="ระบุเวลาเป็นนาที (สูงสุด 7 วัน)">
-                    <div style="font-size: 0.85rem; color: #666; margin-top: 5px;">
-                        <i class="fas fa-info-circle"></i> สามารถตั้งเวลาได้สูงสุด 7 วัน (10,080 นาที)
+            <!-- Left: Controls -->
+            <div>
+                <div class="card">
+                    <h2><i class="fas fa-sliders-h"></i> ตั้งค่าการแจ้งเตือน</h2>
+                    
+                    <div class="form-group">
+                        <label for="notificationTitle"><i class="fas fa-heading"></i> หัวข้อ:</label>
+                        <input type="text" id="notificationTitle" class="form-control" 
+                               placeholder="เช่น: การนัดหมายสำคัญ" 
+                               value="การแจ้งเตือนจากเว็บแอป">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notificationMessage"><i class="fas fa-comment-alt"></i> ข้อความ:</label>
+                        <textarea id="notificationMessage" class="form-control" rows="3" 
+                                  placeholder="กรอกข้อความการแจ้งเตือนที่นี่...">
+แจ้งเตือนทดสอบจากเว็บแอปพลิเคชัน ที่ทำงานแม้ปิดเบราว์เซอร์แล้ว</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="scheduleTime"><i class="fas fa-clock"></i> ตั้งเวลา (นาที):</label>
+                        <input type="number" id="scheduleTime" class="form-control" 
+                               min="1" max="1440" value="2" 
+                               placeholder="ระบุเวลาเป็นนาที">
+                        <small style="color: #666;">แนะนำ: ใช้ 2-5 นาทีสำหรับทดสอบ</small>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-success" id="scheduleBtn">
+                            <i class="fas fa-clock"></i> ตั้งเวลาแจ้งเตือน
+                        </button>
+                        <button class="btn btn-primary" id="sendNowBtn">
+                            <i class="fas fa-paper-plane"></i> ส่งทันที
+                        </button>
                     </div>
                 </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-success" id="scheduleBtn">
-                        <i class="fas fa-clock"></i> ตั้งเวลาแจ้งเตือน
-                    </button>
-                    <button class="btn btn-primary" id="sendNowBtn">
-                        <i class="fas fa-paper-plane"></i> ส่งทันที
-                    </button>
-                </div>
 
-                <!-- Quick Actions -->
-                <div style="margin-top: 30px;">
-                    <h4><i class="fas fa-bolt"></i> การดำเนินการด่วน</h4>
-                    <div class="btn-group" style="margin-top: 15px;">
-                        <button class="btn btn-warning" id="permissionBtn">
-                            <i class="fas fa-hand-paper"></i> ขออนุญาต
+                <!-- Server Simulation -->
+                <div class="server-simulation">
+                    <h2><i class="fas fa-server"></i> เซิร์ฟเวอร์สำหรับแจ้งเตือนหลังปิด Browser</h2>
+                    <p>ส่วนนี้จำลองเซิร์ฟเวอร์สำหรับส่ง Push Notifications หลังปิด Browser</p>
+                    
+                    <div class="server-controls">
+                        <button class="btn btn-success" id="testServerBtn">
+                            <i class="fas fa-play"></i> เริ่มเซิร์ฟเวอร์จำลอง
                         </button>
-                        <button class="btn btn-secondary" id="registerSWBtn">
-                            <i class="fas fa-download"></i> ติดตั้ง Service Worker
+                        <button class="btn btn-warning" id="simulatePushBtn">
+                            <i class="fas fa-bell"></i> ทดสอบ Push
                         </button>
-                        <button class="btn btn-danger" id="clearAllBtn">
-                            <i class="fas fa-trash"></i> ล้างทั้งหมด
+                        <button class="btn btn-primary" id="setupFirebaseBtn">
+                            <i class="fas fa-fire"></i> ตั้งค่า Firebase (แนะนำ)
                         </button>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #f0f7ff; border-radius: 10px;">
+                        <h4><i class="fas fa-lightbulb"></i> วิธีทำให้แจ้งเตือนได้หลังปิด Browser:</h4>
+                        <ol style="margin: 10px 0 0 20px; color: #666;">
+                            <li>ใช้ Firebase Cloud Messaging (ฟรี)</li>
+                            <li>เซิร์ฟเวอร์ Node.js + Web Push</li>
+                            <li>OneSignal หรือบริการ Push อื่นๆ</li>
+                        </ol>
                     </div>
                 </div>
 
                 <!-- Scheduled Notifications -->
                 <div class="scheduled-list">
-                    <h4 style="margin-bottom: 15px;">
-                        <i class="fas fa-calendar-alt"></i> การแจ้งเตือนที่ตั้งเวลาไว้
-                    </h4>
+                    <h2><i class="fas fa-calendar-alt"></i> การแจ้งเตือนที่ตั้งเวลาไว้</h2>
                     <div id="scheduledNotifications">
-                        <!-- จะแสดงรายการที่ตั้งเวลาไว้ที่นี่ -->
                         <div style="text-align: center; padding: 20px; color: #666;">
                             <i class="fas fa-clock fa-2x" style="margin-bottom: 10px; display: block;"></i>
                             ยังไม่มีการตั้งเวลาแจ้งเตือน
@@ -670,16 +534,16 @@
                 </div>
             </div>
 
-            <!-- Notification Log -->
+            <!-- Right: Log -->
             <div class="notification-log">
-                <div class="log-header">
-                    <h3><i class="fas fa-history"></i> บันทึกการทำงาน</h3>
-                    <button class="btn btn-secondary" id="clearLogBtn" style="padding: 8px 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2><i class="fas fa-history"></i> บันทึกการทำงาน</h2>
+                    <button class="btn btn-danger" id="clearLogBtn" style="padding: 8px 16px;">
                         <i class="fas fa-broom"></i> ล้าง
                     </button>
                 </div>
                 
-                <div class="log-list" id="notificationLog">
+                <div id="notificationLog">
                     <div class="log-item">
                         <div>
                             <strong>เริ่มต้นระบบแจ้งเตือน</strong>
@@ -693,38 +557,42 @@
 
         <!-- Instructions -->
         <div class="instructions">
-            <h3><i class="fas fa-graduation-cap"></i> วิธีใช้งาน</h3>
-            <p>เพื่อให้ระบบทำงานได้เต็มประสิทธิภาพและสามารถแจ้งเตือนได้แม้ปิดเบราว์เซอร์ กรุณาดำเนินการตามขั้นตอนต่อไปนี้:</p>
+            <h2><i class="fas fa-graduation-cap"></i> วิธีทดสอบให้แจ้งเตือนหลังปิด Browser</h2>
             
             <div class="steps">
                 <div class="step">
                     <div class="step-number">1</div>
-                    <h4>ติดตั้ง Service Worker</h4>
-                    <p>คลิกปุ่ม "ติดตั้ง Service Worker" เพื่อให้แอปสามารถทำงานในพื้นหลังได้</p>
+                    <h4>ตั้งค่าเบื้องต้น</h4>
+                    <p>ติดตั้ง Service Worker และขออนุญาตการแจ้งเตือน</p>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
-                    <h4>ขออนุญาตการแจ้งเตือน</h4>
-                    <p>คลิกปุ่ม "ขออนุญาต" เพื่ออนุญาตให้แอปส่งการแจ้งเตือนผ่านระบบปฏิบัติการ</p>
+                    <h4>ตั้งเวลาแจ้งเตือน</h4>
+                    <p>ตั้งเวลา 2-5 นาทีจากนี้</p>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
-                    <h4>ตั้งเวลาแจ้งเตือน</h4>
-                    <p>กรอกข้อมูลและตั้งเวลา จากนั้นคลิกปุ่ม "ตั้งเวลาแจ้งเตือน"</p>
+                    <h4>ปิด Browser ทั้งหมด</h4>
+                    <p>ปิดทุกแท็บและหน้าต่าง Browser</p>
                 </div>
                 <div class="step">
                     <div class="step-number">4</div>
-                    <h4>ทดสอบการทำงาน</h4>
-                    <p>ปิดเบราว์เซอร์แล้วรอจนถึงเวลาที่ตั้งไว้ ระบบจะแจ้งเตือนอัตโนมัติ</p>
+                    <h4>รอการแจ้งเตือน</h4>
+                    <p>รอจนถึงเวลาที่ตั้งไว้ (ต้องมีเซิร์ฟเวอร์ทำงาน)</p>
                 </div>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #fff8e1; border-radius: 10px;">
+                <h4><i class="fas fa-exclamation-triangle"></i> หมายเหตุสำคัญ:</h4>
+                <p>Web App ธรรมดา <strong>ไม่สามารถทำงานหลังปิด Browser ได้</strong> ต้องใช้เซิร์ฟเวอร์ส่ง Push Notifications</p>
             </div>
         </div>
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>© 2023 ระบบแจ้งเตือนอัจฉริยะ - พัฒนาด้วย Progressive Web App Technology</p>
-            <p style="margin-top: 5px; font-size: 0.8rem;">
-                <i class="fas fa-info-circle"></i> รองรับ Chrome, Edge, Firefox และ Safari รุ่นใหม่
+            <p>© 2023 ระบบแจ้งเตือนหลังปิด Browser - ใช้เทคโนโลยี Push Notifications</p>
+            <p style="margin-top: 5px; font-size: 0.9rem; opacity: 0.8;">
+                รองรับ Chrome, Edge, Firefox และ Safari
             </p>
         </footer>
     </div>
@@ -739,111 +607,118 @@
 
     <!-- Main JavaScript -->
     <script>
-        // Global Variables
+        // ตัวแปรสำคัญ
         let deferredPrompt = null;
         let scheduledNotifications = [];
         let serviceWorkerRegistration = null;
-        let isAppInstalled = false;
+        let serverSimulationInterval = null;
+        let firebaseConfig = null;
         
-        // Initialize the app when DOM is loaded
+        // เมื่อโหลดหน้าเว็บ
         document.addEventListener('DOMContentLoaded', initializeApp);
         
-        // Main initialization function
+        // ฟังก์ชันเริ่มต้นแอป
         async function initializeApp() {
+            console.log('กำลังเริ่มต้นระบบแจ้งเตือน...');
             logMessage('เริ่มต้นระบบแจ้งเตือนอัจฉริยะ', 'info');
             updateCurrentTime();
             
-            // Setup event listeners
+            // ตั้งค่า Event Listeners
             setupEventListeners();
             
-            // Check system capabilities
+            // ตรวจสอบความสามารถระบบ
             checkSystemCapabilities();
             
-            // Check and register service worker
+            // ตรวจสอบ Service Worker
             await checkServiceWorkerStatus();
             
-            // Check notification permission
+            // ตรวจสอบการอนุญาตการแจ้งเตือน
             checkNotificationPermission();
             
-            // Load scheduled notifications from storage
+            // ตรวจสอบสถานะเซิร์ฟเวอร์
+            checkServerStatus();
+            
+            // โหลดการแจ้งเตือนที่ตั้งเวลาไว้
             await loadScheduledNotifications();
             
-            // Start checking for scheduled notifications
+            // เริ่มตัวตรวจสอบการแจ้งเตือน
             startNotificationChecker();
             
-            // Update time every second
+            // อัพเดทเวลาตลอด
             setInterval(updateCurrentTime, 1000);
             
-            // Update status periodically
-            setInterval(updateSystemStatus, 30000);
+            // ตรวจสอบสถานะเป็นระยะ
+            setInterval(updateSystemStatus, 15000);
             
-            // Check for PWA install prompt
+            // ตั้งค่า PWA Install Prompt
             setupInstallPrompt();
             
+            // ตั้งค่า Firebase (ถ้ามี)
+            setupFirebase();
+            
+            console.log('ระบบพร้อมใช้งานแล้ว');
             logMessage('ระบบพร้อมใช้งานแล้ว', 'success');
         }
         
-        // Setup all event listeners
+        // ตั้งค่า Event Listeners
         function setupEventListeners() {
-            // Button click handlers
+            // ปุ่มหลัก
             document.getElementById('scheduleBtn').addEventListener('click', scheduleNotification);
             document.getElementById('sendNowBtn').addEventListener('click', sendImmediateNotification);
-            document.getElementById('permissionBtn').addEventListener('click', requestNotificationPermission);
-            document.getElementById('registerSWBtn').addEventListener('click', registerServiceWorker);
-            document.getElementById('clearAllBtn').addEventListener('click', clearAllNotifications);
             document.getElementById('clearLogBtn').addEventListener('click', clearLog);
+            
+            // ปุ่มเซิร์ฟเวอร์
+            document.getElementById('testServerBtn').addEventListener('click', startServerSimulation);
+            document.getElementById('simulatePushBtn').addEventListener('click', simulatePushNotification);
+            document.getElementById('setupFirebaseBtn').addEventListener('click', setupFirebaseGuide);
+            
+            // ปุ่ม PWA
             document.getElementById('installBtn').addEventListener('click', installPWA);
             
-            // Before install prompt
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                showInstallBanner();
-            });
-            
-            // App installed
-            window.addEventListener('appinstalled', () => {
-                isAppInstalled = true;
-                hideInstallBanner();
-                showToast('ติดตั้งแอปสำเร็จ!', 'success', 'ตอนนี้คุณสามารถใช้งานแอปได้แม้ไม่มีอินเทอร์เน็ต');
-                logMessage('ผู้ใช้ติดตั้งแอปเป็น PWA แล้ว', 'success');
-            });
+            // Event สำหรับ PWA
+            window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.addEventListener('appinstalled', handleAppInstalled);
         }
         
-        // Check system capabilities
+        // ตรวจสอบความสามารถระบบ
         function checkSystemCapabilities() {
             const capabilities = {
                 serviceWorker: 'serviceWorker' in navigator,
                 pushManager: 'PushManager' in window,
                 notifications: 'Notification' in window,
-                indexedDB: 'indexedDB' in window,
                 backgroundSync: 'SyncManager' in window,
                 periodicSync: 'PeriodicSyncManager' in window
             };
             
-            // Update background status
-            const bgStatus = document.getElementById('backgroundStatus');
-            const bgStatusText = document.getElementById('backgroundStatusText');
+            console.log('ความสามารถระบบ:', capabilities);
             
-            if (capabilities.serviceWorker && capabilities.pushManager) {
-                bgStatus.className = 'status-dot active';
-                bgStatusText.textContent = 'พร้อมใช้งาน';
-            } else {
-                bgStatus.className = 'status-dot inactive';
-                bgStatusText.textContent = 'ไม่รองรับ';
-            }
-            
-            logMessage(`ความสามารถระบบ: ${JSON.stringify(capabilities)}`, 'info');
+            // อัพเดทสถานะพื้นหลัง
+            updateBackgroundStatus();
         }
         
-        // Check and update service worker status
+        // อัพเดทสถานะพื้นหลัง
+        function updateBackgroundStatus() {
+            const bgSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+            const statusEl = document.getElementById('serverStatus');
+            const textEl = document.getElementById('serverStatusText');
+            
+            if (bgSupported) {
+                statusEl.className = 'status-dot active';
+                textEl.textContent = 'พร้อมใช้งาน (ต้องมีเซิร์ฟเวอร์)';
+            } else {
+                statusEl.className = 'status-dot inactive';
+                textEl.textContent = 'จำกัดการทำงาน';
+            }
+        }
+        
+        // ตรวจสอบสถานะ Service Worker
         async function checkServiceWorkerStatus() {
-            const swStatus = document.getElementById('swStatus');
-            const swStatusText = document.getElementById('swStatusText');
+            const statusEl = document.getElementById('swStatus');
+            const textEl = document.getElementById('swStatusText');
             
             if (!('serviceWorker' in navigator)) {
-                swStatus.className = 'status-dot inactive';
-                swStatusText.textContent = 'ไม่รองรับ';
+                statusEl.className = 'status-dot inactive';
+                textEl.textContent = 'ไม่รองรับ';
                 logMessage('เบราว์เซอร์นี้ไม่รองรับ Service Worker', 'warning');
                 return;
             }
@@ -853,70 +728,29 @@
                 
                 if (registration) {
                     serviceWorkerRegistration = registration;
-                    swStatus.className = 'status-dot active';
-                    swStatusText.textContent = 'ทำงานอยู่';
-                    
-                    // Listen for updates
-                    registration.addEventListener('updatefound', () => {
-                        logMessage('พบเวอร์ชันใหม่ของ Service Worker', 'info');
-                    });
-                    
+                    statusEl.className = 'status-dot active';
+                    textEl.textContent = 'ทำงานอยู่';
                     logMessage('Service Worker ทำงานปกติ', 'success');
                 } else {
-                    swStatus.className = 'status-dot waiting';
-                    swStatusText.textContent = 'ยังไม่ได้ติดตั้ง';
+                    statusEl.className = 'status-dot waiting';
+                    textEl.textContent = 'ยังไม่ได้ติดตั้ง';
                     logMessage('กรุณาติดตั้ง Service Worker', 'warning');
                 }
             } catch (error) {
-                swStatus.className = 'status-dot inactive';
-                swStatusText.textContent = 'ข้อผิดพลาด';
+                statusEl.className = 'status-dot inactive';
+                textEl.textContent = 'ข้อผิดพลาด';
                 logMessage(`ข้อผิดพลาด Service Worker: ${error.message}`, 'error');
             }
         }
         
-        // Register service worker
-        async function registerServiceWorker() {
-            if (!('serviceWorker' in navigator)) {
-                showToast('เบราว์เซอร์นี้ไม่รองรับ Service Worker', 'error');
-                return;
-            }
-            
-            try {
-                const registration = await navigator.serviceWorker.register('service-worker.js', {
-                    scope: './'
-                });
-                
-                serviceWorkerRegistration = registration;
-                
-                // Wait for service worker to be ready
-                if (registration.installing) {
-                    registration.installing.addEventListener('statechange', (e) => {
-                        if (e.target.state === 'installed') {
-                            showToast('ติดตั้ง Service Worker สำเร็จ!', 'success');
-                            checkServiceWorkerStatus();
-                            logMessage('Service Worker ติดตั้งเรียบร้อย', 'success');
-                        }
-                    });
-                } else if (registration.active) {
-                    showToast('Service Worker พร้อมใช้งานแล้ว!', 'success');
-                    checkServiceWorkerStatus();
-                    logMessage('Service Worker พร้อมใช้งาน', 'success');
-                }
-                
-            } catch (error) {
-                showToast('ติดตั้ง Service Worker ล้มเหลว', 'error');
-                logMessage(`ติดตั้ง Service Worker ล้มเหลว: ${error.message}`, 'error');
-            }
-        }
-        
-        // Check notification permission status
+        // ตรวจสอบการอนุญาตการแจ้งเตือน
         function checkNotificationPermission() {
-            const notifStatus = document.getElementById('notificationStatus');
-            const notifStatusText = document.getElementById('notificationStatusText');
+            const statusEl = document.getElementById('notificationStatus');
+            const textEl = document.getElementById('notificationStatusText');
             
             if (!('Notification' in window)) {
-                notifStatus.className = 'status-dot inactive';
-                notifStatusText.textContent = 'ไม่รองรับ';
+                statusEl.className = 'status-dot inactive';
+                textEl.textContent = 'ไม่รองรับ';
                 return;
             }
             
@@ -924,102 +758,47 @@
             
             switch(permission) {
                 case 'granted':
-                    notifStatus.className = 'status-dot active';
-                    notifStatusText.textContent = 'อนุญาตแล้ว';
+                    statusEl.className = 'status-dot active';
+                    textEl.textContent = 'อนุญาตแล้ว';
                     break;
                 case 'denied':
-                    notifStatus.className = 'status-dot inactive';
-                    notifStatusText.textContent = 'ปฏิเสธแล้ว';
+                    statusEl.className = 'status-dot inactive';
+                    textEl.textContent = 'ปฏิเสธแล้ว';
                     break;
                 default:
-                    notifStatus.className = 'status-dot waiting';
-                    notifStatusText.textContent = 'รอการอนุญาต';
+                    statusEl.className = 'status-dot waiting';
+                    textEl.textContent = 'รอการอนุญาต';
             }
         }
         
-        // Request notification permission
-        async function requestNotificationPermission() {
-            if (!('Notification' in window)) {
-                showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'error');
-                return;
-            }
+        // ตรวจสอบสถานะเซิร์ฟเวอร์
+        function checkServerStatus() {
+            // ในที่นี้เราตรวจสอบว่าเซิร์ฟเวอร์จำลองทำงานอยู่หรือไม่
+            const serverRunning = serverSimulationInterval !== null;
             
-            try {
-                const permission = await Notification.requestPermission();
-                
-                checkNotificationPermission();
-                
-                if (permission === 'granted') {
-                    showToast('ได้รับอนุญาตการแจ้งเตือนแล้ว!', 'success');
-                    logMessage('ผู้ใช้อนุญาตการแจ้งเตือน', 'success');
-                    
-                    // Subscribe to push notifications
-                    await subscribeToPushNotifications();
-                    
-                    // Send test notification
-                    if (serviceWorkerRegistration) {
-                        serviceWorkerRegistration.showNotification('การแจ้งเตือนทำงานแล้ว!', {
-                            body: 'ตอนนี้คุณจะได้รับการแจ้งเตือนแม้ปิดเบราว์เซอร์',
-                            icon: 'icons/icon-192x192.png',
-                            badge: 'icons/icon-96x96.png',
-                            tag: 'permission-granted'
-                        });
-                    }
-                } else if (permission === 'denied') {
-                    showToast('การแจ้งเตือนถูกปฏิเสธ', 'warning');
-                    logMessage('ผู้ใช้ปฏิเสธการแจ้งเตือน', 'warning');
-                }
-            } catch (error) {
-                showToast('ขออนุญาตล้มเหลว', 'error');
-                logMessage(`ขออนุญาตล้มเหลว: ${error.message}`, 'error');
+            if (serverRunning) {
+                logMessage('เซิร์ฟเวอร์จำลองกำลังทำงาน', 'success');
             }
         }
         
-        // Subscribe to push notifications
-        async function subscribeToPushNotifications() {
-            if (!serviceWorkerRegistration || !('PushManager' in window)) {
-                return;
-            }
-            
-            try {
-                // Generate VAPID key (in production, get from server)
-                const vapidPublicKey = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
-                
-                // Convert to Uint8Array
-                const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-                
-                const subscription = await serviceWorkerRegistration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: applicationServerKey
-                });
-                
-                // Save subscription locally (in production, send to server)
-                localStorage.setItem('pushSubscription', JSON.stringify(subscription));
-                logMessage('ลงทะเบียน Push Notifications สำเร็จ', 'success');
-                
-            } catch (error) {
-                logMessage(`ลงทะเบียน Push ล้มเหลว: ${error.message}`, 'error');
-            }
-        }
-        
-        // Schedule a new notification
+        // ตั้งเวลาแจ้งเตือน
         async function scheduleNotification() {
             const title = document.getElementById('notificationTitle').value.trim();
             const message = document.getElementById('notificationMessage').value.trim();
             const minutes = parseInt(document.getElementById('scheduleTime').value);
             
-            // Validation
+            // ตรวจสอบข้อมูล
             if (!title || !message) {
                 showToast('กรุณากรอกหัวข้อและข้อความ', 'warning');
                 return;
             }
             
-            if (isNaN(minutes) || minutes < 1 || minutes > 10080) {
-                showToast('กรุณาระบุเวลาระหว่าง 1-10080 นาที', 'warning');
+            if (isNaN(minutes) || minutes < 1 || minutes > 1440) {
+                showToast('กรุณาระบุเวลาระหว่าง 1-1440 นาที', 'warning');
                 return;
             }
             
-            // Create notification object
+            // สร้างการแจ้งเตือน
             const notificationId = 'notification-' + Date.now();
             const scheduledTime = Date.now() + (minutes * 60000);
             
@@ -1033,32 +812,26 @@
                 status: 'scheduled'
             };
             
-            // Add to array
+            // เพิ่มลงในรายการ
             scheduledNotifications.push(notification);
             
-            // Save to storage
+            // บันทึกลง LocalStorage
             await saveScheduledNotification(notification);
             
-            // Update UI
+            // อัพเดท UI
             updateScheduledNotificationsUI();
             updateStatistics();
             
-            // Show confirmation
+            // แสดงข้อความยืนยัน
             const timeString = new Date(scheduledTime).toLocaleTimeString('th-TH', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
             
-            const dateString = new Date(scheduledTime).toLocaleDateString('th-TH', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric'
-            });
-            
             showToast(
                 'ตั้งเวลาแจ้งเตือนสำเร็จ!', 
                 'success',
-                `จะแจ้งเตือนวันที่ ${dateString} เวลา ${timeString}`
+                `จะแจ้งเตือนในอีก ${minutes} นาที (${timeString})`
             );
             
             logMessage(
@@ -1066,62 +839,31 @@
                 'info'
             );
             
-            // Send to service worker for background processing
+            // ส่งไปยังเซิร์ฟเวอร์จำลอง (ถ้าทำงานอยู่)
+            if (serverSimulationInterval) {
+                simulateServerSchedule(notification);
+            }
+            
+            // ส่งไปยัง Service Worker สำหรับ Background Sync
             if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
                 serviceWorkerRegistration.active.postMessage({
                     type: 'SCHEDULE_NOTIFICATION',
                     notification: notification
                 });
             }
+            
+            // ถ้ามี Firebase ก็ส่งไปที่ Firebase ด้วย
+            if (firebaseConfig) {
+                scheduleWithFirebase(notification);
+            }
         }
         
-        // Send immediate notification
-        async function sendImmediateNotification() {
-            const title = document.getElementById('notificationTitle').value.trim() || 'การแจ้งเตือน';
-            const message = document.getElementById('notificationMessage').value.trim() || 'ข้อความแจ้งเตือน';
-            
-            // Check permission
-            if (!('Notification' in window) || Notification.permission !== 'granted') {
-                showToast('กรุณาอนุญาตการแจ้งเตือนก่อน', 'warning');
-                return;
-            }
-            
-            // Send via service worker if available
-            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
-                serviceWorkerRegistration.showNotification(title, {
-                    body: message,
-                    icon: 'icons/icon-192x192.png',
-                    badge: 'icons/icon-96x96.png',
-                    tag: 'immediate-' + Date.now(),
-                    requireInteraction: true
-                });
-            } else {
-                // Fallback to regular notification
-                new Notification(title, {
-                    body: message,
-                    icon: 'icons/icon-192x192.png'
-                });
-            }
-            
-            // Play sound
-            playNotificationSound();
-            
-            // Show toast
-            showToast('ส่งการแจ้งเตือนแล้ว!', 'success');
-            
-            // Log
-            logMessage(`ส่งการแจ้งเตือนทันที: "${title}"`, 'info');
-            
-            // Update statistics
-            updateStatistics();
-        }
-        
-        // Update scheduled notifications UI
+        // อัพเดท UI สำหรับการแจ้งเตือนที่ตั้งเวลาไว้
         function updateScheduledNotificationsUI() {
             const container = document.getElementById('scheduledNotifications');
             const now = Date.now();
             
-            // Filter out past notifications
+            // กรองเฉพาะรายการที่ยังไม่ถึงเวลา
             const upcoming = scheduledNotifications.filter(n => 
                 n.status === 'scheduled' && n.scheduledTime > now
             );
@@ -1136,7 +878,7 @@
                 return;
             }
             
-            // Sort by time
+            // เรียงลำดับตามเวลา
             upcoming.sort((a, b) => a.scheduledTime - b.scheduledTime);
             
             let html = '';
@@ -1144,17 +886,12 @@
             upcoming.forEach(notification => {
                 const timeRemaining = notification.scheduledTime - now;
                 const minutesRemaining = Math.ceil(timeRemaining / 60000);
-                const hoursRemaining = Math.floor(minutesRemaining / 60);
-                const remainingText = hoursRemaining > 0 
-                    ? `${hoursRemaining} ชั่วโมง ${minutesRemaining % 60} นาที`
-                    : `${minutesRemaining} นาที`;
+                const isSoon = minutesRemaining <= 5;
                 
                 const timeString = new Date(notification.scheduledTime).toLocaleTimeString('th-TH', {
                     hour: '2-digit',
                     minute: '2-digit'
                 });
-                
-                const isSoon = minutesRemaining <= 30;
                 
                 html += `
                     <div class="scheduled-item ${isSoon ? 'soon' : ''}">
@@ -1164,12 +901,12 @@
                                 ${notification.message}
                             </div>
                             <div style="font-size: 0.8rem; color: #888; margin-top: 5px;">
-                                <i class="fas fa-clock"></i> ${timeString} (อีก ${remainingText})
+                                <i class="fas fa-clock"></i> ${timeString} (อีก ${minutesRemaining} นาที)
                             </div>
                         </div>
                         <button class="btn btn-danger" onclick="cancelNotification('${notification.id}')" 
-                                style="padding: 8px 12px; min-width: auto;">
-                            <i class="fas fa-times"></i>
+                                style="padding: 8px 12px; font-size: 0.9rem;">
+                            <i class="fas fa-times"></i> ยกเลิก
                         </button>
                     </div>
                 `;
@@ -1178,23 +915,23 @@
             container.innerHTML = html;
         }
         
-        // Cancel a scheduled notification
+        // ยกเลิกการแจ้งเตือน
         async function cancelNotification(notificationId) {
             const notification = scheduledNotifications.find(n => n.id === notificationId);
             
             if (!notification) return;
             
             if (confirm(`ยกเลิกการแจ้งเตือน "${notification.title}" ใช่หรือไม่?`)) {
-                // Update status
+                // อัพเดทสถานะ
                 notification.status = 'cancelled';
                 
-                // Remove from array
+                // ลบออกจากอาร์เรย์
                 scheduledNotifications = scheduledNotifications.filter(n => n.id !== notificationId);
                 
-                // Update storage
+                // อัพเดท storage
                 await updateScheduledNotification(notification);
                 
-                // Update UI
+                // อัพเดท UI
                 updateScheduledNotificationsUI();
                 updateStatistics();
                 
@@ -1203,41 +940,255 @@
             }
         }
         
-        // Clear all notifications
-        async function clearAllNotifications() {
-            if (scheduledNotifications.length === 0) {
-                showToast('ไม่มีการแจ้งเตือนที่ตั้งเวลาไว้', 'info');
+        // ส่งการแจ้งเตือนทันที
+        async function sendImmediateNotification() {
+            const title = document.getElementById('notificationTitle').value.trim() || 'การแจ้งเตือน';
+            const message = document.getElementById('notificationMessage').value.trim() || 'ข้อความแจ้งเตือน';
+            
+            // ตรวจสอบการอนุญาต
+            if (!('Notification' in window) || Notification.permission !== 'granted') {
+                const granted = await requestNotificationPermission();
+                if (!granted) return;
+            }
+            
+            // ส่งผ่าน Service Worker ถ้ามี
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                serviceWorkerRegistration.showNotification(title, {
+                    body: message,
+                    icon: 'icons/icon-192x192.png',
+                    badge: 'icons/icon-96x96.png',
+                    tag: 'immediate-' + Date.now(),
+                    requireInteraction: true,
+                    vibrate: [200, 100, 200]
+                });
+            } else {
+                // ส่งผ่าน Notification API
+                new Notification(title, {
+                    body: message,
+                    icon: 'icons/icon-192x192.png'
+                });
+            }
+            
+            // เล่นเสียง
+            playNotificationSound();
+            
+            // แสดง Toast
+            showToast('ส่งการแจ้งเตือนแล้ว!', 'success');
+            
+            // บันทึก Log
+            logMessage(`ส่งการแจ้งเตือนทันที: "${title}"`, 'info');
+            
+            // อัพเดทสถิติ
+            updateStatistics();
+        }
+        
+        // ขออนุญาตการแจ้งเตือน
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'error');
+                return false;
+            }
+            
+            try {
+                const permission = await Notification.requestPermission();
+                
+                // อัพเดท UI
+                checkNotificationPermission();
+                
+                if (permission === 'granted') {
+                    showToast('ได้รับอนุญาตการแจ้งเตือนแล้ว!', 'success');
+                    logMessage('ผู้ใช้อนุญาตการแจ้งเตือน', 'success');
+                    return true;
+                } else {
+                    showToast('การแจ้งเตือนถูกปฏิเสธ', 'warning');
+                    logMessage('ผู้ใช้ปฏิเสธการแจ้งเตือน', 'warning');
+                    return false;
+                }
+            } catch (error) {
+                showToast('ขออนุญาตล้มเหลว', 'error');
+                logMessage(`ขออนุญาตล้มเหลว: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // เริ่มเซิร์ฟเวอร์จำลอง
+        function startServerSimulation() {
+            if (serverSimulationInterval) {
+                clearInterval(serverSimulationInterval);
+                serverSimulationInterval = null;
+                showToast('หยุดเซิร์ฟเวอร์จำลองแล้ว', 'info');
+                logMessage('หยุดเซิร์ฟเวอร์จำลอง', 'info');
                 return;
             }
             
-            if (confirm(`ยกเลิกการแจ้งเตือนทั้งหมด ${scheduledNotifications.length} รายการใช่หรือไม่?`)) {
-                // Cancel all
-                for (const notification of scheduledNotifications) {
-                    notification.status = 'cancelled';
-                    await updateScheduledNotification(notification);
-                }
+            showToast('เริ่มเซิร์ฟเวอร์จำลองแล้ว', 'success');
+            logMessage('เริ่มเซิร์ฟเวอร์จำลองสำหรับทดสอบ Push Notifications', 'success');
+            
+            // จำลองเซิร์ฟเวอร์ที่ตรวจสอบการแจ้งเตือน
+            serverSimulationInterval = setInterval(() => {
+                checkAndSendScheduledNotifications();
+            }, 30000); // ตรวจสอบทุก 30 วินาที
+            
+            // ตรวจสอบทันที
+            setTimeout(checkAndSendScheduledNotifications, 1000);
+        }
+        
+        // ตรวจสอบและส่งการแจ้งเตือนที่ถึงเวลา (จำลองเซิร์ฟเวอร์)
+        function checkAndSendScheduledNotifications() {
+            const now = Date.now();
+            const dueNotifications = scheduledNotifications.filter(n => 
+                n.status === 'scheduled' && n.scheduledTime <= now
+            );
+            
+            console.log(`เซิร์ฟเวอร์จำลอง: พบ ${dueNotifications.length} การแจ้งเตือนที่ถึงเวลา`);
+            
+            dueNotifications.forEach(async (notification) => {
+                // ส่ง Push Notification จำลอง
+                await simulatePushFromServer(notification);
                 
-                scheduledNotifications = [];
+                // อัพเดทสถานะ
+                notification.status = 'sent';
+                await updateScheduledNotification(notification);
                 
-                // Update UI
+                // บันทึก Log
+                logMessage(`เซิร์ฟเวอร์ส่งการแจ้งเตือน: "${notification.title}"`, 'success');
+            });
+            
+            // อัพเดท UI
+            if (dueNotifications.length > 0) {
                 updateScheduledNotificationsUI();
                 updateStatistics();
-                
-                showToast('ยกเลิกการแจ้งเตือนทั้งหมดแล้ว', 'success');
-                logMessage('ยกเลิกการแจ้งเตือนทั้งหมด', 'warning');
             }
         }
         
-        // Start checking for notifications due
-        function startNotificationChecker() {
-            // Check every 30 seconds
-            setInterval(checkScheduledNotifications, 30000);
+        // จำลองการส่ง Push จากเซิร์ฟเวอร์
+        async function simulatePushFromServer(notification) {
+            // ส่งไปยัง Service Worker
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                // ส่ง message ไปยัง Service Worker
+                serviceWorkerRegistration.active.postMessage({
+                    type: 'PUSH_FROM_SERVER',
+                    notification: notification
+                });
+                
+                // หรือแสดง Notification โดยตรง
+                serviceWorkerRegistration.showNotification(notification.title, {
+                    body: `[จากเซิร์ฟเวอร์] ${notification.message}`,
+                    icon: 'icons/icon-192x192.png',
+                    badge: 'icons/icon-96x96.png',
+                    tag: `server-${notification.id}`,
+                    requireInteraction: true,
+                    data: {
+                        url: window.location.href,
+                        time: new Date().toISOString()
+                    },
+                    actions: [
+                        {
+                            action: 'open',
+                            title: 'เปิดแอป'
+                        }
+                    ]
+                });
+                
+                // เล่นเสียง
+                playNotificationSound();
+            }
+        }
+        
+        // จำลองการตั้งเวลาบนเซิร์ฟเวอร์
+        function simulateServerSchedule(notification) {
+            console.log('เซิร์ฟเวอร์จำลองได้รับตารางเวลา:', notification);
+            logMessage(`เซิร์ฟเวอร์รับการตั้งเวลา: "${notification.title}"`, 'info');
+        }
+        
+        // ทดสอบ Push Notification
+        async function simulatePushNotification() {
+            const title = 'ทดสอบ Push Notification';
+            const message = 'นี่คือการทดสอบ Push จากเซิร์ฟเวอร์จำลอง';
             
-            // Initial check
+            await simulatePushFromServer({
+                id: 'test-push-' + Date.now(),
+                title: title,
+                message: message,
+                scheduledTime: Date.now(),
+                status: 'sent'
+            });
+            
+            showToast('ส่งการทดสอบ Push แล้ว', 'success');
+            logMessage('ทดสอบ Push Notification จากเซิร์ฟเวอร์', 'info');
+        }
+        
+        // ตั้งค่า Firebase Guide
+        function setupFirebaseGuide() {
+            const guide = `
+                <h3>📱 ตั้งค่า Firebase Cloud Messaging (ฟรี)</h3>
+                <ol>
+                    <li>ไปที่ <a href="https://firebase.google.com" target="_blank">firebase.google.com</a></li>
+                    <li>สร้างโปรเจคใหม่</li>
+                    <li>เพิ่มเว็บแอปในโปรเจค</li>
+                    <li>ดาวน์โหลดไฟล์การกำหนดค่า</li>
+                    <li>เพิ่มโค้ด Firebase ในเว็บแอป</li>
+                    <li>ขออนุญาตการแจ้งเตือน</li>
+                    <li>ใช้ Firebase Functions สำหรับส่งการแจ้งเตือนตามเวลา</li>
+                </ol>
+                <p>🔥 Firebase ช่วยให้แอปแจ้งเตือนได้แม้ปิด Browser จริงๆ!</p>
+            `;
+            
+            showToast('เปิดคู่มือ Firebase แล้ว', 'info');
+            
+            // แสดงคู่มือในหน้าต่างใหม่
+            const guideWindow = window.open('', '_blank');
+            guideWindow.document.write(`
+                <html>
+                <head><title>คู่มือ Firebase FCM</title></head>
+                <body style="font-family: Arial; padding: 20px;">
+                    ${guide}
+                    <button onclick="window.close()" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        ปิดหน้าต่าง
+                    </button>
+                </body>
+                </html>
+            `);
+        }
+        
+        // ตั้งค่า Firebase
+        function setupFirebase() {
+            // ตรวจสอบว่ามี Firebase อยู่แล้วหรือไม่
+            if (typeof firebase !== 'undefined' && firebase.apps.length > 0) {
+                firebaseConfig = firebase.app().options;
+                logMessage('พบการตั้งค่า Firebase แล้ว', 'success');
+            } else {
+                // ลองโหลด Firebase config จาก localStorage
+                const savedConfig = localStorage.getItem('firebaseConfig');
+                if (savedConfig) {
+                    try {
+                        firebaseConfig = JSON.parse(savedConfig);
+                        logMessage('โหลดการตั้งค่า Firebase จาก localStorage', 'info');
+                    } catch (e) {
+                        console.log('ไม่สามารถโหลด Firebase config:', e);
+                    }
+                }
+            }
+        }
+        
+        // ตั้งเวลาด้วย Firebase (จำลอง)
+        function scheduleWithFirebase(notification) {
+            if (!firebaseConfig) return;
+            
+            console.log('จำลองการส่งไปยัง Firebase:', notification);
+            logMessage(`ส่งตารางเวลาไปยัง Firebase: "${notification.title}"`, 'info');
+        }
+        
+        // เริ่มตัวตรวจสอบการแจ้งเตือน
+        function startNotificationChecker() {
+            // ตรวจสอบทุก 10 วินาที (เมื่อแอปเปิดอยู่)
+            setInterval(checkScheduledNotifications, 10000);
+            
+            // ตรวจสอบทันที
             setTimeout(checkScheduledNotifications, 1000);
         }
         
-        // Check and send due notifications
+        // ตรวจสอบการแจ้งเตือน (เมื่อแอปเปิดอยู่)
         function checkScheduledNotifications() {
             const now = Date.now();
             const dueNotifications = scheduledNotifications.filter(n => 
@@ -1245,78 +1196,65 @@
             );
             
             dueNotifications.forEach(async (notification) => {
-                // Send notification
-                sendScheduledNotification(notification);
+                // ส่งการแจ้งเตือน
+                sendImmediateNotificationFromSchedule(notification);
                 
-                // Update status
+                // อัพเดทสถานะ
                 notification.status = 'sent';
                 await updateScheduledNotification(notification);
                 
-                // Log
                 logMessage(`ส่งการแจ้งเตือนตามเวลา: "${notification.title}"`, 'success');
             });
             
-            // Update UI
+            // อัพเดท UI
             if (dueNotifications.length > 0) {
                 updateScheduledNotificationsUI();
                 updateStatistics();
             }
         }
         
-        // Send a scheduled notification
-        function sendScheduledNotification(notification) {
-            // Send via service worker if available
+        // ส่งการแจ้งเตือนจากการตั้งเวลา
+        function sendImmediateNotificationFromSchedule(notification) {
+            // ตรวจสอบการอนุญาต
+            if (Notification.permission !== 'granted') return;
+            
+            // ส่งผ่าน Service Worker
             if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
                 serviceWorkerRegistration.showNotification(notification.title, {
                     body: notification.message,
                     icon: 'icons/icon-192x192.png',
-                    badge: 'icons/icon-96x96.png',
                     tag: notification.id,
-                    requireInteraction: true,
-                    actions: [
-                        {
-                            action: 'open',
-                            title: 'เปิดแอป'
-                        },
-                        {
-                            action: 'close',
-                            title: 'ปิด'
-                        }
-                    ],
-                    data: {
-                        url: window.location.href,
-                        id: notification.id
-                    }
+                    requireInteraction: true
                 });
-            } 
-            // Fallback to regular notification
-            else if (Notification.permission === 'granted') {
+            } else {
+                // ส่งตรง
                 new Notification(notification.title, {
                     body: notification.message,
-                    icon: 'icons/icon-192x192.png',
-                    tag: notification.id
+                    icon: 'icons/icon-192x192.png'
                 });
             }
             
-            // Play sound
+            // เล่นเสียง
             playNotificationSound();
             
-            // Show toast if app is open
+            // แสดง Toast
             showToast(notification.title, 'info', notification.message);
         }
         
-        // Play notification sound
+        // เล่นเสียงแจ้งเตือน
         function playNotificationSound() {
             try {
                 const audio = document.getElementById('notificationSound');
-                audio.currentTime = 0;
-                audio.play().catch(e => console.log('ไม่สามารถเล่นเสียง:', e));
+                if (audio) {
+                    audio.currentTime = 0;
+                    audio.play().catch(e => console.log('ไม่สามารถเล่นเสียง:', e));
+                }
             } catch (error) {
                 console.log('ข้อผิดพลาดเล่นเสียง:', error);
             }
         }
         
-        // Show toast notification
+        // แสดง Toast
         function showToast(title, type = 'info', message = '') {
             const container = document.getElementById('toastContainer');
             
@@ -1331,19 +1269,19 @@
             };
             
             toast.innerHTML = `
-                <div class="toast-icon">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--${type}); display: flex; align-items: center; justify-content: center; color: white;">
                     <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
                 </div>
-                <div class="toast-content">
+                <div style="flex: 1;">
                     <strong>${title}</strong>
-                    ${message ? `<div style="font-size: 0.9rem; margin-top: 5px;">${message}</div>` : ''}
+                    ${message ? `<div style="font-size: 0.9rem; margin-top: 5px; color: #666;">${message}</div>` : ''}
                 </div>
-                <button class="toast-close">&times;</button>
+                <button class="toast-close" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; padding: 5px;">&times;</button>
             `;
             
             container.appendChild(toast);
             
-            // Auto remove after 5 seconds
+            // ปิดอัตโนมัติหลังจาก 5 วินาที
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.style.opacity = '0';
@@ -1354,7 +1292,7 @@
                 }
             }, 5000);
             
-            // Close button
+            // ปิดเมื่อคลิก
             toast.querySelector('.toast-close').addEventListener('click', () => {
                 toast.style.opacity = '0';
                 toast.style.transform = 'translateX(100%)';
@@ -1364,7 +1302,7 @@
             });
         }
         
-        // Log message
+        // บันทึก Log
         function logMessage(message, type = 'info') {
             const container = document.getElementById('notificationLog');
             const now = new Date();
@@ -1383,19 +1321,19 @@
                 </div>
             `;
             
-            // Add to top
+            // เพิ่มที่ด้านบน
             container.insertBefore(logItem, container.firstChild);
             
-            // Limit to 50 items
+            // จำกัดจำนวน
             if (container.children.length > 50) {
                 container.removeChild(container.lastChild);
             }
             
-            // Save to storage
+            // บันทึกลง localStorage
             saveLogToStorage(message, type, timeString);
         }
         
-        // Clear log
+        // ล้าง Log
         function clearLog() {
             if (confirm('ล้างบันทึกการทำงานทั้งหมดใช่หรือไม่?')) {
                 const container = document.getElementById('notificationLog');
@@ -1414,9 +1352,10 @@
             }
         }
         
-        // Update statistics
+        // อัพเดทสถิติ
         function updateStatistics() {
             const now = Date.now();
+            
             const scheduled = scheduledNotifications.filter(n => 
                 n.status === 'scheduled' && n.scheduledTime > now
             ).length;
@@ -1443,7 +1382,7 @@
             }
         }
         
-        // Update current time
+        // อัพเดทเวลาปัจจุบัน
         function updateCurrentTime() {
             const now = new Date();
             const timeString = now.toLocaleTimeString('th-TH', {
@@ -1452,17 +1391,10 @@
                 second: '2-digit'
             });
             
-            const dateString = now.toLocaleDateString('th-TH', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            
-            document.getElementById('currentTime').textContent = `${timeString} - ${dateString}`;
+            document.getElementById('currentTime').textContent = timeString;
         }
         
-        // Update system status
+        // อัพเดทสถานะระบบ
         function updateSystemStatus() {
             checkServiceWorkerStatus();
             checkNotificationPermission();
@@ -1470,113 +1402,82 @@
             updateStatistics();
         }
         
-        // Setup PWA install prompt
+        // ตั้งค่า PWA Install Prompt
         function setupInstallPrompt() {
-            // Check if app is already installed
+            // ตรวจสอบว่าแอปติดตั้งแล้วหรือไม่
             if (window.matchMedia('(display-mode: standalone)').matches) {
-                isAppInstalled = true;
-                hideInstallBanner();
+                // แอปติดตั้งแล้ว
+                console.log('แอปติดตั้งเป็น PWA แล้ว');
+            }
+        }
+        
+        // จัดการก่อนแสดง Install Prompt
+        function handleBeforeInstallPrompt(e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // แสดงปุ่มติดตั้ง
+            const banner = document.getElementById('installBanner');
+            if (banner) {
+                banner.style.display = 'block';
+            }
+        }
+        
+        // จัดการหลังติดตั้งแอป
+        function handleAppInstalled() {
+            console.log('แอปติดตั้งแล้ว');
+            deferredPrompt = null;
+            
+            // ซ่อนปุ่มติดตั้ง
+            const banner = document.getElementById('installBanner');
+            if (banner) {
+                banner.style.display = 'none';
             }
             
-            // Listen for beforeinstallprompt
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                showInstallBanner();
-            });
+            showToast('ติดตั้งแอปสำเร็จ!', 'success');
+            logMessage('ผู้ใช้ติดตั้งแอปเป็น PWA', 'success');
         }
         
-        // Show install banner
-        function showInstallBanner() {
-            if (!isAppInstalled && deferredPrompt) {
-                const banner = document.getElementById('installBanner');
-                banner.classList.add('show');
-            }
-        }
-        
-        // Hide install banner
-        function hideInstallBanner() {
-            const banner = document.getElementById('installBanner');
-            banner.classList.remove('show');
-        }
-        
-        // Install PWA
+        // ติดตั้ง PWA
         async function installPWA() {
-            if (!deferredPrompt) return;
+            if (!deferredPrompt) {
+                showToast('ไม่สามารถติดตั้งแอปได้ในขณะนี้', 'warning');
+                return;
+            }
             
             deferredPrompt.prompt();
             
             const { outcome } = await deferredPrompt.userChoice;
             
             if (outcome === 'accepted') {
-                logMessage('ผู้ใช้ติดตั้งแอปเป็น PWA', 'success');
+                console.log('ผู้ใช้ยอมรับการติดตั้ง');
             } else {
-                logMessage('ผู้ใช้ปฏิเสธการติดตั้งแอป', 'warning');
+                console.log('ผู้ใช้ปฏิเสธการติดตั้ง');
             }
             
             deferredPrompt = null;
-            hideInstallBanner();
         }
         
-        // Helper function: Convert base64 to Uint8Array
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-            const base64 = (base64String + padding)
-                .replace(/-/g, '+')
-                .replace(/_/g, '/');
-            
-            const rawData = atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            
-            return outputArray;
-        }
+        // ==================== STORAGE FUNCTIONS ====================
         
-        // Storage Functions
+        // บันทึกการแจ้งเตือนที่ตั้งเวลาไว้
         async function saveScheduledNotification(notification) {
             try {
-                // Try IndexedDB first
-                if ('indexedDB' in window) {
-                    const db = await openDatabase();
-                    const tx = db.transaction('notifications', 'readwrite');
-                    const store = tx.objectStore('notifications');
-                    await store.put(notification);
-                    return;
-                }
-                
-                // Fallback to localStorage
                 const notifications = JSON.parse(localStorage.getItem('scheduledNotifications') || '[]');
                 notifications.push(notification);
                 localStorage.setItem('scheduledNotifications', JSON.stringify(notifications));
-                
             } catch (error) {
-                console.error('Save error:', error);
-                // Final fallback to in-memory only
+                console.error('Error saving notification:', error);
             }
         }
         
+        // โหลดการแจ้งเตือนที่ตั้งเวลาไว้
         async function loadScheduledNotifications() {
             try {
-                let notifications = [];
-                
-                // Try IndexedDB first
-                if ('indexedDB' in window) {
-                    const db = await openDatabase();
-                    const tx = db.transaction('notifications', 'readonly');
-                    const store = tx.objectStore('notifications');
-                    const all = await store.getAll();
-                    notifications = all || [];
-                } 
-                // Fallback to localStorage
-                else {
-                    notifications = JSON.parse(localStorage.getItem('scheduledNotifications') || '[]');
-                }
-                
-                // Filter out cancelled and sent
+                const notifications = JSON.parse(localStorage.getItem('scheduledNotifications') || '[]');
                 const now = Date.now();
+                
+                // กรองเฉพาะรายการที่ยังไม่ถึงเวลา
                 scheduledNotifications = notifications.filter(n => 
                     n.status === 'scheduled' && n.scheduledTime > now
                 );
@@ -1584,26 +1485,17 @@
                 updateScheduledNotificationsUI();
                 updateStatistics();
                 
-                logMessage(`โหลดการแจ้งเตือนที่ตั้งเวลาไว้ ${scheduledNotifications.length} รายการ`, 'info');
+                console.log(`โหลด ${scheduledNotifications.length} การแจ้งเตือนที่ตั้งเวลาไว้`);
                 
             } catch (error) {
-                console.error('Load error:', error);
+                console.error('Error loading notifications:', error);
                 scheduledNotifications = [];
             }
         }
         
+        // อัพเดทการแจ้งเตือน
         async function updateScheduledNotification(notification) {
             try {
-                // Try IndexedDB
-                if ('indexedDB' in window) {
-                    const db = await openDatabase();
-                    const tx = db.transaction('notifications', 'readwrite');
-                    const store = tx.objectStore('notifications');
-                    await store.put(notification);
-                    return;
-                }
-                
-                // Update localStorage
                 const notifications = JSON.parse(localStorage.getItem('scheduledNotifications') || '[]');
                 const index = notifications.findIndex(n => n.id === notification.id);
                 
@@ -1611,46 +1503,26 @@
                     notifications[index] = notification;
                     localStorage.setItem('scheduledNotifications', JSON.stringify(notifications));
                 }
-                
             } catch (error) {
-                console.error('Update error:', error);
+                console.error('Error updating notification:', error);
             }
         }
         
+        // บันทึก Log
         function saveLogToStorage(message, type, timeString) {
             try {
                 const logs = JSON.parse(localStorage.getItem('notificationLogs') || '[]');
                 logs.unshift({ message, type, timeString, timestamp: Date.now() });
                 
-                // Keep only last 100 logs
+                // จำกัดจำนวน
                 if (logs.length > 100) {
                     logs.pop();
                 }
                 
                 localStorage.setItem('notificationLogs', JSON.stringify(logs));
             } catch (error) {
-                console.error('Save log error:', error);
+                console.error('Error saving log:', error);
             }
-        }
-        
-        // IndexedDB setup
-        async function openDatabase() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('NotificationApp', 1);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve(request.result);
-                
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    
-                    if (!db.objectStoreNames.contains('notifications')) {
-                        const store = db.createObjectStore('notifications', { keyPath: 'id' });
-                        store.createIndex('scheduledTime', 'scheduledTime');
-                        store.createIndex('status', 'status');
-                    }
-                };
-            });
         }
     </script>
 </body>
