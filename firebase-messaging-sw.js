@@ -1,92 +1,36 @@
-// firebase-messaging-sw.js
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js');
-
-// Firebase configuration (same as in firebase-config.js)
+// firebase-config.js
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  vapidKey: "YOUR_VAPID_KEY"
+  // ⚠️ เปลี่ยนค่าตรงนี้เป็นของ Firebase Project คุณ
+   apiKey: "AIzaSyAh9wbVVHoYF3XN3sBw5M3hYVxe4fihpOk",
+  authDomain: "servicenotify-57f39.firebaseapp.com",
+  databaseURL: "https://servicenotify-57f39-default-rtdb.firebaseio.com",
+  projectId: "servicenotify-57f39",
+  storageBucket: "servicenotify-57f39.firebasestorage.app",
+  messagingSenderId: "548978955126",
+  appId: "1:548978955126:web:f4897866d67b186a056057",
+  measurementId: "G-7QLVB1X8K3",
+  vapidKey: "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U"
 };
 
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+// สำหรับทดสอบ ถ้ายังไม่ได้ตั้งค่า Firebase
+const mockFirebaseConfig = {
+  apiKey: "test-key",
+  authDomain: "test.firebaseapp.com",
+  projectId: "test-project",
+  storageBucket: "test.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:test",
+  vapidKey: "test-vapid-key"
+};
 
-// Retrieve Firebase Messaging instance
-const messaging = firebase.messaging();
+// ใช้ mock ถ้า config ไม่ถูกต้อง
+let configToUse = firebaseConfig;
 
-// Handle background messages
-messaging.onBackgroundMessage((payload) => {
-  console.log('[Firebase Service Worker] Received background message:', payload);
-  
-  // Customize notification here
-  const notificationTitle = payload.notification?.title || 'การแจ้งเตือนใหม่';
-  const notificationOptions = {
-    body: payload.notification?.body || 'คุณมีการแจ้งเตือนใหม่',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-96x96.png',
-    tag: payload.data?.id || 'firebase-notification',
-    data: payload.data || {},
-    requireInteraction: true,
-    actions: [
-      {
-        action: 'open',
-        title: 'เปิดแอป'
-      },
-      {
-        action: 'close',
-        title: 'ปิด'
-      }
-    ],
-    vibrate: [200, 100, 200]
-  };
-  
-  return self.registration.showNotification(notificationTitle, notificationOptions);
-});
+// ตรวจสอบว่ามีค่า config จริงหรือไม่
+if (!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("ABCDEF")) {
+  console.warn("⚠️  Using mock Firebase config. Please update firebase-config.js");
+  configToUse = mockFirebaseConfig;
+}
 
-// Handle notification click
-self.addEventListener('notificationclick', (event) => {
-  console.log('[Firebase Service Worker] Notification clicked:', event.notification.tag);
-  
-  event.notification.close();
-  
-  // Handle action buttons
-  if (event.action === 'open') {
-    // Open or focus the app
-    event.waitUntil(
-      clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true
-      })
-      .then((clientList) => {
-        // Check if there's already a window open
-        for (const client of clientList) {
-          if (client.url.includes(self.registration.scope) && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        
-        // Open new window
-        if (clients.openWindow) {
-          return clients.openWindow('/');
-        }
-      })
-    );
-  }
-  
-  // Send message to all clients
-  event.waitUntil(
-    self.clients.matchAll().then((clients) => {
-      clients.forEach((client) => {
-        client.postMessage({
-          type: 'FIREBASE_NOTIFICATION_CLICKED',
-          notification: event.notification
-        });
-      });
-    })
-  );
-});
+// กำหนดเป็น global variable
+window.firebaseConfig = configToUse;
