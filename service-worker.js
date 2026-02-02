@@ -1,20 +1,21 @@
 // service-worker.js
-const CACHE_NAME = 'notification-app-v2.0';
+const CACHE_NAME = 'notification-app-v3.0';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/firebase-config.js',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
 ];
 
-// ติดตั้ง Service Worker
+// Install Service Worker
 self.addEventListener('install', event => {
   console.log('[Service Worker] กำลังติดตั้ง...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('[Service Worker] กำลังแคชไฟล์แอป');
+        console.log('[Service Worker] แคชไฟล์แอป');
         return cache.addAll(APP_SHELL);
       })
       .then(() => {
@@ -24,7 +25,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// เปิดใช้งาน Service Worker
+// Activate Service Worker
 self.addEventListener('activate', event => {
   console.log('[Service Worker] กำลังเปิดใช้งาน...');
   
@@ -46,66 +47,28 @@ self.addEventListener('activate', event => {
   );
 });
 
-// ดักจับการเรียกข้อมูล
-self.addEventListener('fetch', event => {
-  // ข้ามคำขอที่ไม่ใช่ GET
-  if (event.request.method !== 'GET') return;
-  
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // ถ้ามีในแคชให้ส่งกลับ
-        if (response) {
-          return response;
-        }
-        
-        // ถ้าไม่มีให้เรียกจากเน็ตเวิร์ก
-        return fetch(event.request)
-          .then(response => {
-            // ตรวจสอบว่าควรแคชหรือไม่
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-            
-            // โคลน response เพื่อแคช
-            const responseToCache = response.clone();
-            
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-            
-            return response;
-          })
-          .catch(() => {
-            // ถ้าไม่สามารถเชื่อมต่อได้ อาจแสดงหน้า offline
-            console.log('[Service Worker] ไม่สามารถโหลดได้:', event.request.url);
-          });
-      })
-  );
-});
-
-// จัดการ Push Notifications
+// Handle Push Notifications
 self.addEventListener('push', event => {
   console.log('[Service Worker] ได้รับ Push Notification');
   
   let data = {
     title: 'การแจ้งเตือนใหม่',
-    body: 'คุณมีการแจ้งเตือนใหม่จากเว็บแอป',
-    icon: 'icons/icon-192x192.png',
-    badge: 'icons/icon-96x96.png',
+    body: 'คุณมีการแจ้งเตือนใหม่จากแอป',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-96x96.png',
     tag: 'push-notification',
     timestamp: Date.now(),
-    requireInteraction: true
+    requireInteraction: true,
+    vibrate: [200, 100, 200]
   };
   
-  // พยายามอ่านข้อมูลจาก Push
+  // Parse push data
   if (event.data) {
     try {
       const pushData = event.data.json();
       data = { ...data, ...pushData };
     } catch (e) {
-      console.log('[Service Worker] ข้อมูล Push ไม่ใช่ JSON, ใช้ข้อความธรรมดา');
+      console.log('[Service Worker] ข้อมูล Push ไม่ใช่ JSON');
       data.body = event.data.text() || data.body;
     }
   }
@@ -120,15 +83,16 @@ self.addEventListener('push', event => {
     requireInteraction: data.requireInteraction || true,
     actions: [
       {
-        action: 'open',
-        title: 'เปิดแอป'
+        action: 'view',
+        title: 'ดู'
       },
       {
-        action: 'dismiss',
+        action: 'close',
         title: 'ปิด'
       }
     ],
-    vibrate: [200, 100, 200, 100, 200]
+    vibrate: [200, 100, 200, 100, 200],
+    silent: false
   };
   
   event.waitUntil(
@@ -136,43 +100,42 @@ self.addEventListener('push', event => {
   );
 });
 
-// จัดการเมื่อคลิกที่ Notification
+// Handle Notification Click
 self.addEventListener('notificationclick', event => {
   console.log('[Service Worker] คลิกที่ Notification:', event.notification.tag);
   
   event.notification.close();
   
-  // ตรวจสอบว่าเป็นการคลิกปุ่ม action หรือไม่
-  if (event.action === 'open') {
-    // เปิดหรือโฟกัสที่แอป
+  // Handle action buttons
+  if (event.action === 'view') {
+    // Open or focus the app
     event.waitUntil(
       clients.matchAll({
         type: 'window',
         includeUncontrolled: true
       })
       .then(clientList => {
-        // หาแอปที่เปิดอยู่แล้ว
+        // Find app window
         for (const client of clientList) {
           if (client.url.includes(self.registration.scope) && 'focus' in client) {
             return client.focus();
           }
         }
         
-        // ถ้าไม่มีแอปที่เปิดอยู่ ให้เปิดใหม่
+        // Open new window
         if (clients.openWindow) {
           return clients.openWindow('/');
         }
       })
     );
-  } else if (event.action === 'dismiss') {
-    // ไม่ทำอะไร เพียงปิดการแจ้งเตือน
+  } else if (event.action === 'close') {
+    // Just close the notification
     console.log('[Service Worker] ปิดการแจ้งเตือน');
   } else {
-    // คลิกที่ตัวการแจ้งเตือนเอง (ไม่ใช่ปุ่ม action)
+    // Default click (notification body)
     event.waitUntil(
       clients.matchAll({
-        type: 'window',
-        includeUncontrolled: true
+        type: 'window'
       })
       .then(clientList => {
         if (clientList.length > 0) {
@@ -183,9 +146,21 @@ self.addEventListener('notificationclick', event => {
       })
     );
   }
+  
+  // Send message to page
+  event.waitUntil(
+    self.clients.matchAll().then(clients => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'NOTIFICATION_CLICKED',
+          notification: event.notification
+        });
+      });
+    })
+  );
 });
 
-// จัดการ Background Sync
+// Handle Background Sync
 self.addEventListener('sync', event => {
   console.log('[Service Worker] Background Sync:', event.tag);
   
@@ -196,20 +171,23 @@ self.addEventListener('sync', event => {
   }
 });
 
-// ฟังก์ชันซิงค์การแจ้งเตือน
+// Sync notifications
 async function syncNotifications() {
   console.log('[Service Worker] กำลังซิงค์การแจ้งเตือน...');
   
   try {
-    // ในแอปจริง คุณอาจดึงข้อมูลจากเซิร์ฟเวอร์ที่นี่
-    // สำหรับตัวอย่างนี้ เราจะแค่ตรวจสอบการแจ้งเตือนที่ตั้งเวลาไว้
+    // Get pending notifications from IndexedDB
+    const pendingNotifications = await getPendingNotifications();
     
-    // ส่งการแจ้งเตือนว่ากำลังซิงค์
-    await self.registration.showNotification('กำลังซิงค์ข้อมูล', {
-      body: 'ระบบกำลังซิงค์ข้อมูลการแจ้งเตือน',
-      icon: 'icons/icon-192x192.png',
-      tag: 'sync-' + Date.now()
-    });
+    if (pendingNotifications.length > 0) {
+      // Send to server
+      await sendNotificationsToServer(pendingNotifications);
+      
+      // Clear pending notifications
+      await clearPendingNotifications();
+      
+      console.log(`[Service Worker] ซิงค์สำเร็จ: ${pendingNotifications.length} การแจ้งเตือน`);
+    }
     
     return true;
   } catch (error) {
@@ -218,30 +196,19 @@ async function syncNotifications() {
   }
 }
 
-// รับข้อความจากหน้าเว็บ
+// Handle messages from page
 self.addEventListener('message', event => {
   console.log('[Service Worker] ได้รับข้อความ:', event.data);
   
-  const { type, data, notification } = event.data;
+  const { type, data } = event.data;
   
   switch (type) {
     case 'SCHEDULE_NOTIFICATION':
-      console.log('[Service Worker] ได้รับการตั้งเวลา:', notification);
-      handleScheduledNotification(notification);
+      scheduleBackgroundNotification(data);
       break;
       
-    case 'PUSH_FROM_SERVER':
-      console.log('[Service Worker] ได้รับ Push จากเซิร์ฟเวอร์:', notification);
-      showServerNotification(notification);
-      break;
-      
-    case 'TEST_NOTIFICATION':
-      console.log('[Service Worker] ทดสอบการแจ้งเตือน');
-      self.registration.showNotification('ทดสอบจาก Service Worker', {
-        body: 'นี่คือการทดสอบการแจ้งเตือน',
-        icon: 'icons/icon-192x192.png',
-        tag: 'test-' + Date.now()
-      });
+    case 'GET_NOTIFICATIONS':
+      event.ports[0].postMessage({ notifications: [] });
       break;
       
     default:
@@ -249,50 +216,30 @@ self.addEventListener('message', event => {
   }
 });
 
-// จัดการการแจ้งเตือนที่ตั้งเวลาไว้
-function handleScheduledNotification(notification) {
-  console.log('[Service Worker] จัดการการแจ้งเตือนที่ตั้งเวลาไว้:', notification.id);
+// Schedule notification in background
+function scheduleBackgroundNotification(notification) {
+  console.log('[Service Worker] ตั้งเวลาในพื้นหลัง:', notification);
   
-  // บันทึกลง IndexedDB สำหรับการเข้าถึงในพื้นหลัง
-  saveToIndexedDB(notification)
+  // Save to IndexedDB
+  saveToIndexedDB('pending_notifications', notification)
     .then(() => {
-      console.log('[Service Worker] บันทึกการแจ้งเตือนสำเร็จ');
+      console.log('[Service Worker] บันทึกการแจ้งเตือนรอดำเนินการ');
       
-      // พยายามตั้งค่า Periodic Sync สำหรับการตรวจสอบ
-      setupPeriodicSync();
+      // Register sync
+      if ('SyncManager' in self.registration) {
+        self.registration.sync.register('sync-notifications')
+          .then(() => {
+            console.log('[Service Worker] ลงทะเบียน Background Sync');
+          });
+      }
     })
     .catch(error => {
-      console.error('[Service Worker] บันทึกการแจ้งเตือนล้มเหลว:', error);
+      console.error('[Service Worker] บันทึกล้มเหลว:', error);
     });
 }
 
-// แสดงการแจ้งเตือนจากเซิร์ฟเวอร์
-function showServerNotification(notification) {
-  console.log('[Service Worker] แสดงการแจ้งเตือนจากเซิร์ฟเวอร์:', notification.title);
-  
-  self.registration.showNotification(notification.title, {
-    body: `[จากเซิร์ฟเวอร์] ${notification.message}`,
-    icon: 'icons/icon-192x192.png',
-    badge: 'icons/icon-96x96.png',
-    tag: notification.id,
-    timestamp: notification.scheduledTime || Date.now(),
-    requireInteraction: true,
-    data: {
-      id: notification.id,
-      fromServer: true
-    },
-    actions: [
-      {
-        action: 'open',
-        title: 'เปิดแอป'
-      }
-    ],
-    vibrate: [200, 100, 200]
-  });
-}
-
-// บันทึกลง IndexedDB
-async function saveToIndexedDB(notification) {
+// IndexedDB Helper Functions
+async function saveToIndexedDB(storeName, data) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('NotificationDB', 1);
     
@@ -301,97 +248,21 @@ async function saveToIndexedDB(notification) {
     request.onsuccess = (event) => {
       const db = event.target.result;
       
-      if (!db.objectStoreNames.contains('notifications')) {
-        const transaction = db.transaction(['notifications'], 'readwrite');
-        const store = transaction.objectStore('notifications');
-        
-        // สร้าง index
-        if (!store.indexNames.contains('scheduledTime')) {
-          store.createIndex('scheduledTime', 'scheduledTime');
-        }
+      if (!db.objectStoreNames.contains(storeName)) {
+        db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
       }
       
-      const transaction = db.transaction(['notifications'], 'readwrite');
-      const store = transaction.objectStore('notifications');
-      const addRequest = store.add(notification);
+      const transaction = db.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      const addRequest = store.add(data);
       
       addRequest.onsuccess = () => resolve();
       addRequest.onerror = () => reject(addRequest.error);
     };
-    
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      
-      if (!db.objectStoreNames.contains('notifications')) {
-        const store = db.createObjectStore('notifications', { keyPath: 'id' });
-        store.createIndex('scheduledTime', 'scheduledTime');
-        store.createIndex('status', 'status');
-      }
-    };
   });
 }
 
-// ตั้งค่า Periodic Sync
-function setupPeriodicSync() {
-  if ('periodicSync' in self.registration) {
-    self.registration.periodicSync.register('check-notifications', {
-      minInterval: 24 * 60 * 60 * 1000 // 1 วัน (ขั้นต่ำ)
-    }).then(() => {
-      console.log('[Service Worker] ตั้งค่า Periodic Sync สำเร็จ');
-    }).catch(error => {
-      console.error('[Service Worker] ตั้งค่า Periodic Sync ล้มเหลว:', error);
-    });
-  }
-}
-
-// ตรวจสอบการแจ้งเตือนเป็นระยะ (สำหรับเบราว์เซอร์ที่ไม่รองรับ Periodic Sync)
-setInterval(() => {
-  checkScheduledNotifications().then(count => {
-    if (count > 0) {
-      console.log(`[Service Worker] ส่ง ${count} การแจ้งเตือนจากพื้นหลัง`);
-    }
-  });
-}, 60 * 1000); // ทุก 1 นาที
-
-// ตรวจสอบการแจ้งเตือนที่ถึงเวลา
-async function checkScheduledNotifications() {
-  try {
-    const notifications = await getScheduledNotificationsFromDB();
-    const now = Date.now();
-    
-    const dueNotifications = notifications.filter(notification => 
-      notification.status === 'scheduled' && 
-      notification.scheduledTime <= now
-    );
-    
-    console.log(`[Service Worker] พบ ${dueNotifications.length} การแจ้งเตือนที่ถึงเวลา`);
-    
-    for (const notification of dueNotifications) {
-      await self.registration.showNotification(notification.title, {
-        body: notification.message,
-        icon: 'icons/icon-192x192.png',
-        tag: notification.id,
-        timestamp: notification.scheduledTime,
-        requireInteraction: true
-      });
-      
-      // อัพเดทสถานะ
-      notification.status = 'sent';
-      await updateNotificationInDB(notification);
-      
-      console.log(`[Service Worker] ส่งการแจ้งเตือน: ${notification.title}`);
-    }
-    
-    return dueNotifications.length;
-    
-  } catch (error) {
-    console.error('[Service Worker] ตรวจสอบการแจ้งเตือนล้มเหลว:', error);
-    return 0;
-  }
-}
-
-// ดึงการแจ้งเตือนที่ตั้งเวลาไว้จาก DB
-async function getScheduledNotificationsFromDB() {
+async function getPendingNotifications() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('NotificationDB', 1);
     
@@ -400,25 +271,22 @@ async function getScheduledNotificationsFromDB() {
     request.onsuccess = (event) => {
       const db = event.target.result;
       
-      if (!db.objectStoreNames.contains('notifications')) {
+      if (!db.objectStoreNames.contains('pending_notifications')) {
         resolve([]);
         return;
       }
       
-      const transaction = db.transaction(['notifications'], 'readonly');
-      const store = transaction.objectStore('notifications');
-      const index = store.index('status');
+      const transaction = db.transaction(['pending_notifications'], 'readonly');
+      const store = transaction.objectStore('pending_notifications');
+      const getAllRequest = store.getAll();
       
-      const getRequest = index.getAll('scheduled');
-      
-      getRequest.onsuccess = () => resolve(getRequest.result || []);
-      getRequest.onerror = () => reject(getRequest.error);
+      getAllRequest.onsuccess = () => resolve(getAllRequest.result || []);
+      getAllRequest.onerror = () => reject(getAllRequest.error);
     };
   });
 }
 
-// อัพเดทการแจ้งเตือนใน DB
-async function updateNotificationInDB(notification) {
+async function clearPendingNotifications() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('NotificationDB', 1);
     
@@ -427,23 +295,42 @@ async function updateNotificationInDB(notification) {
     request.onsuccess = (event) => {
       const db = event.target.result;
       
-      const transaction = db.transaction(['notifications'], 'readwrite');
-      const store = transaction.objectStore('notifications');
-      const putRequest = store.put(notification);
+      if (!db.objectStoreNames.contains('pending_notifications')) {
+        resolve();
+        return;
+      }
       
-      putRequest.onsuccess = () => resolve();
-      putRequest.onerror = () => reject(putRequest.error);
+      const transaction = db.transaction(['pending_notifications'], 'readwrite');
+      const store = transaction.objectStore('pending_notifications');
+      const clearRequest = store.clear();
+      
+      clearRequest.onsuccess = () => resolve();
+      clearRequest.onerror = () => reject(clearRequest.error);
     };
   });
 }
 
-// Background Fetch (ถ้ารองรับ)
-if ('backgroundFetch' in self.registration) {
-  self.addEventListener('backgroundfetchsuccess', event => {
-    console.log('[Service Worker] Background Fetch สำเร็จ:', event.registration.id);
-  });
+async function sendNotificationsToServer(notifications) {
+  // In production, send to your server
+  console.log('[Service Worker] ส่งการแจ้งเตือนไปเซิร์ฟเวอร์:', notifications);
   
-  self.addEventListener('backgroundfetchfail', event => {
-    console.log('[Service Worker] Background Fetch ล้มเหลว:', event.registration.id);
+  // Simulate server call
+  return new Promise(resolve => {
+    setTimeout(() => {
+      console.log('[Service Worker] ส่งสำเร็จ');
+      resolve();
+    }, 1000);
   });
 }
+
+// Periodic background task (check every 5 minutes)
+setInterval(async () => {
+  console.log('[Service Worker] ตรวจสอบพื้นหลัง...');
+  
+  // Check for scheduled notifications
+  const pending = await getPendingNotifications();
+  
+  if (pending.length > 0) {
+    console.log(`[Service Worker] พบ ${pending.length} การแจ้งเตือนรอดำเนินการ`);
+  }
+}, 5 * 60 * 1000);
