@@ -1,81 +1,76 @@
 {
-  "name": "ระบบแจ้งเตือนอัจฉริยะ",
+  "name": "แอปแจ้งเตือนอัจฉริยะ",
   "short_name": "แจ้งเตือน",
-  "description": "เว็บแอปแจ้งเตือนที่ทำงานในพื้นหลังได้ แม้ปิดเบราว์เซอร์",
-  "start_url": "./index.html",
+  "description": "แอปแจ้งเตือนที่ทำงานได้แม้ปิดเบราว์เซอร์ มีกระดิ่งแสดงจำนวนเหมือนแอปไลน์",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#2196F3",
+  "background_color": "#2C3E50",
   "theme_color": "#2196F3",
   "orientation": "portrait",
-  "scope": "./",
+  "scope": "/",
   "lang": "th",
-  "dir": "ltr",
   "categories": ["productivity", "utilities"],
+  
   "icons": [
     {
-      "src": "icons/icon-72x72.png",
+      "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-96x96.png",
+      "src": "/icons/icon-96x96.png",
       "sizes": "96x96",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-128x128.png",
+      "src": "/icons/icon-128x128.png",
       "sizes": "128x128",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-144x144.png",
+      "src": "/icons/icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-152x152.png",
+      "src": "/icons/icon-152x152.png",
       "sizes": "152x152",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-192x192.png",
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-384x384.png",
+      "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-512x512.png",
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
+  
   "screenshots": [
     {
-      "src": "screenshots/screenshot1.png",
+      "src": "/screenshots/screenshot1.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide",
-      "label": "หน้าจอหลักของแอป"
+      "form_factor": "wide"
     }
   ],
+  
   "shortcuts": [
     {
-      "name": "ตั้งเวลาแจ้งเตือนใหม่",
-      "short_name": "ตั้งเวลา",
-      "description": "ตั้งเวลาแจ้งเตือนใหม่",
-      "url": "./index.html?action=schedule",
-      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "name": "สร้างการแจ้งเตือน",
+      "short_name": "สร้าง",
+      "description": "สร้างการแจ้งเตือนใหม่",
+      "url": "/?action=new",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "ดูการแจ้งเตือน",
-      "short_name": "ดูแจ้งเตือน",
-      "description": "ดูการแจ้งเตือนที่ตั้งเวลาไว้",
-      "url": "./index.html?action=view",
-      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
-    }
-  ]
-}
+      "
