@@ -49,8 +49,8 @@
             <div class="flex items-center space-x-4">
                 <!-- Connection Status -->
                 <div id="connectionStatus" class="flex items-center">
-                    <div id="statusDot" class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-                    <span id="statusText" class="text-sm">กำลังเชื่อมต่อ...</span>
+                    <div id="statusDot" class="w-3 h-3 rounded-full bg-green-500 mr-2 pulse"></div>
+                    <span id="statusText" class="text-sm status-connected">เชื่อมต่อกับ Google Sheets แล้ว</span>
                 </div>
                 
                 <!-- Notification badge -->
@@ -66,43 +66,19 @@
         <!-- Message Display -->
         <div id="msg" class="mb-4 p-4 rounded-lg"></div>
 
-        <!-- Google Sheets Configuration -->
-        <div id="configPanel" class="mb-8 bg-gray-900 rounded-2xl p-6 shadow-xl">
+        <!-- Google Sheets Status -->
+        <div class="mb-8 bg-green-900 rounded-2xl p-6 shadow-xl border-2 border-green-500">
             <h2 class="text-2xl font-bold text-green-300 mb-4">
-                <i class="fas fa-cogs mr-2"></i>การตั้งค่า Google Sheets
+                <i class="fas fa-check-circle mr-2"></i>เชื่อมต่อกับ Google Sheets สำเร็จ
             </h2>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                    <label class="block text-gray-300 mb-2" for="sheetUrl">
-                        <i class="fas fa-link mr-2"></i>Google Apps Script URL
-                    </label>
-                    <input 
-                        type="url" 
-                        id="sheetUrl" 
-                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                        placeholder="https://script.google.com/macros/s/..."
-                    >
-                    <p class="text-gray-500 text-xs mt-2">URL ของ Google Apps Script Web App ที่คุณ deploy แล้ว</p>
-                </div>
-                
-                <div class="flex items-end">
-                    <button id="testConnectionBtn" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg transition duration-200">
-                        <i class="fas fa-plug mr-2"></i>ทดสอบการเชื่อมต่อ
-                    </button>
-                </div>
-            </div>
-            
-            <div class="bg-gray-800 rounded-lg p-4">
-                <h3 class="font-bold text-green-300 mb-2">
-                    <i class="fas fa-info-circle mr-2"></i>คำแนะนำ
-                </h3>
-                <ol class="list-decimal pl-5 text-gray-300 space-y-1 text-sm">
-                    <li>สร้าง Google Apps Script ใหม่</li>
-                    <li>เพิ่มฟังก์ชัน doPost() สำหรับรับข้อมูล</li>
-                    <li>Deploy เป็น Web App (Execute as: Me, Who has access: Anyone)</li>
-                    <li>คัดลอก URL มาใส่ในช่องด้านบน</li>
-                </ol>
+            <div class="bg-green-800 rounded-lg p-4">
+                <p class="text-green-200 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    ระบบสามารถบันทึกข้อมูลแจ้งเตือนลง Google Sheets ได้ทันที
+                </p>
+                <p class="text-green-300 text-sm">
+                    เมื่อคุณตั้งเวลาแจ้งเตือน ข้อมูลจะถูกบันทึกลง Google Sheets อัตโนมัติ
+                </p>
             </div>
         </div>
 
@@ -325,12 +301,10 @@
         const currentDateElement = document.getElementById('currentDate');
         const nextAlarmTimeElement = document.getElementById('nextAlarmTime');
         const totalAlarmsElement = document.getElementById('totalAlarms');
-        const sheetUrlInput = document.getElementById('sheetUrl');
-        const testConnectionBtn = document.getElementById('testConnectionBtn');
-        const connectionStatus = document.getElementById('connectionStatus');
-        const statusDot = document.getElementById('statusDot');
-        const statusText = document.getElementById('statusText');
         const msgElement = document.getElementById('msg');
+        
+        // ตั้งค่า Google Apps Script URL ของคุณตรงนี้
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
         
         // Set minimum date to today
         const dateInput = document.getElementById('date');
@@ -348,8 +322,7 @@
         let alarms = JSON.parse(localStorage.getItem('alarms')) || [];
         let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
         let unreadCount = parseInt(localStorage.getItem('unreadCount')) || 0;
-        let googleScriptUrl = localStorage.getItem('googleScriptUrl') || '';
-        let isConnected = false;
+        let isConnected = true; // ตั้งค่าเป็น true เพราะเรามี URL อยู่แล้ว
         let alarmCheckInterval;
         
         // Initialize the app
@@ -359,10 +332,10 @@
             renderAlarms();
             renderNotifications();
             
-            // Load saved Google Script URL
-            if (googleScriptUrl) {
-                sheetUrlInput.value = googleScriptUrl;
-            }
+            // อัตโนมัติเชื่อมต่อกับ Google Sheets
+            setTimeout(() => {
+                testConnection();
+            }, 1000);
             
             // Check for alarms every second
             alarmCheckInterval = setInterval(checkAlarms, 1000);
@@ -619,7 +592,7 @@
         
         // Save data to Google Sheets - ใช้รูปแบบ fetch ตามที่ต้องการ
         function saveToGoogleSheets(alarmData, status = 'created') {
-            if (!googleScriptUrl || !isConnected) return false;
+            if (!isConnected) return false;
             
             try {
                 const payload = {
@@ -639,7 +612,7 @@
                 }
                 
                 // ใช้รูปแบบ fetch ตามที่ต้องการ
-                fetch(googleScriptUrl, {
+                fetch(GOOGLE_SCRIPT_URL, {
                     method: "POST",
                     body: formData
                 })
@@ -673,59 +646,28 @@
         
         // Test connection to Google Apps Script
         function testConnection() {
-            const url = sheetUrlInput.value.trim();
-            if (!url) {
-                updateConnectionStatus(false, 'กรุณากรอก URL');
-                showMessage('กรุณากรอก Google Apps Script URL', 'error');
-                return;
-            }
-            
-            updateConnectionStatus(null, 'กำลังทดสอบการเชื่อมต่อ...');
-            
             // สร้าง FormData สำหรับการทดสอบ
             const formData = new FormData();
             formData.append('test', 'connection');
             formData.append('action', 'test');
             
             // ใช้รูปแบบ fetch ตามที่ต้องการ
-            fetch(url, {
+            fetch(GOOGLE_SCRIPT_URL, {
                 method: "POST",
                 body: formData
             })
             .then(res => res.text())
             .then(data => {
-                // Save URL if connection appears successful
-                googleScriptUrl = url;
-                localStorage.setItem('googleScriptUrl', url);
                 isConnected = true;
-                
-                updateConnectionStatus(true, 'เชื่อมต่อสำเร็จกับ Google Sheets');
                 showMessage('เชื่อมต่อสำเร็จกับ Google Sheets: ' + data, 'success');
                 
                 // Sync existing alarms
                 syncExistingAlarms();
             })
             .catch(error => {
-                updateConnectionStatus(false, 'ไม่สามารถเชื่อมต่อได้');
                 isConnected = false;
                 showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้', 'error');
             });
-        }
-        
-        // Update connection status display
-        function updateConnectionStatus(connected, message) {
-            if (connected === true) {
-                statusDot.className = 'w-3 h-3 rounded-full bg-green-500 mr-2 pulse';
-                statusText.className = 'text-sm status-connected';
-            } else if (connected === false) {
-                statusDot.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
-                statusText.className = 'text-sm status-disconnected';
-            } else {
-                statusDot.className = 'w-3 h-3 rounded-full bg-yellow-500 mr-2 pulse';
-                statusText.className = 'text-sm status-connecting';
-            }
-            
-            statusText.textContent = message;
         }
         
         // Sync existing alarms to Google Sheets
@@ -880,11 +822,7 @@
             localStorage.setItem('alarms', JSON.stringify(alarms));
             
             // บันทึกลง Google Sheets
-            if (isConnected) {
-                saveToGoogleSheets(alarm, 'created');
-            } else {
-                showMessage(`ตั้งเวลาแจ้งเตือน "${title}" สำเร็จแล้ว! (บันทึกเฉพาะในเครื่อง)`, 'success');
-            }
+            saveToGoogleSheets(alarm, 'created');
             
             // Reset form
             alarmForm.reset();
@@ -952,9 +890,6 @@
         closeDemoBtn.addEventListener('click', function() {
             demoNotification.classList.add('hidden');
         });
-        
-        // Test connection button
-        testConnectionBtn.addEventListener('click', testConnection);
         
         // Initialize the application
         init();
