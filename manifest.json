@@ -1,75 +1,52 @@
 {
-  "name": "แอปแจ้งเตือนอัจฉริยะ",
-  "short_name": "แจ้งเตือน",
-  "description": "แอปแจ้งเตือนที่ทำงานได้แม้ปิดเบราว์เซอร์ มีกระดิ่งแสดงจำนวน",
-  "start_url": "/",
+  "name": "ระบบแจ้งเตือน",
+  "short_name": "AlarmApp",
+  "description": "ระบบตั้งเวลาแจ้งเตือนและบันทึกลง Google Sheets",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
-  "orientation": "portrait",
-  "scope": "/",
-  "lang": "th",
-  "categories": ["productivity", "utilities"],
+  "background_color": "#121826",
+  "theme_color": "#3B82F6",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23667eea'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='white'>🔔</text></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
+      "sizes": "72x72",
+      "type": "image/png"
     },
     {
-      "src": "https://img.icons8.com/color/96/000000/appointment-reminders.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
       "sizes": "96x96",
       "type": "image/png"
     },
     {
-      "src": "https://img.icons8.com/color/144/000000/appointment-reminders.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": "https://img.icons8.com/color/192/000000/appointment-reminders.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://img.icons8.com/color/512/000000/appointment-reminders.png",
-      "sizes": "512x512",
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
+      "sizes": "384x384",
       "type": "image/png"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
-      "sizes": "1200x600",
-      "type": "image/jpeg",
-      "form_factor": "wide",
-      "label": "หน้าจอหลักของแอปแจ้งเตือน"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "สร้างการแจ้งเตือนใหม่",
-      "short_name": "สร้าง",
-      "description": "สร้างการแจ้งเตือนใหม่",
-      "url": "/?action=new",
-      "icons": [
-        {
-          "src": "https://img.icons8.com/color/96/000000/plus.png",
-          "sizes": "96x96"
-        }
-      ]
     },
     {
-      "name": "ดูการแจ้งเตือน",
-      "short_name": "แจ้งเตือน",
-      "description": "ดูการแจ้งเตือนทั้งหมด",
-      "url": "/?action=notifications",
-      "icons": [
-        {
-          "src": "https://img.icons8.com/color/96/000000/appointment-reminders.png",
-          "sizes": "96x96"
-        }
-      ]
+      "src": "https://cdn-icons-png.flaticon.com/512/565/565422.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
   ]
 }
