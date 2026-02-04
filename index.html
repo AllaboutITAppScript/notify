@@ -1,859 +1,1384 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบแจ้งเตือน</title>
-    
-    <!-- Font Awesome -->
+    <title>ระบบแจ้งเตือนสมาชิก</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        :root {
-            --primary: #2196F3;
-            --primary-dark: #1976D2;
-            --success: #4CAF50;
-            --warning: #FF9800;
-            --danger: #f44336;
-            --dark: #333;
-            --light: #f5f5f5;
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        },
+                        dark: {
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                            600: '#475569',
+                        }
+                    }
+                }
+            }
         }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
         
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'Prompt', sans-serif;
+            font-family: 'Noto Sans Thai', sans-serif;
         }
         
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .app-container {
-            width: 100%;
-            max-width: 500px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-        }
-        
-        .header h1 i {
-            font-size: 2rem;
-        }
-        
-        .header p {
-            opacity: 0.9;
-        }
-        
-        /* Content */
-        .content {
-            padding: 30px;
-        }
-        
-        /* Status Panel */
-        .status-panel {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 2px solid #e9ecef;
-        }
-        
-        .status-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .status-item:last-child {
-            border-bottom: none;
-        }
-        
-        .status-label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-        
-        .status-dot.active {
-            background: var(--success);
-            animation: pulse 2s infinite;
-        }
-        
-        .status-dot.inactive {
-            background: var(--danger);
-        }
-        
-        .status-dot.waiting {
-            background: var(--warning);
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        /* Notification Form */
-        .notification-form {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-            border: 2px solid #e9ecef;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--dark);
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-        }
-        
-        /* Buttons */
-        .btn {
-            padding: 15px 25px;
-            border: none;
-            border-radius: 10px;
-            font-weight: 600;
+        .notification-bell {
+            position: relative;
             cursor: pointer;
-            transition: all 0.3s;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            font-size: 1rem;
-            width: 100%;
         }
         
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
+        .notification-item.unread {
+            border-left: 4px solid #0ea5e9;
+            background-color: rgba(14, 165, 233, 0.05);
         }
         
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+        .promotion-bg {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
         }
         
-        .btn-success {
-            background: linear-gradient(135deg, var(--success), #45a049);
-            color: white;
+        .news-bg {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         }
         
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+        .alert-bg {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
         }
         
-        .btn-warning {
-            background: linear-gradient(135deg, var(--warning), #e68900);
-            color: white;
+        .dark .promotion-bg {
+            background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%);
         }
         
-        .btn-warning:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+        .dark .news-bg {
+            background: linear-gradient(135deg, #14532d 0%, #166534 100%);
         }
         
-        .btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 20px;
+        .dark .alert-bg {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
         }
         
-        /* Notification History */
-        .history-panel {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            border: 2px solid #e9ecef;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        
-        .history-item {
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            border-left: 4px solid var(--primary);
-        }
-        
-        .history-item.success {
-            border-left-color: var(--success);
-        }
-        
-        .history-item.warning {
-            border-left-color: var(--warning);
-        }
-        
-        .history-item.error {
-            border-left-color: var(--danger);
-        }
-        
-        .history-time {
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 5px;
-        }
-        
-        /* Toast Notifications */
-        .toast-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        
-        .toast {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-top: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            animation: slideIn 0.3s;
-            border-left: 5px solid var(--success);
-            min-width: 300px;
-        }
-        
-        .toast.error {
-            border-left-color: var(--danger);
-        }
-        
-        .toast.warning {
-            border-left-color: var(--warning);
-        }
-        
-        .toast.info {
-            border-left-color: var(--primary);
+        .alert-notification {
+            animation: slideIn 0.5s ease-out;
         }
         
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
         
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            border-top: 1px solid #e9ecef;
-            background: #f8f9fa;
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
         }
         
-        /* Responsive */
-        @media (max-width: 768px) {
-            .app-container {
-                border-radius: 15px;
-            }
-            
-            .header {
-                padding: 25px 20px;
-            }
-            
-            .content {
-                padding: 20px;
-            }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .btn-disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
     </style>
 </head>
-<body>
-    <div class="app-container">
+<body class="bg-gray-50 text-gray-800 dark:bg-dark-900 dark:text-gray-200">
+    <div class="container mx-auto p-4 max-w-6xl min-h-screen">
         <!-- Header -->
-        <div class="header">
-            <h1>
-                <i class="fas fa-bell"></i>
-                ระบบแจ้งเตือน
-            </h1>
-            <p>แจ้งเตือนเมื่อเปิดใช้งานเท่านั้น</p>
+        <header class="flex justify-between items-center mb-8 p-4 bg-white dark:bg-dark-800 rounded-xl shadow-md glass-effect">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-bell text-primary-500 text-2xl"></i>
+                <h1 class="text-2xl font-bold">ระบบแจ้งเตือนสมาชิก</h1>
+                <span class="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 px-2 py-1 rounded">Workshop Version</span>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- Setup Database Button -->
+                <button id="setupDbBtn" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition">
+                    <i class="fas fa-database mr-2"></i>Setup Database
+                </button>
+                
+                <!-- Theme Toggle -->
+                <button id="themeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-dark-700">
+                    <i class="fas fa-sun text-yellow-500"></i>
+                </button>
+            </div>
+        </header>
+        
+        <!-- API Configuration -->
+        <div id="apiConfigSection" class="mb-6 p-6 bg-white dark:bg-dark-800 rounded-xl shadow-md glass-effect">
+            <h2 class="text-xl font-bold mb-4 text-blue-600 dark:text-blue-400">
+                <i class="fas fa-cog mr-2"></i>ตั้งค่า API Endpoint
+            </h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                กรุณาใส่ URL ของ Google Apps Script Web App ของคุณ (ต้องเผยแพร่เป็น Web App ก่อน)
+            </p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block mb-2 font-medium">Web App URL (exec)</label>
+                    <div class="flex">
+                        <input type="text" id="apiUrlInput" 
+                               class="flex-1 p-3 border border-gray-300 dark:border-dark-700 rounded-l-lg bg-gray-50 dark:bg-dark-900 font-mono text-sm"
+                               placeholder="https://script.google.com/macros/s/.../exec"
+                               value="https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec">
+                        <button onclick="saveApiUrl()" class="px-6 bg-primary-500 hover:bg-primary-600 text-white rounded-r-lg">
+                            <i class="fas fa-save mr-2"></i>บันทึก
+                        </button>
+                    </div>
+                    <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        <p><i class="fas fa-info-circle mr-1"></i>URL นี้จะใช้สำหรับบันทึกข้อมูลผ่าน doPost + fetch</p>
+                        <p class="mt-1"><i class="fas fa-lightbulb mr-1"></i>วิธีหา URL: Deploy > New Deployment > Web App > Copy URL</p>
+                    </div>
+                </div>
+                
+                <div id="apiStatus" class="hidden p-4 rounded-lg">
+                    <div class="flex items-center">
+                        <i id="apiStatusIcon" class="fas fa-spinner spinner mr-3"></i>
+                        <div>
+                            <span id="apiStatusText" class="font-medium"></span>
+                            <p id="apiStatusMessage" class="text-sm mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <!-- Content -->
-        <div class="content">
-            <!-- Status Panel -->
-            <div class="status-panel">
-                <div class="status-item">
-                    <div class="status-label">
-                        <div class="status-dot" id="notificationStatus"></div>
-                        <span>สถานะการแจ้งเตือน</span>
-                    </div>
-                    <span id="notificationStatusText">กำลังตรวจสอบ...</span>
-                </div>
-                
-                <div class="status-item">
-                    <div class="status-label">
-                        <div class="status-dot" id="systemStatus"></div>
-                        <span>สถานะระบบ</span>
-                    </div>
-                    <span id="systemStatusText">กำลังตรวจสอบ...</span>
-                </div>
+        
+        <!-- Main Content Area -->
+        <div id="contentArea" class="fade-in">
+            <!-- Login/Register Form will be loaded here after API setup -->
+            <div class="text-center py-12">
+                <i class="fas fa-link text-4xl text-gray-400 dark:text-gray-600 mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">กรุณาตั้งค่า API URL ก่อน</h3>
+                <p class="text-gray-600 dark:text-gray-400">ใส่ Web App URL ของคุณด้านบนแล้วคลิก "บันทึก"</p>
             </div>
-
-            <!-- Notification Form -->
-            <div class="notification-form">
-                <h2 style="margin-bottom: 20px; color: var(--dark);">
-                    <i class="fas fa-paper-plane"></i> ส่งการแจ้งเตือน
-                </h2>
-                
-                <div class="form-group">
-                    <label class="form-label">หัวข้อ:</label>
-                    <input type="text" id="notificationTitle" class="form-control" 
-                           placeholder="เช่น: การนัดหมายสำคัญ" 
-                           value="แจ้งเตือนจากระบบ">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">ข้อความ:</label>
-                    <textarea id="notificationMessage" class="form-control" rows="3" 
-                              placeholder="กรอกข้อความการแจ้งเตือน...">ระบบนี้จะแจ้งเตือนเมื่อเปิดใช้งานเท่านั้น</textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">เวลาล่าช้า (วินาที):</label>
-                    <input type="number" id="delayTime" class="form-control" value="10" min="1" max="300">
-                    <div style="margin-top: 8px; font-size: 0.9rem; color: #666;">
-                        <i class="fas fa-info-circle"></i> เวลาที่จะรอก่อนแจ้งเตือน
-                    </div>
-                </div>
-                
-                <div class="btn-group">
-                    <button class="btn btn-primary" id="testNowBtn">
-                        <i class="fas fa-bell"></i> ทดสอบทันที
-                    </button>
-                    <button class="btn btn-success" id="scheduleBtn">
-                        <i class="fas fa-clock"></i> ตั้งเวลาแจ้งเตือน
-                    </button>
-                    <button class="btn btn-warning" id="requestPermissionBtn">
-                        <i class="fas fa-hand-paper"></i> ขออนุญาต
-                    </button>
-                </div>
-            </div>
-
-            <!-- Notification History -->
-            <div class="history-panel">
-                <h2 style="margin-bottom: 15px; color: var(--dark);">
-                    <i class="fas fa-history"></i> ประวัติการแจ้งเตือน
-                </h2>
-                
-                <div id="notificationHistory">
-                    <div class="history-item">
-                        <strong>เริ่มต้นระบบ</strong>
-                        <p>ระบบแจ้งเตือนพร้อมใช้งานแล้ว</p>
-                        <div class="history-time" id="currentTime"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="footer">
-                <p>ระบบแจ้งเตือนเมื่อเปิดใช้งานเท่านั้น</p>
-                <p style="margin-top: 5px; font-size: 0.9rem; color: #888;">
-                    <i class="fas fa-code"></i> ใช้ HTML5 + JavaScript
-                </p>
-            </div>
+        </div>
+        
+        <!-- Alert Container -->
+        <div id="alertContainer" class="fixed top-4 right-4 z-50 w-80 space-y-3"></div>
+        
+        <!-- Developer Info -->
+        <div class="mt-8 pt-4 border-t border-gray-200 dark:border-dark-700 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p>ระบบแจ้งเตือนสมาชิกสำหรับ Workshop • ใช้ Google Apps Script + JavaScript + Tailwind CSS</p>
+            <p class="mt-1">บันทึกข้อมูลผ่าน doPost + fetch API</p>
         </div>
     </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <!-- Audio for Notification Sound -->
-    <audio id="notificationSound">
-        <source src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3" type="audio/mpeg">
-    </audio>
-
-    <!-- Main JavaScript -->
+    
+    <!-- Scripts -->
     <script>
         // Global variables
-        let notifications = [];
-        let isSystemReady = false;
+        let currentUser = null;
+        let unreadCount = 0;
+        let webAppUrl = 'https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec';
         
-        // Initialize app when page loads
-        document.addEventListener('DOMContentLoaded', initializeApp);
-        
-        async function initializeApp() {
-            console.log('🚀 เริ่มต้นระบบแจ้งเตือน...');
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // ตั้งค่าโหมดดาร์กเป็นค่าเริ่มต้น
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('dark-mode', 'true');
             
-            // Update current time
-            updateCurrentTime();
-            setInterval(updateCurrentTime, 1000);
-            
-            // Setup event listeners
-            setupEventListeners();
-            
-            // Check notification permission
-            checkNotificationPermission();
-            
-            // Load notification history
-            loadNotificationHistory();
-            
-            // Update system status
-            updateSystemStatus(true);
-            
-            // Add initial log
-            addToHistory('เริ่มต้นระบบแจ้งเตือน', 'success');
-            
-            console.log('✅ ระบบพร้อมใช้งาน');
-            showToast('ระบบพร้อมใช้งาน!', 'success', 'สามารถส่งการแจ้งเตือนได้ทันที');
-            
-            // Play welcome sound
-            setTimeout(() => playSound(), 500);
-        }
-        
-        // Setup event listeners
-        function setupEventListeners() {
-            // Buttons
-            document.getElementById('testNowBtn').addEventListener('click', sendTestNotification);
-            document.getElementById('scheduleBtn').addEventListener('click', scheduleNotification);
-            document.getElementById('requestPermissionBtn').addEventListener('click', requestNotificationPermission);
-        }
-        
-        // Update current time
-        function updateCurrentTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('th-TH', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            document.getElementById('currentTime').textContent = `เวลา: ${timeString}`;
-        }
-        
-        // Check notification permission
-        function checkNotificationPermission() {
-            const statusDot = document.getElementById('notificationStatus');
-            const statusText = document.getElementById('notificationStatusText');
-            
-            if (!('Notification' in window)) {
-                statusDot.className = 'status-dot inactive';
-                statusText.textContent = 'ไม่รองรับ';
-                return false;
+            // Load saved API URL if exists
+            const savedUrl = localStorage.getItem('webAppUrl');
+            if (savedUrl) {
+                document.getElementById('apiUrlInput').value = savedUrl;
+                webAppUrl = savedUrl;
+                showAlert('โหลด URL ที่บันทึกไว้แล้ว', 'info');
+                checkApiConnection();
             }
             
-            const permission = Notification.permission;
-            
-            switch(permission) {
-                case 'granted':
-                    statusDot.className = 'status-dot active';
-                    statusText.textContent = 'อนุญาตแล้ว';
-                    return true;
-                case 'denied':
-                    statusDot.className = 'status-dot inactive';
-                    statusText.textContent = 'ปฏิเสธแล้ว';
-                    return false;
-                default:
-                    statusDot.className = 'status-dot waiting';
-                    statusText.textContent = 'รอการอนุญาต';
-                    return false;
-            }
-        }
+            // Set up event listeners
+            document.getElementById('themeToggle').addEventListener('click', toggleDarkMode);
+            document.getElementById('setupDbBtn').addEventListener('click', setupDatabase);
+        });
         
-        // Request notification permission
-        async function requestNotificationPermission() {
-            if (!('Notification' in window)) {
-                showToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน', 'error');
-                return false;
-            }
+        // Save API URL
+        function saveApiUrl() {
+            const apiUrlInput = document.getElementById('apiUrlInput');
+            const url = apiUrlInput.value.trim();
             
-            try {
-                const permission = await Notification.requestPermission();
-                
-                // Update UI
-                checkNotificationPermission();
-                
-                if (permission === 'granted') {
-                    showToast('อนุญาตการแจ้งเตือนแล้ว!', 'success');
-                    addToHistory('ผู้ใช้อนุญาตการแจ้งเตือน', 'success');
-                    playSound();
-                    return true;
-                } else {
-                    showToast('การแจ้งเตือนถูกปฏิเสธ', 'warning');
-                    addToHistory('ผู้ใช้ปฏิเสธการแจ้งเตือน', 'error');
-                    return false;
-                }
-            } catch (error) {
-                console.error('ขออนุญาตล้มเหลว:', error);
-                showToast('ขออนุญาตล้มเหลว', 'error');
-                return false;
-            }
-        }
-        
-        // Send test notification
-        async function sendTestNotification() {
-            const title = document.getElementById('notificationTitle').value.trim() || 'ทดสอบแจ้งเตือน';
-            const message = document.getElementById('notificationMessage').value.trim() || 'นี่คือการทดสอบ';
-            
-            // Check permission first
-            if (Notification.permission !== 'granted') {
-                const granted = await requestNotificationPermission();
-                if (!granted) return;
-            }
-            
-            // Send notification
-            const notification = new Notification(title, {
-                body: message,
-                icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-                requireInteraction: true
-            });
-            
-            // Play sound
-            playSound();
-            
-            // Show toast
-            showToast('ส่งการแจ้งเตือนแล้ว!', 'success');
-            
-            // Add to history
-            addToHistory(`ส่งการแจ้งเตือน: ${title}`, 'success');
-            
-            // Log
-            console.log('ทดสอบแจ้งเตือน:', title);
-        }
-        
-        // Schedule notification
-        async function scheduleNotification() {
-            const title = document.getElementById('notificationTitle').value.trim() || 'แจ้งเตือนตามเวลา';
-            const message = document.getElementById('notificationMessage').value.trim() || 'นี่คือแจ้งเตือนตามเวลาที่ตั้งไว้';
-            const delaySeconds = parseInt(document.getElementById('delayTime').value) || 10;
-            
-            // Validation
-            if (delaySeconds < 1 || delaySeconds > 300) {
-                showToast('กรุณาระบุเวลาระหว่าง 1-300 วินาที', 'warning');
+            if (!url) {
+                showAlert('กรุณาใส่ URL', 'error');
                 return;
             }
             
-            // Check permission
-            if (Notification.permission !== 'granted') {
-                const granted = await requestNotificationPermission();
-                if (!granted) return;
-            }
-            
-            // Show confirmation
-            showToast(
-                'ตั้งเวลาแจ้งเตือนสำเร็จ!', 
-                'success',
-                `จะแจ้งเตือนในอีก ${delaySeconds} วินาที`
-            );
-            
-            addToHistory(`ตั้งเวลาแจ้งเตือนในอีก ${delaySeconds} วินาที`, 'success');
-            
-            // Start countdown
-            startCountdown(delaySeconds, title, message);
-        }
-        
-        // Start countdown for scheduled notification
-        function startCountdown(seconds, title, message) {
-            console.log(`เริ่มนับถอยหลัง: ${seconds} วินาที`);
-            
-            let remaining = seconds;
-            
-            // Show initial countdown
-            const countdownElement = document.createElement('div');
-            countdownElement.className = 'history-item warning';
-            countdownElement.innerHTML = `
-                <strong>กำลังนับถอยหลัง: ${title}</strong>
-                <p>${message}</p>
-                <div class="history-time">เหลือเวลา: ${remaining} วินาที</div>
-            `;
-            
-            const historyContainer = document.getElementById('notificationHistory');
-            historyContainer.insertBefore(countdownElement, historyContainer.firstChild);
-            
-            // Update countdown every second
-            const countdownInterval = setInterval(() => {
-                remaining--;
-                
-                if (remaining <= 0) {
-                    clearInterval(countdownInterval);
-                    
-                    // Send notification
-                    sendScheduledNotification(title, message);
-                    
-                    // Update countdown element
-                    countdownElement.className = 'history-item success';
-                    countdownElement.innerHTML = `
-                        <strong>แจ้งเตือนตามเวลา: ${title}</strong>
-                        <p>${message}</p>
-                        <div class="history-time">ส่งแล้วเมื่อ: ${new Date().toLocaleTimeString('th-TH')}</div>
-                    `;
-                } else {
-                    // Update countdown display
-                    countdownElement.querySelector('.history-time').textContent = 
-                        `เหลือเวลา: ${remaining} วินาที`;
-                }
-            }, 1000);
-        }
-        
-        // Send scheduled notification
-        function sendScheduledNotification(title, message) {
-            // Send notification
-            const notification = new Notification(title, {
-                body: '[ตามเวลา] ' + message,
-                icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
-                requireInteraction: true
-            });
-            
-            // Play sound
-            playSound();
-            
-            // Show toast
-            showToast('แจ้งเตือนตามเวลา!', 'success', title);
-            
-            // Add to history
-            addToHistory(`แจ้งเตือนตามเวลา: ${title}`, 'success');
-            
-            console.log('แจ้งเตือนตามเวลา:', title);
-        }
-        
-        // Update system status
-        function updateSystemStatus(isReady) {
-            const statusDot = document.getElementById('systemStatus');
-            const statusText = document.getElementById('systemStatusText');
-            
-            isSystemReady = isReady;
-            
-            if (isReady) {
-                statusDot.className = 'status-dot active';
-                statusText.textContent = 'พร้อมใช้งาน';
-            } else {
-                statusDot.className = 'status-dot inactive';
-                statusText.textContent = 'ไม่พร้อมใช้งาน';
-            }
-        }
-        
-        // Add to history
-        function addToHistory(message, type = 'info') {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('th-TH', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            const historyItem = document.createElement('div');
-            historyItem.className = `history-item ${type}`;
-            historyItem.innerHTML = `
-                <strong>${message}</strong>
-                <div class="history-time">เวลา: ${timeString}</div>
-            `;
-            
-            const historyContainer = document.getElementById('notificationHistory');
-            historyContainer.insertBefore(historyItem, historyContainer.firstChild);
-            
-            // Keep only last 20 items
-            const maxItems = 20;
-            while (historyContainer.children.length > maxItems) {
-                historyContainer.removeChild(historyContainer.lastChild);
+            if (!url.includes('/macros/s/') || !url.endsWith('/exec')) {
+                showAlert('URL ต้องเป็นรูปแบบ Google Apps Script Web App ที่ลงท้ายด้วย /exec', 'warning');
+                return;
             }
             
             // Save to localStorage
-            saveToHistoryStorage(message, type, timeString);
+            localStorage.setItem('webAppUrl', url);
+            webAppUrl = url;
+            
+            showAlert('บันทึก URL สำเร็จ', 'success');
+            checkApiConnection();
         }
         
-        // Save to history storage
-        function saveToHistoryStorage(message, type, timeString) {
+        // Check API connection
+        async function checkApiConnection() {
+            if (!webAppUrl) return;
+            
+            const apiStatus = document.getElementById('apiStatus');
+            const apiStatusIcon = document.getElementById('apiStatusIcon');
+            const apiStatusText = document.getElementById('apiStatusText');
+            const apiStatusMessage = document.getElementById('apiStatusMessage');
+            
+            apiStatus.classList.remove('hidden');
+            apiStatus.classList.add('bg-blue-50', 'dark:bg-blue-900/20', 'border', 'border-blue-200', 'dark:border-blue-800');
+            apiStatusIcon.className = 'fas fa-spinner spinner mr-3 text-blue-500';
+            apiStatusText.textContent = 'กำลังตรวจสอบการเชื่อมต่อ...';
+            apiStatusMessage.textContent = '';
+            
             try {
-                const history = JSON.parse(localStorage.getItem('notificationHistory') || '[]');
-                history.unshift({
-                    message,
-                    type,
-                    timeString,
-                    timestamp: Date.now()
-                });
+                // Test doGet API
+                const testUrl = `${webAppUrl}?page=api&action=checkDatabase`;
+                console.log('Testing API connection:', testUrl);
                 
-                // Keep only last 50 items
-                if (history.length > 50) {
-                    history.pop();
+                const response = await fetch(testUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                localStorage.setItem('notificationHistory', JSON.stringify(history));
+                const result = await response.json();
+                
+                if (result.success) {
+                    apiStatus.classList.remove('bg-blue-50', 'dark:bg-blue-900/20', 'border', 'border-blue-200', 'dark:border-blue-800');
+                    apiStatus.classList.add('bg-green-50', 'dark:bg-green-900/20', 'border', 'border-green-200', 'dark:border-green-800');
+                    apiStatusIcon.className = 'fas fa-check-circle mr-3 text-green-500';
+                    apiStatusText.textContent = 'เชื่อมต่อ API สำเร็จ';
+                    apiStatusMessage.textContent = 'ระบบพร้อมใช้งาน';
+                    
+                    // Load login form after successful connection
+                    setTimeout(() => {
+                        loadLoginForm();
+                    }, 1000);
+                    
+                } else {
+                    throw new Error(result.message || 'API returned error');
+                }
+                
             } catch (error) {
-                console.error('Save history error:', error);
+                console.error('API connection error:', error);
+                
+                apiStatus.classList.remove('bg-blue-50', 'dark:bg-blue-900/20', 'border', 'border-blue-200', 'dark:border-blue-800');
+                apiStatus.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border', 'border-red-200', 'dark:border-red-800');
+                apiStatusIcon.className = 'fas fa-times-circle mr-3 text-red-500';
+                apiStatusText.textContent = 'เชื่อมต่อ API ไม่สำเร็จ';
+                apiStatusMessage.textContent = error.message;
+                
+                showAlert('ไม่สามารถเชื่อมต่อกับ API ได้: ' + error.message, 'error');
             }
         }
         
-        // Load notification history
-        function loadNotificationHistory() {
+        // Toggle dark mode
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            html.classList.toggle('dark');
+            
+            if (html.classList.contains('dark')) {
+                localStorage.setItem('dark-mode', 'true');
+                themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
+            } else {
+                localStorage.setItem('dark-mode', 'false');
+                themeToggle.innerHTML = '<i class="fas fa-moon text-yellow-500"></i>';
+            }
+        }
+        
+        // ฟังก์ชันสำหรับเรียก API ผ่าน doPost (ใช้หลักการ fetch)
+        async function callApi(action, data) {
+            if (!webAppUrl) {
+                showAlert('กรุณาตั้งค่า API URL ก่อน', 'error');
+                return { success: false, message: 'ยังไม่ได้ตั้งค่า API URL' };
+            }
+            
+            // ตรวจสอบว่ามี currentUser หรือไม่ (สำหรับบาง action ที่ต้องการ userId)
+            if (currentUser && !data.userId && action !== 'login' && action !== 'register' && action !== 'setupDatabase') {
+                data.userId = currentUser.id;
+            }
+            
+            // เพิ่ม action ลงในข้อมูล
+            data.action = action;
+            
             try {
-                const history = JSON.parse(localStorage.getItem('notificationHistory') || '[]');
+                // สร้าง FormData object
+                const formData = new FormData();
                 
-                history.forEach(item => {
-                    const historyItem = document.createElement('div');
-                    historyItem.className = `history-item ${item.type}`;
-                    historyItem.innerHTML = `
-                        <strong>${item.message}</strong>
-                        <div class="history-time">เวลา: ${item.timeString}</div>
-                    `;
-                    
-                    const historyContainer = document.getElementById('notificationHistory');
-                    // Don't add the initial item again
-                    if (item.message !== 'เริ่มต้นระบบ') {
-                        historyContainer.appendChild(historyItem);
+                // เพิ่มข้อมูลทั้งหมดลงใน FormData
+                for (const key in data) {
+                    if (data.hasOwnProperty(key) && data[key] !== undefined && data[key] !== null) {
+                        formData.append(key, data[key]);
                     }
-                });
-            } catch (error) {
-                console.error('Load history error:', error);
-            }
-        }
-        
-        // Play sound
-        function playSound() {
-            try {
-                const audio = document.getElementById('notificationSound');
-                audio.currentTime = 0;
-                audio.play().catch(e => console.log('ไม่สามารถเล่นเสียง:', e));
-            } catch (error) {
-                console.log('เล่นเสียงล้มเหลว:', error);
-                
-                // Fallback sound using Web Audio API
-                try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    oscillator.frequency.value = 800;
-                    oscillator.type = 'sine';
-                    
-                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-                    
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.5);
-                } catch (e) {
-                    console.log('Web Audio API also failed:', e);
                 }
+                
+                console.log(`Sending ${action} request to:`, webAppUrl);
+                console.log('Data:', Object.fromEntries(formData));
+                
+                // เรียกใช้ API ผ่าน doPost
+                const response = await fetch(webAppUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Response:', result);
+                return result;
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                return { 
+                    success: false, 
+                    message: 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message 
+                };
             }
         }
         
-        // Show toast notification
-        function showToast(title, type = 'info', message = '') {
-            const container = document.getElementById('toastContainer');
+        // ฟังก์ชันสำหรับเรียก API ผ่าน doGet (ใช้หลักการ fetch)
+        async function callGetApi(action, params = {}) {
+            if (!webAppUrl) {
+                showAlert('กรุณาตั้งค่า API URL ก่อน', 'error');
+                return { success: false, message: 'ยังไม่ได้ตั้งค่า API URL' };
+            }
             
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
+            try {
+                // สร้าง query string
+                const queryParams = new URLSearchParams({
+                    page: 'api',
+                    action: action,
+                    ...params
+                });
+                
+                // เรียกใช้ API ผ่าน doGet
+                const url = `${webAppUrl}?${queryParams.toString()}`;
+                console.log(`Fetching ${action} from:`, url);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                return result;
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                return { 
+                    success: false, 
+                    message: 'เกิดข้อผิดพลาดในการดึงข้อมูล: ' + error.message 
+                };
+            }
+        }
+        
+        // ฟังก์ชันสำหรับตั้งค่าฐานข้อมูล
+        async function setupDatabase() {
+            if (!webAppUrl) {
+                showAlert('กรุณาตั้งค่า API URL ก่อน', 'error');
+                return;
+            }
             
-            const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-times-circle',
-                warning: 'fa-exclamation-triangle',
-                info: 'fa-info-circle'
-            };
+            const setupBtn = document.getElementById('setupDbBtn');
+            const originalText = setupBtn.innerHTML;
             
-            toast.innerHTML = `
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--${type}); 
-                           display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;">
-                    <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
+            setupBtn.innerHTML = '<i class="fas fa-spinner spinner mr-2"></i>กำลังตั้งค่า...';
+            setupBtn.disabled = true;
+            setupBtn.classList.add('btn-disabled');
+            
+            showAlert('กำลังตั้งค่าฐานข้อมูล กรุณารอสักครู่...', 'info');
+            
+            try {
+                // เรียก API ผ่าน doPost สำหรับ setup database
+                const response = await callApi('setupDatabase', {});
+                
+                if (response.success) {
+                    showAlert('ตั้งค่าฐานข้อมูลสำเร็จ! ' + response.message, 'success');
+                    
+                    // รอสักครู่แล้วรีโหลดหน้า
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    showAlert(response.message, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Setup DB Error:', error);
+                showAlert('เกิดข้อผิดพลาดในการตั้งค่าฐานข้อมูล: ' + error.message, 'error');
+            } finally {
+                setTimeout(() => {
+                    setupBtn.innerHTML = originalText;
+                    setupBtn.disabled = false;
+                    setupBtn.classList.remove('btn-disabled');
+                }, 3000);
+            }
+        }
+        
+        // Show alert notification
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertId = 'alert-' + Date.now();
+            
+            let bgColor = 'bg-blue-100 dark:bg-blue-900';
+            let textColor = 'text-blue-800 dark:text-blue-200';
+            let icon = 'fas fa-info-circle';
+            
+            if (type === 'success') {
+                bgColor = 'bg-green-100 dark:bg-green-900';
+                textColor = 'text-green-800 dark:text-green-200';
+                icon = 'fas fa-check-circle';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-100 dark:bg-red-900';
+                textColor = 'text-red-800 dark:text-red-200';
+                icon = 'fas fa-exclamation-circle';
+            } else if (type === 'warning') {
+                bgColor = 'bg-yellow-100 dark:bg-yellow-900';
+                textColor = 'text-yellow-800 dark:text-yellow-200';
+                icon = 'fas fa-exclamation-triangle';
+            }
+            
+            const alertHTML = `
+                <div id="${alertId}" class="alert-notification p-4 rounded-lg shadow-lg ${bgColor} ${textColor} border-l-4 ${type === 'success' ? 'border-green-500' : type === 'error' ? 'border-red-500' : type === 'warning' ? 'border-yellow-500' : 'border-blue-500'}">
+                    <div class="flex items-center">
+                        <i class="${icon} mr-3"></i>
+                        <div class="flex-1">${message}</div>
+                        <button onclick="document.getElementById('${alertId}').remove()" class="ml-2 text-lg">&times;</button>
+                    </div>
                 </div>
-                <div style="flex: 1;">
-                    <strong style="display: block; margin-bottom: 5px;">${title}</strong>
-                    ${message ? `<div style="font-size: 0.9rem; color: #666;">${message}</div>` : ''}
-                </div>
-                <button class="toast-close" style="background: none; border: none; font-size: 1.5rem; 
-                        cursor: pointer; color: #999; padding: 5px; width: 30px; height: 30px; 
-                        display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                    &times;
-                </button>
             `;
             
-            container.appendChild(toast);
+            alertContainer.insertAdjacentHTML('afterbegin', alertHTML);
             
             // Auto remove after 5 seconds
             setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.style.opacity = '0';
-                    setTimeout(() => {
-                        if (toast.parentNode) toast.parentNode.removeChild(toast);
-                    }, 300);
-                }
+                const alertEl = document.getElementById(alertId);
+                if (alertEl) alertEl.remove();
             }, 5000);
-            
-            // Close button
-            toast.querySelector('.toast-close').addEventListener('click', () => {
-                toast.style.opacity = '0';
-                setTimeout(() => {
-                    if (toast.parentNode) toast.parentNode.removeChild(toast);
-                }, 300);
-            });
         }
         
-        // Listen for page visibility changes
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                // Page became visible, update time
-                updateCurrentTime();
-                
-                // Check for any pending notifications
-                console.log('หน้าเว็บถูกเปิดขึ้นมาใหม่');
-                addToHistory('ผู้ใช้เปิดหน้าเว็บขึ้นมาใหม่', 'info');
-            } else {
-                console.log('หน้าเว็บถูกซ่อน/ปิด');
-            }
-        });
+        // Load login form
+        function loadLoginForm() {
+            const contentArea = document.getElementById('contentArea');
+            
+            contentArea.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-8">
+                    <!-- Login Form -->
+                    <div class="flex-1 bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                        <h2 class="text-xl font-bold mb-6 text-center">เข้าสู่ระบบ</h2>
+                        <form id="loginForm" class="space-y-4">
+                            <div>
+                                <label for="loginEmail" class="block mb-2 font-medium">อีเมล</label>
+                                <input type="email" id="loginEmail" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" value="admin@example.com">
+                            </div>
+                            <div>
+                                <label for="loginPassword" class="block mb-2 font-medium">รหัสผ่าน</label>
+                                <input type="password" id="loginPassword" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" value="admin123">
+                            </div>
+                            <button type="submit" class="w-full p-3 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition">
+                                <i class="fas fa-sign-in-alt mr-2"></i>เข้าสู่ระบบ
+                            </button>
+                        </form>
+                        
+                        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <p class="font-bold mb-2 text-blue-800 dark:text-blue-300">บัญชีตัวอย่างสำหรับทดสอบ:</p>
+                            <div class="space-y-1 text-sm">
+                                <p><span class="font-medium">แอดมิน:</span> admin@example.com / admin123</p>
+                                <p><span class="font-medium">ผู้ใช้:</span> user@example.com / user123</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Register Form -->
+                    <div class="flex-1 bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                        <h2 class="text-xl font-bold mb-6 text-center">ลงทะเบียนสมาชิก</h2>
+                        <form id="registerForm" class="space-y-4">
+                            <div>
+                                <label for="regUsername" class="block mb-2 font-medium">ชื่อผู้ใช้</label>
+                                <input type="text" id="regUsername" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" placeholder="กรุณากรอกชื่อผู้ใช้">
+                            </div>
+                            <div>
+                                <label for="regEmail" class="block mb-2 font-medium">อีเมล</label>
+                                <input type="email" id="regEmail" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" placeholder="example@email.com">
+                            </div>
+                            <div>
+                                <label for="regPassword" class="block mb-2 font-medium">รหัสผ่าน</label>
+                                <input type="password" id="regPassword" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" placeholder="อย่างน้อย 6 ตัวอักษร">
+                            </div>
+                            <div>
+                                <label for="regConfirmPassword" class="block mb-2 font-medium">ยืนยันรหัสผ่าน</label>
+                                <input type="password" id="regConfirmPassword" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" placeholder="กรอกรหัสผ่านอีกครั้ง">
+                            </div>
+                            <button type="submit" class="w-full p-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition">
+                                <i class="fas fa-user-plus mr-2"></i>ลงทะเบียน
+                            </button>
+                        </form>
+                        
+                        <div class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                            <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                ระบบจะบันทึกข้อมูลผ่าน Google Apps Script API โดยใช้หลักการ doPost + fetch
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add event listeners for forms
+            document.getElementById('loginForm').addEventListener('submit', login);
+            document.getElementById('registerForm').addEventListener('submit', register);
+        }
         
-        // Check for scheduled notifications every minute
-        setInterval(() => {
-            // This ensures notifications work when page is open
-            console.log('ระบบตรวจสอบสถานะ...');
-        }, 60000);
+        // Login function - ใช้ callApi (fetch + doPost)
+        async function login(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'กำลังเข้าสู่ระบบ...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-disabled');
+            
+            showAlert('กำลังส่งข้อมูลไปยัง Google Apps Script API...', 'info');
+            
+            try {
+                const response = await callApi('login', { email, password });
+                handleLoginResponse(response);
+            } catch (error) {
+                handleError(error);
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-disabled');
+            }
+        }
+        
+        // Handle login response
+        function handleLoginResponse(response) {
+            if (response.success) {
+                currentUser = {
+                    id: response.userId,
+                    username: response.username,
+                    role: response.role,
+                    email: document.getElementById('loginEmail').value
+                };
+                
+                showAlert(response.message, 'success');
+                loadDashboard();
+                updateUIAfterLogin();
+                
+                // Start polling for notifications
+                startNotificationPolling();
+            } else {
+                showAlert(response.message, 'error');
+            }
+        }
+        
+        // Register function - ใช้ callApi (fetch + doPost)
+        async function register(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                showAlert('รหัสผ่านไม่ตรงกัน', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showAlert('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร', 'error');
+                return;
+            }
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'กำลังลงทะเบียน...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-disabled');
+            
+            showAlert('กำลังส่งข้อมูลลงทะเบียนผ่าน API...', 'info');
+            
+            try {
+                const response = await callApi('register', { email, username, password });
+                handleRegisterResponse(response, email);
+            } catch (error) {
+                handleError(error);
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-disabled');
+            }
+        }
+        
+        // Handle register response
+        function handleRegisterResponse(response, email) {
+            if (response.success) {
+                showAlert(response.message, 'success');
+                // Clear register form
+                document.getElementById('registerForm').reset();
+                // Switch to login email
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('loginPassword').value = '';
+            } else {
+                showAlert(response.message, 'error');
+            }
+        }
+        
+        // Update UI after login
+        function updateUIAfterLogin() {
+            // Add logout button to header
+            const header = document.querySelector('header');
+            const logoutBtn = document.createElement('button');
+            logoutBtn.id = 'logoutBtn';
+            logoutBtn.className = 'px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition';
+            logoutBtn.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i>ออกจากระบบ';
+            logoutBtn.addEventListener('click', logout);
+            
+            // Add user info
+            const userInfo = document.createElement('div');
+            userInfo.id = 'userInfo';
+            userInfo.className = 'flex items-center';
+            userInfo.innerHTML = `
+                <span id="usernameDisplay" class="font-medium">${currentUser.username}</span>
+                <span id="userRole" class="ml-2 px-2 py-1 text-xs rounded-full bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300">
+                    ${currentUser.role === 'admin' ? 'แอดมิน' : 'ผู้ใช้'}
+                </span>
+            `;
+            
+            // Add notification bell
+            const notificationBell = document.createElement('div');
+            notificationBell.id = 'notificationBell';
+            notificationBell.className = 'notification-bell ml-4';
+            notificationBell.innerHTML = `
+                <i class="fas fa-bell text-xl text-gray-600 dark:text-gray-300"></i>
+                <div id="notificationBadge" class="notification-badge hidden">0</div>
+            `;
+            notificationBell.addEventListener('click', showNotifications);
+            
+            // Insert elements before theme toggle
+            const themeToggle = document.getElementById('themeToggle');
+            header.insertBefore(logoutBtn, themeToggle);
+            header.insertBefore(userInfo, logoutBtn);
+            header.insertBefore(notificationBell, userInfo);
+            
+            // Hide API config section
+            document.getElementById('apiConfigSection').classList.add('hidden');
+            
+            // Update notification badge
+            updateNotificationBadge();
+        }
+        
+        // Load dashboard based on user role
+        function loadDashboard() {
+            const contentArea = document.getElementById('contentArea');
+            
+            if (currentUser.role === 'admin') {
+                loadAdminDashboard();
+            } else {
+                loadUserDashboard();
+            }
+        }
+        
+        // Load user dashboard
+        function loadUserDashboard() {
+            const contentArea = document.getElementById('contentArea');
+            
+            contentArea.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- User Profile -->
+                    <div class="lg:col-span-1 bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                        <div class="text-center mb-6">
+                            <div class="w-20 h-20 mx-auto rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center mb-4">
+                                <i class="fas fa-user text-primary-500 text-3xl"></i>
+                            </div>
+                            <h3 class="text-xl font-bold">${currentUser.username}</h3>
+                            <p class="text-gray-600 dark:text-gray-400">${currentUser.email}</p>
+                            <div class="mt-2">
+                                <span class="px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300">
+                                    ${currentUser.role === 'admin' ? 'แอดมิน' : 'ผู้ใช้'}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                                <span class="font-medium">การแจ้งเตือนที่ยังไม่ได้อ่าน</span>
+                                <span id="unreadCount" class="font-bold text-xl text-primary-600 dark:text-primary-400">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Notifications List -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-xl font-bold">การแจ้งเตือนทั้งหมด</h2>
+                                <button id="refreshNotifications" class="p-2 rounded-lg bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600 transition">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            
+                            <div id="notificationsList" class="space-y-4">
+                                <!-- Notifications will be loaded here -->
+                                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    <i class="fas fa-spinner spinner text-3xl mb-2"></i>
+                                    <p>กำลังโหลดการแจ้งเตือน...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Load notifications
+            loadUserNotifications();
+            
+            // Add event listener for refresh button
+            document.getElementById('refreshNotifications').addEventListener('click', loadUserNotifications);
+        }
+        
+        // Load admin dashboard
+        function loadAdminDashboard() {
+            const contentArea = document.getElementById('contentArea');
+            
+            contentArea.innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Create Notification -->
+                    <div class="lg:col-span-2 bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                        <h2 class="text-xl font-bold mb-6">สร้างการแจ้งเตือน</h2>
+                        <div class="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <p class="text-sm text-blue-700 dark:text-blue-300">
+                                <i class="fas fa-link mr-2"></i>กำลังใช้ API URL: ${webAppUrl}
+                            </p>
+                        </div>
+                        <form id="createNotificationForm" class="space-y-4">
+                            <div>
+                                <label for="notificationTitle" class="block mb-2 font-medium">หัวข้อ</label>
+                                <input type="text" id="notificationTitle" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" placeholder="เช่น: โปรโมชั่นพิเศษ" value="โปรโมชั่นพิเศษสำหรับ Workshop">
+                            </div>
+                            
+                            <div>
+                                <label for="notificationMessage" class="block mb-2 font-medium">ข้อความ</label>
+                                <textarea id="notificationMessage" rows="3" required class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900" placeholder="รายละเอียดการแจ้งเตือน">ทดสอบระบบแจ้งเตือนสำหรับ Workshop</textarea>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="notificationType" class="block mb-2 font-medium">ประเภท</label>
+                                    <select id="notificationType" class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900">
+                                        <option value="promotion" selected>โปรโมชั่น</option>
+                                        <option value="news">ข่าวสาร</option>
+                                        <option value="alert">แจ้งเตือนสำคัญ</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label for="notificationDate" class="block mb-2 font-medium">วันที่แจ้งเตือน</label>
+                                    <input type="date" id="notificationDate" class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900">
+                                </div>
+                                
+                                <div>
+                                    <label for="notificationTime" class="block mb-2 font-medium">เวลาแจ้งเตือน</label>
+                                    <input type="time" id="notificationTime" class="w-full p-3 border border-gray-300 dark:border-dark-700 rounded-lg bg-gray-50 dark:bg-dark-900">
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-end space-x-3">
+                                <button type="button" id="sendNowBtn" class="px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition">
+                                    <i class="fas fa-paper-plane mr-2"></i>ส่งทันที
+                                </button>
+                                <button type="submit" class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition">
+                                    <i class="fas fa-clock mr-2"></i>กำหนดเวลาส่ง
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Admin Actions -->
+                    <div class="space-y-8">
+                        <!-- User Management -->
+                        <div class="bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                            <h2 class="text-xl font-bold mb-4">จัดการผู้ใช้</h2>
+                            <button id="manageUsersBtn" class="w-full p-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition mb-3">
+                                <i class="fas fa-users mr-2"></i>ดูรายการผู้ใช้ทั้งหมด
+                            </button>
+                        </div>
+                        
+                        <!-- Quick Stats -->
+                        <div class="bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                            <h2 class="text-xl font-bold mb-4">สถิติ</h2>
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                                    <span>ผู้ใช้ทั้งหมด</span>
+                                    <span id="totalUsers" class="font-bold text-xl">-</span>
+                                </div>
+                                <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-dark-700 rounded-lg">
+                                    <span>การแจ้งเตือนทั้งหมด</span>
+                                    <span id="totalNotifications" class="font-bold text-xl">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notifications List for Admin -->
+                <div class="mt-8 bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold">การแจ้งเตือนทั้งหมด</h2>
+                        <button id="refreshAdminNotifications" class="p-2 rounded-lg bg-gray-100 dark:bg-dark-700 hover:bg-gray-200 dark:hover:bg-dark-600 transition">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="adminNotificationsList" class="space-y-4">
+                        <!-- Notifications will be loaded here -->
+                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-spinner spinner text-3xl mb-2"></i>
+                            <p>กำลังโหลดการแจ้งเตือน...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('notificationDate');
+            if (dateInput) dateInput.value = today;
+            
+            // Set current time + 5 minutes as default
+            const now = new Date();
+            now.setMinutes(now.getMinutes() + 5);
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const timeInput = document.getElementById('notificationTime');
+            if (timeInput) timeInput.value = `${hours}:${minutes}`;
+            
+            // Load stats
+            loadAdminStats();
+            
+            // Load admin notifications
+            loadAdminNotifications();
+            
+            // Add event listeners
+            const createForm = document.getElementById('createNotificationForm');
+            if (createForm) {
+                createForm.addEventListener('submit', createScheduledNotification);
+            }
+            
+            const sendNowBtn = document.getElementById('sendNowBtn');
+            if (sendNowBtn) {
+                sendNowBtn.addEventListener('click', sendNotificationNow);
+            }
+            
+            const manageUsersBtn = document.getElementById('manageUsersBtn');
+            if (manageUsersBtn) {
+                manageUsersBtn.addEventListener('click', showUserManagement);
+            }
+            
+            const refreshBtn = document.getElementById('refreshAdminNotifications');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', loadAdminNotifications);
+            }
+        }
+        
+        // Load user notifications - ใช้ callGetApi (fetch + doGet)
+        async function loadUserNotifications() {
+            try {
+                const response = await callGetApi('getUserNotifications', { userId: currentUser.id });
+                handleUserNotificationsResponse(response);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+        
+        // Handle user notifications response
+        function handleUserNotificationsResponse(response) {
+            if (response.success) {
+                unreadCount = response.unread_count || 0;
+                updateNotificationBadge();
+                
+                const notificationsList = document.getElementById('notificationsList') || 
+                                         document.getElementById('adminNotificationsList');
+                
+                if (!notificationsList) return;
+                
+                if (response.notifications && response.notifications.length === 0) {
+                    notificationsList.innerHTML = `
+                        <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-bell-slash text-3xl mb-2"></i>
+                            <p>ยังไม่มีการแจ้งเตือน</p>
+                        </div>
+                    `;
+                } else if (response.notifications) {
+                    let notificationsHTML = '';
+                    
+                    response.notifications.forEach(notification => {
+                        let typeText = '';
+                        let typeClass = '';
+                        
+                        if (notification.type === 'promotion') {
+                            typeText = 'โปรโมชั่น';
+                            typeClass = 'promotion-bg';
+                        } else if (notification.type === 'news') {
+                            typeText = 'ข่าวสาร';
+                            typeClass = 'news-bg';
+                        } else {
+                            typeText = 'สำคัญ';
+                            typeClass = 'alert-bg';
+                        }
+                        
+                        const notificationDate = new Date(notification.created_at).toLocaleDateString('th-TH', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        const readClass = notification.is_read ? '' : 'unread';
+                        
+                        notificationsHTML += `
+                            <div class="notification-item p-4 rounded-lg border border-gray-200 dark:border-dark-700 ${readClass} ${typeClass}">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <span class="font-bold">${notification.title}</span>
+                                        <span class="ml-2 px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-dark-700">${typeText}</span>
+                                    </div>
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">${notificationDate}</span>
+                                </div>
+                                <p class="mb-3">${notification.message}</p>
+                                ${!notification.is_read ? `
+                                    <button onclick="markNotificationAsRead('${notification.id}')" class="px-3 py-1 text-sm bg-primary-500 hover:bg-primary-600 text-white rounded transition">
+                                        <i class="fas fa-check mr-1"></i>ทำเครื่องหมายว่าอ่านแล้ว
+                                    </button>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                    
+                    notificationsList.innerHTML = notificationsHTML;
+                }
+                
+                // Update unread count in dashboard
+                if (document.getElementById('unreadCount')) {
+                    document.getElementById('unreadCount').textContent = unreadCount;
+                }
+            } else {
+                showAlert('ไม่สามารถโหลดการแจ้งเตือนได้: ' + response.message, 'error');
+            }
+        }
+        
+        // Mark notification as read - ใช้ callApi (fetch + doPost)
+        async function markNotificationAsRead(notificationId) {
+            try {
+                const response = await callApi('markAsRead', { notificationId });
+                if (response.success) {
+                    showAlert('ทำเครื่องหมายว่าอ่านแล้วสำเร็จ', 'success');
+                    // โหลดการแจ้งเตือนใหม่
+                    if (currentUser.role === 'admin') {
+                        loadAdminNotifications();
+                    } else {
+                        loadUserNotifications();
+                    }
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                handleError(error);
+            }
+        }
+        
+        // Create scheduled notification - ใช้ callApi (fetch + doPost)
+        async function createScheduledNotification(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('notificationTitle').value;
+            const message = document.getElementById('notificationMessage').value;
+            const type = document.getElementById('notificationType').value;
+            const date = document.getElementById('notificationDate').value;
+            const time = document.getElementById('notificationTime').value;
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'กำลังสร้าง...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-disabled');
+            
+            try {
+                const response = await callApi('createNotification', { 
+                    title, 
+                    message, 
+                    type,
+                    senderId: currentUser.id,
+                    scheduledDate: date,
+                    scheduledTime: time
+                });
+                
+                if (response.success) {
+                    showAlert('สร้างการแจ้งเตือนเรียบร้อยแล้ว', 'success');
+                    document.getElementById('createNotificationForm').reset();
+                    
+                    // Reset to today's date and current time
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('notificationDate').value = today;
+                    
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    document.getElementById('notificationTime').value = `${hours}:${minutes}`;
+                    
+                    loadAdminNotifications();
+                    loadAdminStats();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                handleError(error);
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-disabled');
+            }
+        }
+        
+        // Send notification immediately - ใช้ callApi (fetch + doPost)
+        async function sendNotificationNow() {
+            const title = document.getElementById('notificationTitle').value;
+            const message = document.getElementById('notificationMessage').value;
+            const type = document.getElementById('notificationType').value;
+            
+            if (!title || !message) {
+                showAlert('กรุณากรอกหัวข้อและข้อความ', 'warning');
+                return;
+            }
+            
+            const sendNowBtn = document.getElementById('sendNowBtn');
+            const originalText = sendNowBtn.textContent;
+            sendNowBtn.textContent = 'กำลังส่ง...';
+            sendNowBtn.disabled = true;
+            sendNowBtn.classList.add('btn-disabled');
+            
+            try {
+                const response = await callApi('createNotification', { 
+                    title, 
+                    message, 
+                    type,
+                    senderId: currentUser.id
+                });
+                
+                if (response.success) {
+                    showAlert('ส่งการแจ้งเตือนเรียบร้อยแล้ว', 'success');
+                    document.getElementById('createNotificationForm').reset();
+                    
+                    // Reset to today's date and current time
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('notificationDate').value = today;
+                    
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    document.getElementById('notificationTime').value = `${hours}:${minutes}`;
+                    
+                    loadAdminNotifications();
+                    loadAdminStats();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                handleError(error);
+            } finally {
+                sendNowBtn.textContent = originalText;
+                sendNowBtn.disabled = false;
+                sendNowBtn.classList.remove('btn-disabled');
+            }
+        }
+        
+        // Load admin notifications - ใช้ callGetApi (fetch + doGet)
+        async function loadAdminNotifications() {
+            try {
+                const response = await callGetApi('getUserNotifications', { userId: currentUser.id });
+                handleUserNotificationsResponse(response);
+            } catch (error) {
+                handleError(error);
+            }
+        }
+        
+        // Delete notification - ใช้ callApi (fetch + doPost)
+        async function deleteNotification(notificationId) {
+            if (confirm('คุณแน่ใจที่จะลบการแจ้งเตือนนี้?')) {
+                try {
+                    const response = await callApi('deleteNotification', { notificationId });
+                    if (response.success) {
+                        showAlert('ลบการแจ้งเตือนเรียบร้อยแล้ว', 'success');
+                        loadAdminNotifications();
+                        loadAdminStats();
+                    } else {
+                        showAlert(response.message, 'error');
+                    }
+                } catch (error) {
+                    handleError(error);
+                }
+            }
+        }
+        
+        // Load admin stats - ใช้ callGetApi (fetch + doGet)
+        async function loadAdminStats() {
+            // Load notifications count
+            try {
+                const response = await callGetApi('getUserNotifications', { userId: currentUser.id });
+                if (response.success) {
+                    if (document.getElementById('totalNotifications')) {
+                        document.getElementById('totalNotifications').textContent = response.notifications ? response.notifications.length : 0;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading notifications count:', error);
+            }
+            
+            // Load users count
+            try {
+                const response = await callGetApi('getAllUsers');
+                if (response.success && document.getElementById('totalUsers')) {
+                    document.getElementById('totalUsers').textContent = response.users ? response.users.length : 0;
+                }
+            } catch (error) {
+                console.error('Error loading users count:', error);
+            }
+        }
+        
+        // Show user management - ใช้ callGetApi (fetch + doGet)
+        async function showUserManagement() {
+            try {
+                const response = await callGetApi('getAllUsers');
+                if (response.success) {
+                    handleUserManagementResponse(response);
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                handleError(error);
+            }
+        }
+        
+        // Handle user management response
+        function handleUserManagementResponse(response) {
+            const contentArea = document.getElementById('contentArea');
+            
+            let usersHTML = '';
+            response.users.forEach(user => {
+                usersHTML += `
+                    <tr class="border-b border-gray-200 dark:border-dark-700">
+                        <td class="py-3">${user.username}</td>
+                        <td class="py-3">${user.email}</td>
+                        <td class="py-3">
+                            <span class="px-2 py-1 rounded-full ${user.role === 'admin' ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300' : 'bg-gray-100 dark:bg-dark-700'}">
+                                ${user.role === 'admin' ? 'แอดมิน' : 'ผู้ใช้'}
+                            </span>
+                        </td>
+                        <td class="py-3">
+                            ${new Date(user.created_at).toLocaleDateString('th-TH')}
+                        </td>
+                        <td class="py-3">
+                            ${user.id !== currentUser.id ? `
+                                <select onchange="updateUserRole('${user.id}', this.value)" class="p-2 border border-gray-300 dark:border-dark-700 rounded bg-gray-50 dark:bg-dark-900">
+                                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>ผู้ใช้</option>
+                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>แอดมิน</option>
+                                </select>
+                            ` : 'บัญชีปัจจุบัน'}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            contentArea.innerHTML = `
+                <div class="bg-white dark:bg-dark-800 rounded-xl shadow-md p-6 glass-effect">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold">จัดการผู้ใช้ทั้งหมด</h2>
+                        <button onclick="loadDashboard()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition">
+                            <i class="fas fa-arrow-left mr-2"></i>กลับไปแดชบอร์ด
+                        </button>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-300 dark:border-dark-700">
+                                    <th class="text-left py-3">ชื่อผู้ใช้</th>
+                                    <th class="text-left py-3">อีเมล</th>
+                                    <th class="text-left py-3">สิทธิ์</th>
+                                    <th class="text-left py-3">วันที่สมัคร</th>
+                                    <th class="text-left py-3">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${usersHTML}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Update user role - ใช้ callApi (fetch + doPost)
+        async function updateUserRole(userId, newRole) {
+            try {
+                const response = await callApi('updateUserRole', { userId, newRole });
+                if (response.success) {
+                    showAlert('เปลี่ยนสิทธิ์ผู้ใช้เรียบร้อยแล้ว', 'success');
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                handleError(error);
+            }
+        }
+        
+        // Show notifications dropdown
+        function showNotifications() {
+            // For simplicity, we'll just reload the notifications
+            if (currentUser.role === 'admin') {
+                loadAdminNotifications();
+            } else {
+                loadUserNotifications();
+            }
+        }
+        
+        // Update notification badge
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+        
+        // Start polling for notifications
+        function startNotificationPolling() {
+            // Check for new notifications every 30 seconds
+            setInterval(() => {
+                if (currentUser) {
+                    callGetApi('getUserNotifications', { userId: currentUser.id })
+                        .then(response => {
+                            if (response.success && response.unread_count !== unreadCount) {
+                                unreadCount = response.unread_count;
+                                updateNotificationBadge();
+                                
+                                // Show notification alert if there's a new one
+                                if (response.unread_count > 0 && !document.hidden) {
+                                    showAlert(`คุณมีการแจ้งเตือนใหม่ ${response.unread_count} รายการ`, 'info');
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Polling error:', error);
+                        });
+                }
+            }, 30000); // 30 seconds
+        }
+        
+        // Logout function
+        function logout() {
+            currentUser = null;
+            unreadCount = 0;
+            
+            // Remove dynamic elements from header
+            const logoutBtn = document.getElementById('logoutBtn');
+            const userInfo = document.getElementById('userInfo');
+            const notificationBell = document.getElementById('notificationBell');
+            
+            if (logoutBtn) logoutBtn.remove();
+            if (userInfo) userInfo.remove();
+            if (notificationBell) notificationBell.remove();
+            
+            // Show API config section
+            document.getElementById('apiConfigSection').classList.remove('hidden');
+            
+            // Load initial view
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = `
+                <div class="text-center py-12">
+                    <i class="fas fa-link text-4xl text-gray-400 dark:text-gray-600 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">กรุณาตั้งค่า API URL ก่อน</h3>
+                    <p class="text-gray-600 dark:text-gray-400">ใส่ Web App URL ของคุณด้านบนแล้วคลิก "บันทึก"</p>
+                </div>
+            `;
+            
+            showAlert('ออกจากระบบสำเร็จ', 'success');
+        }
+        
+        // Handle errors
+        function handleError(error) {
+            console.error('Error:', error);
+            showAlert('เกิดข้อผิดพลาด: ' + error.toString(), 'error');
+        }
     </script>
 </body>
 </html>
