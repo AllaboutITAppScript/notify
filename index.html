@@ -6,10 +6,16 @@
     <title>ระบบตั้งเวลาแจ้งเตือน + Google Sheets</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             background-color: #121826;
             color: #e5e7eb;
+            font-family: 'Sarabun', sans-serif;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Prompt', sans-serif;
         }
         
         @keyframes pulse {
@@ -34,10 +40,104 @@
         .status-connected { color: #10b981; }
         .status-disconnected { color: #ef4444; }
         .status-connecting { color: #f59e0b; }
+        
+        /* iOS-like notification badge */
+        .notification-badge {
+            background-color: #FF3B30;
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: bold;
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Mobile app style */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            
+            .mobile-hidden {
+                display: none !important;
+            }
+        }
+        
+        /* App icon for mobile */
+        .app-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
-<body class="min-h-screen font-sans">
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
+<body class="min-h-screen">
+    <!-- App Icon for Mobile (PWA) -->
+    <div id="appIcon" class="fixed bottom-6 right-6 z-50 app-icon mobile-hidden">
+        <i class="fas fa-bell"></i>
+        <div id="mobileBadge" class="notification-badge hidden">0</div>
+    </div>
+    
+    <!-- Install Prompt for PWA -->
+    <div id="installPrompt" class="hidden fixed bottom-20 right-6 bg-gray-800 rounded-xl p-4 shadow-2xl max-w-xs border border-gray-700 z-50">
+        <div class="flex items-center mb-3">
+            <div class="app-icon mr-3">
+                <i class="fas fa-bell"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-white">ติดตั้งเป็นแอป</h4>
+                <p class="text-gray-400 text-sm">ใช้ได้แม้ไม่มีอินเทอร์เน็ต</p>
+            </div>
+        </div>
+        <div class="flex space-x-2">
+            <button id="installBtn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-sm">
+                ติดตั้ง
+            </button>
+            <button id="closeInstallBtn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
+                ปิด
+            </button>
+        </div>
+    </div>
+    
+    <!-- Mobile Navigation -->
+    <div id="mobileNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 z-40">
+        <div class="flex justify-around p-3">
+            <button class="flex flex-col items-center text-gray-400 hover:text-white">
+                <i class="fas fa-clock text-xl mb-1"></i>
+                <span class="text-xs">ตั้งเวลา</span>
+            </button>
+            <button class="flex flex-col items-center text-gray-400 hover:text-white">
+                <i class="fas fa-list text-xl mb-1"></i>
+                <span class="text-xs">รายการ</span>
+            </button>
+            <button id="mobileNotificationBtn" class="flex flex-col items-center text-gray-400 hover:text-white relative">
+                <i class="fas fa-bell text-xl mb-1"></i>
+                <span class="text-xs">แจ้งเตือน</span>
+                <div id="mobileNavBadge" class="notification-badge hidden">0</div>
+            </button>
+            <button class="flex flex-col items-center text-gray-400 hover:text-white">
+                <i class="fas fa-cog text-xl mb-1"></i>
+                <span class="text-xs">ตั้งค่า</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8 max-w-4xl pb-24 md:pb-8">
         <header class="flex justify-between items-center mb-10">
             <div>
                 <h1 class="text-3xl font-bold text-blue-400">
@@ -48,16 +148,16 @@
             
             <div class="flex items-center space-x-4">
                 <!-- Connection Status -->
-                <div id="connectionStatus" class="flex items-center">
+                <div id="connectionStatus" class="md:flex items-center hidden">
                     <div id="statusDot" class="w-3 h-3 rounded-full bg-green-500 mr-2 pulse"></div>
-                    <span id="statusText" class="text-sm status-connected">เชื่อมต่อกับ Google Sheets แล้ว</span>
+                    <span id="statusText" class="text-sm status-connected">เชื่อมต่อกับ Google Sheets</span>
                 </div>
                 
                 <!-- Notification badge -->
                 <div class="relative">
                     <button id="notificationBtn" class="bg-gray-800 hover:bg-gray-700 p-3 rounded-full transition duration-200">
                         <i class="fas fa-bell text-xl"></i>
-                        <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold hidden">0</span>
+                        <div id="notificationBadge" class="notification-badge hidden">0</div>
                     </button>
                 </div>
             </div>
@@ -79,6 +179,10 @@
                 <p class="text-green-300 text-sm">
                     เมื่อคุณตั้งเวลาแจ้งเตือน ข้อมูลจะถูกบันทึกลง Google Sheets อัตโนมัติ
                 </p>
+                <div class="mt-3 flex items-center text-green-400">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    <span>บันทึกแล้ว: <span id="syncCount">0</span> รายการ</span>
+                </div>
             </div>
         </div>
 
@@ -257,7 +361,7 @@
                 <div id="serviceStatus" class="w-3 h-3 rounded-full bg-green-500 mr-3 pulse"></div>
                 <div>
                     <p class="font-medium">บริการแจ้งเตือนทำงานอยู่</p>
-                    <p class="text-sm text-gray-400">บันทึกลง Google Sheets เมื่อแจ้งเตือน</p>
+                    <p class="text-sm text-gray-400">บันทึกลง Google Sheets เมื่อแจ้งเตือน • ทำงานเบื้องหลังได้</p>
                 </div>
             </div>
             <div class="text-right">
@@ -283,6 +387,7 @@
         </div>
     </div>
 
+    <!-- Service Worker Registration -->
     <script>
         // DOM elements
         const alarmForm = document.getElementById('alarmForm');
@@ -302,6 +407,14 @@
         const nextAlarmTimeElement = document.getElementById('nextAlarmTime');
         const totalAlarmsElement = document.getElementById('totalAlarms');
         const msgElement = document.getElementById('msg');
+        const syncCountElement = document.getElementById('syncCount');
+        const mobileBadge = document.getElementById('mobileBadge');
+        const mobileNavBadge = document.getElementById('mobileNavBadge');
+        const mobileNotificationBtn = document.getElementById('mobileNotificationBtn');
+        const appIcon = document.getElementById('appIcon');
+        const installPrompt = document.getElementById('installPrompt');
+        const installBtn = document.getElementById('installBtn');
+        const closeInstallBtn = document.getElementById('closeInstallBtn');
         
         // ตั้งค่า Google Apps Script URL ของคุณตรงนี้
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
@@ -322,8 +435,11 @@
         let alarms = JSON.parse(localStorage.getItem('alarms')) || [];
         let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
         let unreadCount = parseInt(localStorage.getItem('unreadCount')) || 0;
-        let isConnected = true; // ตั้งค่าเป็น true เพราะเรามี URL อยู่แล้ว
+        let isConnected = true;
         let alarmCheckInterval;
+        let deferredPrompt;
+        let serviceWorkerRegistration;
+        let syncCount = 0;
         
         // Initialize the app
         function init() {
@@ -349,6 +465,95 @@
                     Notification.requestPermission();
                 }, 2000);
             }
+            
+            // Register Service Worker for PWA
+            registerServiceWorker();
+            
+            // Setup PWA install prompt
+            setupPWAInstall();
+            
+            // Check for updates every 5 minutes
+            setInterval(() => {
+                if (navigator.onLine) {
+                    syncPendingData();
+                }
+            }, 300000);
+            
+            // Show app icon on mobile
+            if ('ontouchstart' in window || navigator.maxTouchPoints) {
+                appIcon.classList.remove('mobile-hidden');
+            }
+        }
+        
+        // Register Service Worker
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js', {
+                        scope: '/'
+                    });
+                    console.log('Service Worker registered successfully');
+                    
+                    // Check for updates
+                    serviceWorkerRegistration.addEventListener('updatefound', () => {
+                        const newWorker = serviceWorkerRegistration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed') {
+                                if (navigator.serviceWorker.controller) {
+                                    console.log('New content available; please refresh.');
+                                }
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error('Service Worker registration failed:', error);
+                }
+            }
+        }
+        
+        // Setup PWA install prompt
+        function setupPWAInstall() {
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                
+                // Show install prompt after 5 seconds
+                setTimeout(() => {
+                    if (deferredPrompt && !isAppInstalled()) {
+                        installPrompt.classList.remove('hidden');
+                    }
+                }, 5000);
+            });
+            
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                    installPrompt.classList.add('hidden');
+                }
+            });
+            
+            closeInstallBtn.addEventListener('click', () => {
+                installPrompt.classList.add('hidden');
+            });
+            
+            // Check if app is already installed
+            window.addEventListener('appinstalled', () => {
+                console.log('PWA installed successfully');
+                deferredPrompt = null;
+                installPrompt.classList.add('hidden');
+            });
+        }
+        
+        // Check if app is installed
+        function isAppInstalled() {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   window.navigator.standalone ||
+                   document.referrer.includes('android-app://');
         }
         
         // Show message function
@@ -381,13 +586,23 @@
             if (unreadCount > 0) {
                 notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
                 notificationBadge.classList.remove('hidden');
-                notificationBadge.classList.add('pulse');
+                
+                // Update mobile badges
+                mobileBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                mobileBadge.classList.remove('hidden');
+                mobileNavBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                mobileNavBadge.classList.remove('hidden');
             } else {
                 notificationBadge.classList.add('hidden');
-                notificationBadge.classList.remove('pulse');
+                mobileBadge.classList.add('hidden');
+                mobileNavBadge.classList.add('hidden');
             }
             
             localStorage.setItem('unreadCount', unreadCount);
+            
+            // Update sync count
+            syncCount = alarms.filter(alarm => alarm.synced).length;
+            syncCountElement.textContent = syncCount;
         }
         
         // Render active alarms
@@ -582,6 +797,9 @@
             // บันทึกลง Google Sheets เมื่อแจ้งเตือน
             if (isConnected) {
                 saveToGoogleSheets(alarm, 'triggered');
+            } else {
+                // Save to pending sync if offline
+                saveToPendingSync(alarm, 'triggered');
             }
             
             renderAlarms();
@@ -592,7 +810,10 @@
         
         // Save data to Google Sheets - ใช้รูปแบบ fetch ตามที่ต้องการ
         function saveToGoogleSheets(alarmData, status = 'created') {
-            if (!isConnected) return false;
+            if (!isConnected) {
+                saveToPendingSync(alarmData, status);
+                return false;
+            }
             
             try {
                 const payload = {
@@ -629,19 +850,55 @@
                         alarms[alarmIndex].synced = true;
                         localStorage.setItem('alarms', JSON.stringify(alarms));
                         renderAlarms();
+                        updateBadge();
                     }
                 })
                 .catch(error => {
                     console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
-                    showMessage('ไม่สามารถบันทึกลง Google Sheets ได้', 'error');
+                    // Save to pending sync if offline
+                    saveToPendingSync(alarmData, status);
+                    showMessage('บันทึกชั่วคราวไว้ในเครื่อง (รอสัญญาณ)', 'warning');
                 });
                 
                 return true;
             } catch (error) {
                 console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
-                showMessage('ข้อผิดพลาด: ' + error.toString(), 'error');
+                saveToPendingSync(alarmData, status);
+                showMessage('บันทึกชั่วคราวไว้ในเครื่อง', 'warning');
                 return false;
             }
+        }
+        
+        // Save to pending sync when offline
+        function saveToPendingSync(alarmData, status) {
+            const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+            pendingSync.push({
+                alarmData,
+                status,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem('pendingSync', JSON.stringify(pendingSync));
+        }
+        
+        // Sync pending data when online
+        function syncPendingData() {
+            if (!isConnected || !navigator.onLine) return;
+            
+            const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+            if (pendingSync.length === 0) return;
+            
+            showMessage('กำลังซิงค์ข้อมูลที่ค้างอยู่...', 'info');
+            
+            pendingSync.forEach((item, index) => {
+                setTimeout(() => {
+                    saveToGoogleSheets(item.alarmData, item.status);
+                }, index * 1000);
+            });
+            
+            // Clear pending sync after processing
+            setTimeout(() => {
+                localStorage.removeItem('pendingSync');
+            }, pendingSync.length * 1500);
         }
         
         // Test connection to Google Apps Script
@@ -663,10 +920,12 @@
                 
                 // Sync existing alarms
                 syncExistingAlarms();
+                // Sync pending data
+                syncPendingData();
             })
             .catch(error => {
                 isConnected = false;
-                showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้', 'error');
+                showMessage('ทำงานออฟไลน์ - บันทึกไว้ในเครื่อง', 'warning');
             });
         }
         
@@ -696,11 +955,17 @@
             }, 10000);
             
             if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(`⏰ ${alarm.title}`, {
+                const notification = new Notification(`⏰ ${alarm.title}`, {
                     body: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
                     icon: 'https://cdn-icons-png.flaticon.com/512/565/565422.png',
-                    tag: 'alarm-notification'
+                    tag: 'alarm-notification',
+                    requireInteraction: true
                 });
+                
+                notification.onclick = function() {
+                    window.focus();
+                    this.close();
+                };
             }
         }
         
@@ -764,9 +1029,7 @@
             alarms[index].datetime = alarmDate.toISOString();
             
             // บันทึกลง Google Sheets
-            if (isConnected) {
-                saveToGoogleSheets(newAlarm, 'created');
-            }
+            saveToGoogleSheets(newAlarm, 'created');
             
             renderAlarms();
         }
@@ -862,6 +1125,22 @@
             markAllNotificationsAsRead();
         });
         
+        // Mobile notification button
+        mobileNotificationBtn.addEventListener('click', function() {
+            notificationPanel.classList.remove('hidden');
+            markAllNotificationsAsRead();
+        });
+        
+        // App icon click
+        appIcon.addEventListener('click', function() {
+            if (unreadCount > 0) {
+                notificationPanel.classList.remove('hidden');
+                markAllNotificationsAsRead();
+            } else {
+                showMessage('ไม่มีข้อความแจ้งเตือนใหม่', 'info');
+            }
+        });
+        
         // Close notification panel
         closeNotificationBtn.addEventListener('click', function() {
             notificationPanel.classList.add('hidden');
@@ -889,6 +1168,18 @@
         // Close demo notification
         closeDemoBtn.addEventListener('click', function() {
             demoNotification.classList.add('hidden');
+        });
+        
+        // Network status monitoring
+        window.addEventListener('online', () => {
+            showMessage('เชื่อมต่ออินเทอร์เน็ตแล้ว กำลังซิงค์ข้อมูล...', 'success');
+            isConnected = true;
+            syncPendingData();
+        });
+        
+        window.addEventListener('offline', () => {
+            showMessage('กำลังทำงานแบบออฟไลน์', 'warning');
+            isConnected = false;
         });
         
         // Initialize the application
