@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบตั้งเวลาแจ้งเตือน</title>
+    <title>ระบบตั้งเวลาแจ้งเตือน + Google Sheets</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Custom styles for dark mode */
         body {
             background-color: #121826;
             color: #e5e7eb;
         }
         
-        /* Notification badge animation */
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
@@ -24,7 +22,6 @@
             animation: pulse 2s infinite;
         }
         
-        /* Swipe animation for notifications */
         @keyframes slideInRight {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -33,6 +30,10 @@
         .slide-in {
             animation: slideInRight 0.3s ease-out;
         }
+        
+        .status-connected { color: #10b981; }
+        .status-disconnected { color: #ef4444; }
+        .status-connecting { color: #f59e0b; }
     </style>
 </head>
 <body class="min-h-screen font-sans">
@@ -42,17 +43,68 @@
                 <h1 class="text-3xl font-bold text-blue-400">
                     <i class="fas fa-bell mr-3"></i>ระบบแจ้งเตือน
                 </h1>
-                <p class="text-gray-400 mt-2">ตั้งเวลาแจ้งเตือนและทำงานในเบื้องหลัง</p>
+                <p class="text-gray-400 mt-2">ตั้งเวลาแจ้งเตือนและบันทึกลง Google Sheets</p>
             </div>
             
-            <!-- Notification badge -->
-            <div class="relative">
-                <button id="notificationBtn" class="bg-gray-800 hover:bg-gray-700 p-3 rounded-full transition duration-200">
-                    <i class="fas fa-bell text-xl"></i>
-                    <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold hidden">0</span>
-                </button>
+            <div class="flex items-center space-x-4">
+                <!-- Connection Status -->
+                <div id="connectionStatus" class="flex items-center">
+                    <div id="statusDot" class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+                    <span id="statusText" class="text-sm">กำลังเชื่อมต่อ...</span>
+                </div>
+                
+                <!-- Notification badge -->
+                <div class="relative">
+                    <button id="notificationBtn" class="bg-gray-800 hover:bg-gray-700 p-3 rounded-full transition duration-200">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold hidden">0</span>
+                    </button>
+                </div>
             </div>
         </header>
+
+        <!-- Message Display -->
+        <div id="msg" class="mb-4 p-4 rounded-lg"></div>
+
+        <!-- Google Sheets Configuration -->
+        <div id="configPanel" class="mb-8 bg-gray-900 rounded-2xl p-6 shadow-xl">
+            <h2 class="text-2xl font-bold text-green-300 mb-4">
+                <i class="fas fa-cogs mr-2"></i>การตั้งค่า Google Sheets
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-gray-300 mb-2" for="sheetUrl">
+                        <i class="fas fa-link mr-2"></i>Google Apps Script URL
+                    </label>
+                    <input 
+                        type="url" 
+                        id="sheetUrl" 
+                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="https://script.google.com/macros/s/..."
+                    >
+                    <p class="text-gray-500 text-xs mt-2">URL ของ Google Apps Script Web App ที่คุณ deploy แล้ว</p>
+                </div>
+                
+                <div class="flex items-end">
+                    <button id="testConnectionBtn" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg transition duration-200">
+                        <i class="fas fa-plug mr-2"></i>ทดสอบการเชื่อมต่อ
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="font-bold text-green-300 mb-2">
+                    <i class="fas fa-info-circle mr-2"></i>คำแนะนำ
+                </h3>
+                <ol class="list-decimal pl-5 text-gray-300 space-y-1 text-sm">
+                    <li>สร้าง Google Apps Script ใหม่</li>
+                    <li>เพิ่มฟังก์ชัน doPost() สำหรับรับข้อมูล</li>
+                    <li>Deploy เป็น Web App (Execute as: Me, Who has access: Anyone)</li>
+                    <li>คัดลอก URL มาใส่ในช่องด้านบน</li>
+                </ol>
+            </div>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Left column: Form for setting alarms -->
@@ -197,7 +249,7 @@
             </div>
         </div>
         
-        <!-- Notification panel (hidden by default) -->
+        <!-- Notification panel -->
         <div id="notificationPanel" class="hidden fixed top-0 right-0 w-full md:w-96 h-full bg-gray-900 shadow-2xl z-50 p-6 overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-blue-300">
@@ -229,7 +281,7 @@
                 <div id="serviceStatus" class="w-3 h-3 rounded-full bg-green-500 mr-3 pulse"></div>
                 <div>
                     <p class="font-medium">บริการแจ้งเตือนทำงานอยู่</p>
-                    <p class="text-sm text-gray-400">ระบบจะแจ้งเตือนแม้เมื่อปิดเบราว์เซอร์ (ใช้ Background Sync API)</p>
+                    <p class="text-sm text-gray-400">บันทึกลง Google Sheets เมื่อแจ้งเตือน</p>
                 </div>
             </div>
             <div class="text-right">
@@ -237,7 +289,7 @@
             </div>
         </div>
         
-        <!-- Demo notification (hidden by default) -->
+        <!-- Demo notification -->
         <div id="demoNotification" class="hidden fixed bottom-4 right-4 max-w-sm bg-gray-800 border-l-4 border-blue-500 rounded-lg shadow-xl p-4 z-40 slide-in">
             <div class="flex justify-between">
                 <div class="flex-1">
@@ -273,6 +325,12 @@
         const currentDateElement = document.getElementById('currentDate');
         const nextAlarmTimeElement = document.getElementById('nextAlarmTime');
         const totalAlarmsElement = document.getElementById('totalAlarms');
+        const sheetUrlInput = document.getElementById('sheetUrl');
+        const testConnectionBtn = document.getElementById('testConnectionBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const msgElement = document.getElementById('msg');
         
         // Set minimum date to today
         const dateInput = document.getElementById('date');
@@ -290,6 +348,8 @@
         let alarms = JSON.parse(localStorage.getItem('alarms')) || [];
         let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
         let unreadCount = parseInt(localStorage.getItem('unreadCount')) || 0;
+        let googleScriptUrl = localStorage.getItem('googleScriptUrl') || '';
+        let isConnected = false;
         let alarmCheckInterval;
         
         // Initialize the app
@@ -298,6 +358,11 @@
             updateBadge();
             renderAlarms();
             renderNotifications();
+            
+            // Load saved Google Script URL
+            if (googleScriptUrl) {
+                sheetUrlInput.value = googleScriptUrl;
+            }
             
             // Check for alarms every second
             alarmCheckInterval = setInterval(checkAlarms, 1000);
@@ -311,9 +376,19 @@
                     Notification.requestPermission();
                 }, 2000);
             }
+        }
+        
+        // Show message function
+        function showMessage(message, type = 'success') {
+            msgElement.innerHTML = message;
+            msgElement.className = type === 'success' ? 
+                'bg-green-900 text-green-300' : 'bg-red-900 text-red-300';
             
-            // Setup service worker for background sync (simulated)
-            setupBackgroundService();
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                msgElement.innerHTML = '';
+                msgElement.className = '';
+            }, 5000);
         }
         
         // Update current time display
@@ -328,23 +403,6 @@
             });
         }
         
-        // Setup background service (simulated)
-        function setupBackgroundService() {
-            // In a real app, this would register a service worker
-            console.log('Background service is running...');
-            
-            // Check if there are alarms set for today
-            const now = new Date();
-            const todayAlarms = alarms.filter(alarm => {
-                const alarmDate = new Date(alarm.datetime);
-                return alarmDate.toDateString() === now.toDateString() && !alarm.triggered;
-            });
-            
-            if (todayAlarms.length > 0) {
-                console.log(`${todayAlarms.length} alarms set for today`);
-            }
-        }
-        
         // Update notification badge
         function updateBadge() {
             if (unreadCount > 0) {
@@ -356,7 +414,6 @@
                 notificationBadge.classList.remove('pulse');
             }
             
-            // Update in localStorage
             localStorage.setItem('unreadCount', unreadCount);
         }
         
@@ -375,9 +432,7 @@
                 return;
             }
             
-            // Sort alarms by datetime
             alarms.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
-            
             activeAlarms.innerHTML = '';
             let nextAlarm = null;
             
@@ -412,6 +467,11 @@
                                         <i class="fas fa-check mr-1"></i>แจ้งเตือนแล้ว
                                     </span>` : ''
                                 }
+                                ${alarm.synced ? 
+                                    `<span class="text-xs px-2 py-1 rounded bg-green-900 text-green-300 ml-2">
+                                        <i class="fas fa-cloud mr-1"></i>บันทึกแล้ว
+                                    </span>` : ''
+                                }
                             </div>
                         </div>
                         <button class="delete-alarm ml-2 text-gray-500 hover:text-red-400" data-index="${index}">
@@ -423,7 +483,6 @@
                 activeAlarms.appendChild(alarmElement);
             });
             
-            // Update next alarm display
             if (nextAlarm) {
                 const nextAlarmDate = new Date(nextAlarm.datetime);
                 nextAlarmTimeElement.textContent = `การแจ้งเตือนถัดไป: ${nextAlarmDate.toLocaleDateString('th-TH')} ${nextAlarmDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}`;
@@ -431,10 +490,8 @@
                 nextAlarmTimeElement.textContent = 'การแจ้งเตือนถัดไป: ไม่มี';
             }
             
-            // Update total alarms count
             totalAlarmsElement.textContent = alarms.length;
             
-            // Add event listeners to delete buttons
             document.querySelectorAll('.delete-alarm').forEach(button => {
                 button.addEventListener('click', function() {
                     const index = parseInt(this.getAttribute('data-index'));
@@ -466,9 +523,7 @@
                 return;
             }
             
-            // Sort notifications by datetime (newest first)
             notifications.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
-            
             notificationsList.innerHTML = '';
             
             notifications.forEach((notification, index) => {
@@ -501,7 +556,6 @@
                 notificationsList.appendChild(notificationElement);
             });
             
-            // Add event listeners to delete notification buttons
             document.querySelectorAll('.delete-notification').forEach(button => {
                 button.addEventListener('click', function() {
                     const index = parseInt(this.getAttribute('data-index'));
@@ -517,11 +571,9 @@
             alarms.forEach((alarm, index) => {
                 const alarmDate = new Date(alarm.datetime);
                 
-                // Check if alarm should be triggered
                 if (!alarm.triggered && alarmDate <= now) {
                     triggerAlarm(index);
                     
-                    // Handle repeating alarms
                     if (alarm.repeat !== 'none') {
                         rescheduleRepeatingAlarm(index);
                     }
@@ -533,11 +585,10 @@
         function triggerAlarm(index) {
             const alarm = alarms[index];
             
-            // Mark as triggered
             alarms[index].triggered = true;
+            alarms[index].triggered_at = new Date().toISOString();
             localStorage.setItem('alarms', JSON.stringify(alarms));
             
-            // Create notification
             const notification = {
                 id: Date.now(),
                 title: alarm.title,
@@ -550,36 +601,158 @@
             notifications.unshift(notification);
             localStorage.setItem('notifications', JSON.stringify(notifications));
             
-            // Increment unread count
             unreadCount++;
             updateBadge();
             
-            // Show notification
             showNotification(alarm);
             
-            // Update display
+            // บันทึกลง Google Sheets เมื่อแจ้งเตือน
+            if (isConnected) {
+                saveToGoogleSheets(alarm, 'triggered');
+            }
+            
             renderAlarms();
             renderNotifications();
             
-            // Play notification sound (simulated)
             playNotificationSound();
+        }
+        
+        // Save data to Google Sheets - ใช้รูปแบบ fetch ตามที่ต้องการ
+        function saveToGoogleSheets(alarmData, status = 'created') {
+            if (!googleScriptUrl || !isConnected) return false;
+            
+            try {
+                const payload = {
+                    date: alarmData.date || new Date(alarmData.datetime).toLocaleDateString('th-TH'),
+                    time: alarmData.time || new Date(alarmData.datetime).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}),
+                    title: alarmData.title,
+                    description: alarmData.description || '',
+                    repeat: alarmData.repeat || 'none',
+                    status: status || 'active',
+                    triggered_at: alarmData.triggered_at || ''
+                };
+                
+                // สร้าง FormData object
+                const formData = new FormData();
+                for (const key in payload) {
+                    formData.append(key, payload[key]);
+                }
+                
+                // ใช้รูปแบบ fetch ตามที่ต้องการ
+                fetch(googleScriptUrl, {
+                    method: "POST",
+                    body: formData
+                })
+                .then(res => res.text())
+                .then(data => {
+                    console.log('บันทึกลง Google Sheets สำเร็จ:', data);
+                    
+                    // แสดงข้อความตอบกลับ
+                    showMessage(data, 'success');
+                    
+                    // Mark the alarm as synced
+                    const alarmIndex = alarms.findIndex(a => a.id === alarmData.id);
+                    if (alarmIndex !== -1) {
+                        alarms[alarmIndex].synced = true;
+                        localStorage.setItem('alarms', JSON.stringify(alarms));
+                        renderAlarms();
+                    }
+                })
+                .catch(error => {
+                    console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
+                    showMessage('ไม่สามารถบันทึกลง Google Sheets ได้', 'error');
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
+                showMessage('ข้อผิดพลาด: ' + error.toString(), 'error');
+                return false;
+            }
+        }
+        
+        // Test connection to Google Apps Script
+        function testConnection() {
+            const url = sheetUrlInput.value.trim();
+            if (!url) {
+                updateConnectionStatus(false, 'กรุณากรอก URL');
+                showMessage('กรุณากรอก Google Apps Script URL', 'error');
+                return;
+            }
+            
+            updateConnectionStatus(null, 'กำลังทดสอบการเชื่อมต่อ...');
+            
+            // สร้าง FormData สำหรับการทดสอบ
+            const formData = new FormData();
+            formData.append('test', 'connection');
+            formData.append('action', 'test');
+            
+            // ใช้รูปแบบ fetch ตามที่ต้องการ
+            fetch(url, {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.text())
+            .then(data => {
+                // Save URL if connection appears successful
+                googleScriptUrl = url;
+                localStorage.setItem('googleScriptUrl', url);
+                isConnected = true;
+                
+                updateConnectionStatus(true, 'เชื่อมต่อสำเร็จกับ Google Sheets');
+                showMessage('เชื่อมต่อสำเร็จกับ Google Sheets: ' + data, 'success');
+                
+                // Sync existing alarms
+                syncExistingAlarms();
+            })
+            .catch(error => {
+                updateConnectionStatus(false, 'ไม่สามารถเชื่อมต่อได้');
+                isConnected = false;
+                showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้', 'error');
+            });
+        }
+        
+        // Update connection status display
+        function updateConnectionStatus(connected, message) {
+            if (connected === true) {
+                statusDot.className = 'w-3 h-3 rounded-full bg-green-500 mr-2 pulse';
+                statusText.className = 'text-sm status-connected';
+            } else if (connected === false) {
+                statusDot.className = 'w-3 h-3 rounded-full bg-red-500 mr-2';
+                statusText.className = 'text-sm status-disconnected';
+            } else {
+                statusDot.className = 'w-3 h-3 rounded-full bg-yellow-500 mr-2 pulse';
+                statusText.className = 'text-sm status-connecting';
+            }
+            
+            statusText.textContent = message;
+        }
+        
+        // Sync existing alarms to Google Sheets
+        function syncExistingAlarms() {
+            if (!isConnected) return;
+            
+            const unsyncedAlarms = alarms.filter(alarm => !alarm.synced);
+            
+            unsyncedAlarms.forEach((alarm, index) => {
+                setTimeout(() => {
+                    saveToGoogleSheets(alarm, 'synced');
+                }, index * 500); // Delay to avoid rate limiting
+            });
         }
         
         // Show browser/system notification
         function showNotification(alarm) {
-            // Show in-app notification
             document.getElementById('demoTitle').textContent = alarm.title;
             document.getElementById('demoDesc').textContent = alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!';
             document.getElementById('demoTime').textContent = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
             
             demoNotification.classList.remove('hidden');
             
-            // Auto-hide after 10 seconds
             setTimeout(() => {
                 demoNotification.classList.add('hidden');
             }, 10000);
             
-            // Show browser notification if permission is granted
             if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification(`⏰ ${alarm.title}`, {
                     body: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
@@ -589,10 +762,9 @@
             }
         }
         
-        // Play notification sound (simulated with Web Audio API)
+        // Play notification sound
         function playNotificationSound() {
             try {
-                // Create audio context
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -603,7 +775,6 @@
                 oscillator.frequency.value = 800;
                 oscillator.type = 'sine';
                 
-                // Fade in and out
                 gainNode.gain.setValueAtTime(0, audioContext.currentTime);
                 gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.1);
                 gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
@@ -619,9 +790,7 @@
         function rescheduleRepeatingAlarm(index) {
             const alarm = alarms[index];
             const alarmDate = new Date(alarm.datetime);
-            const now = new Date();
             
-            // Calculate next occurrence based on repeat type
             switch (alarm.repeat) {
                 case 'daily':
                     alarmDate.setDate(alarmDate.getDate() + 1);
@@ -634,22 +803,28 @@
                     break;
             }
             
-            // Create new alarm for next occurrence
             const newAlarm = {
+                id: Date.now(),
                 title: alarm.title,
                 description: alarm.description,
+                date: alarm.date,
+                time: alarm.time,
                 datetime: alarmDate.toISOString(),
                 repeat: alarm.repeat,
-                triggered: false
+                triggered: false,
+                synced: false
             };
             
             alarms.push(newAlarm);
             localStorage.setItem('alarms', JSON.stringify(alarms));
             
-            // Reset current alarm's triggered status so it can be checked again
-            // This is needed because we're rescheduling it
             alarms[index].triggered = false;
             alarms[index].datetime = alarmDate.toISOString();
+            
+            // บันทึกลง Google Sheets
+            if (isConnected) {
+                saveToGoogleSheets(newAlarm, 'created');
+            }
             
             renderAlarms();
         }
@@ -660,6 +835,7 @@
                 alarms.splice(index, 1);
                 localStorage.setItem('alarms', JSON.stringify(alarms));
                 renderAlarms();
+                showMessage('ลบการแจ้งเตือนเรียบร้อยแล้ว', 'success');
             }
         }
         
@@ -686,22 +862,29 @@
             const time = document.getElementById('time').value;
             const repeat = document.querySelector('input[name="repeat"]:checked').value;
             
-            // Combine date and time
             const datetime = new Date(`${date}T${time}`);
             
-            // Create alarm object
             const alarm = {
                 id: Date.now(),
                 title,
                 description,
+                date,
+                time,
                 datetime: datetime.toISOString(),
                 repeat,
-                triggered: false
+                triggered: false,
+                synced: false
             };
             
-            // Add to alarms array
             alarms.push(alarm);
             localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            // บันทึกลง Google Sheets
+            if (isConnected) {
+                saveToGoogleSheets(alarm, 'created');
+            } else {
+                showMessage(`ตั้งเวลาแจ้งเตือน "${title}" สำเร็จแล้ว! (บันทึกเฉพาะในเครื่อง)`, 'success');
+            }
             
             // Reset form
             alarmForm.reset();
@@ -709,11 +892,7 @@
             timeInput.value = `${nextHour.getHours().toString().padStart(2, '0')}:00`;
             document.querySelector('input[name="repeat"][value="none"]').checked = true;
             
-            // Update UI
             renderAlarms();
-            
-            // Show success message
-            alert(`ตั้งเวลาแจ้งเตือน "${title}" สำเร็จแล้ว!`);
         });
         
         // Clear form button
@@ -727,7 +906,7 @@
         // Clear all alarms button
         clearAllBtn.addEventListener('click', function() {
             if (alarms.length === 0) {
-                alert('ไม่มีเวลาที่ตั้งไว้');
+                showMessage('ไม่มีเวลาที่ตั้งไว้', 'error');
                 return;
             }
             
@@ -735,13 +914,13 @@
                 alarms = [];
                 localStorage.setItem('alarms', JSON.stringify(alarms));
                 renderAlarms();
+                showMessage('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว', 'success');
             }
         });
         
         // Toggle notification panel
         notificationBtn.addEventListener('click', function() {
             notificationPanel.classList.remove('hidden');
-            // Mark all notifications as read when panel is opened
             markAllNotificationsAsRead();
         });
         
@@ -755,7 +934,6 @@
             markAllNotificationsAsRead();
         });
         
-        // Mark all notifications as read
         function markAllNotificationsAsRead() {
             if (unreadCount === 0) return;
             
@@ -767,12 +945,16 @@
             unreadCount = 0;
             updateBadge();
             renderNotifications();
+            showMessage('ทำเครื่องหมายว่าอ่านแล้วทั้งหมดเรียบร้อย', 'success');
         }
         
         // Close demo notification
         closeDemoBtn.addEventListener('click', function() {
             demoNotification.classList.add('hidden');
         });
+        
+        // Test connection button
+        testConnectionBtn.addEventListener('click', testConnection);
         
         // Initialize the application
         init();
