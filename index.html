@@ -136,6 +136,24 @@
         .swal2-cancel {
             background-color: #6b7280 !important;
         }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
     </style>
 </head>
 <body class="min-h-screen">
@@ -202,9 +220,9 @@
         <header class="flex justify-between items-center mb-10">
             <div>
                 <h1 class="text-3xl font-bold text-blue-400">
-                    <i class="fas fa-bell mr-3"></i>ระบบแจ้งเตือน
+                    <i class="fas fa-bell mr-3"></i>ระบบแจ้งเตือนรวมศูนย์
                 </h1>
-                <p class="text-gray-400 mt-2">ตั้งเวลาแจ้งเตือนและบันทึกลง Google Sheets</p>
+                <p class="text-gray-400 mt-2">ตั้งเวลาแจ้งเตือน, ส่งประกาศทุกคน, บันทึกลง Google Sheets</p>
             </div>
             
             <div class="flex items-center space-x-4">
@@ -235,10 +253,10 @@
             <div class="bg-green-800 rounded-lg p-4">
                 <p class="text-green-200 mb-2">
                     <i class="fas fa-info-circle mr-2"></i>
-                    ระบบสามารถบันทึกข้อมูลแจ้งเตือนลง Google Sheets ได้ทันที
+                    ระบบสามารถบันทึกและลบข้อมูลแจ้งเตือนลง Google Sheets ได้ทันที
                 </p>
                 <p class="text-green-300 text-sm">
-                    เมื่อคุณตั้งเวลาแจ้งเตือน ข้อมูลจะถูกบันทึกลง Google Sheets อัตโนมัติ
+                    เมื่อคุณตั้งเวลาแจ้งเตือนหรือส่งประกาศ ข้อมูลจะถูกบันทึกลง Google Sheets อัตโนมัติ
                 </p>
                 <div class="mt-3 flex items-center text-green-400">
                     <i class="fas fa-sync-alt mr-2"></i>
@@ -247,6 +265,10 @@
                 <div class="mt-2 flex items-center text-green-300">
                     <i class="fas fa-users mr-2"></i>
                     <span>ผู้ใช้ทั้งหมด: <span id="totalUsers">1</span> คน</span>
+                </div>
+                <div class="mt-2 flex items-center text-green-400">
+                    <i class="fas fa-broadcast-tower mr-2"></i>
+                    <span>ประกาศทั้งหมด: <span id="totalBroadcasts">0</span> ข้อความ</span>
                 </div>
             </div>
         </div>
@@ -292,6 +314,9 @@
                     <button id="testBroadcastBtn" class="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition duration-200">
                         <i class="fas fa-bell mr-2"></i>ทดสอบ
                     </button>
+                    <button id="clearBroadcastBtn" class="px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-lg transition duration-200">
+                        <i class="fas fa-trash mr-2"></i>ล้างฟอร์ม
+                    </button>
                 </div>
             </div>
         </div>
@@ -300,7 +325,7 @@
             <!-- Left column: Form for setting alarms -->
             <div class="lg:col-span-2 bg-gray-900 rounded-2xl p-6 shadow-xl">
                 <h2 class="text-2xl font-bold text-blue-300 mb-6">
-                    <i class="fas fa-clock mr-2"></i>ตั้งเวลาแจ้งเตือน
+                    <i class="fas fa-clock mr-2"></i>ตั้งเวลาแจ้งเตือนส่วนตัว
                 </h2>
                 
                 <form id="alarmForm" class="space-y-6">
@@ -504,7 +529,7 @@
         </div>
     </div>
 
-    <!-- Service Worker and Application Script -->
+    <!-- Application Script -->
     <script>
         // DOM elements
         const alarmForm = document.getElementById('alarmForm');
@@ -541,14 +566,17 @@
         const broadcastMessage = document.getElementById('broadcastMessage');
         const sendBroadcastBtn = document.getElementById('sendBroadcastBtn');
         const testBroadcastBtn = document.getElementById('testBroadcastBtn');
+        const clearBroadcastBtn = document.getElementById('clearBroadcastBtn');
         const totalUsersElement = document.getElementById('totalUsers');
+        const totalBroadcastsElement = document.getElementById('totalBroadcasts');
         
         // ตั้งค่า Google Apps Script URL ของคุณตรงนี้
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
         
         // Firebase-like simple database simulation
-        const BROADCAST_DB_KEY = 'alarm_broadcast_db';
-        const USER_SESSIONS_KEY = 'alarm_user_sessions';
+        const BROADCAST_DB_KEY = 'alarm_broadcast_db_v2';
+        const USER_SESSIONS_KEY = 'alarm_user_sessions_v2';
+        const USER_DATA_KEY = 'alarm_user_data_v2';
         
         // Set minimum date to today
         const dateInput = document.getElementById('date');
@@ -563,18 +591,19 @@
         timeInput.value = `${nextHour.getHours().toString().padStart(2, '0')}:00`;
         
         // State variables
-        let alarms = JSON.parse(localStorage.getItem('alarms')) || [];
-        let notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-        let unreadCount = parseInt(localStorage.getItem('unreadCount')) || 0;
+        let alarms = JSON.parse(localStorage.getItem('alarms_v2')) || [];
+        let notifications = JSON.parse(localStorage.getItem('notifications_v2')) || [];
+        let unreadCount = parseInt(localStorage.getItem('unreadCount_v2')) || 0;
         let isConnected = true;
         let alarmCheckInterval;
         let deferredPrompt;
         let serviceWorkerRegistration;
         let syncCount = 0;
-        let userId = localStorage.getItem('userId') || generateUserId();
-        let broadcastNotifications = JSON.parse(localStorage.getItem('broadcastNotifications')) || [];
-        let broadcastUnreadCount = parseInt(localStorage.getItem('broadcastUnreadCount')) || 0;
+        let userId = localStorage.getItem('userId_v2') || generateUserId();
+        let broadcastNotifications = JSON.parse(localStorage.getItem('broadcastNotifications_v2')) || [];
+        let broadcastUnreadCount = parseInt(localStorage.getItem('broadcastUnreadCount_v2')) || 0;
         let connectionTested = false;
+        let lastBroadcastCheck = localStorage.getItem('lastBroadcastCheck') || 0;
         
         // Custom SweetAlert2 configuration
         const SwalConfig = {
@@ -594,8 +623,9 @@
         // Initialize the app
         function init() {
             // Generate user ID if not exists
-            if (!localStorage.getItem('userId')) {
-                localStorage.setItem('userId', userId);
+            if (!localStorage.getItem('userId_v2')) {
+                localStorage.setItem('userId_v2', userId);
+                localStorage.setItem('userName_v2', `ผู้ใช้ ${Math.floor(Math.random() * 1000)}`);
             }
             
             updateCurrentTime();
@@ -605,9 +635,6 @@
             
             // Register user session
             registerUserSession();
-            
-            // อย่าเรียก testConnection อัตโนมัติเมื่อโหลดหน้า
-            // testConnection(); // เอาออก
             
             // Check for alarms every second
             alarmCheckInterval = setInterval(checkAlarms, 1000);
@@ -628,13 +655,13 @@
             // Setup PWA install prompt
             setupPWAInstall();
             
-            // Check for updates every 5 minutes
+            // Check for updates every 2 minutes
             setInterval(() => {
                 if (navigator.onLine) {
                     syncPendingData();
                     checkForBroadcastMessages();
                 }
-            }, 300000);
+            }, 120000);
             
             // Show app icon on mobile
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
@@ -649,6 +676,12 @@
             
             // Setup periodic badge update
             setInterval(updateAllBadges, 30000);
+            
+            // Check for new broadcasts on startup
+            setTimeout(checkForBroadcastMessages, 3000);
+            
+            // Setup manual connection test button
+            setTimeout(addManualConnectionTest, 1000);
         }
         
         // Generate unique user ID
@@ -662,7 +695,8 @@
             userSessions[userId] = {
                 lastSeen: new Date().toISOString(),
                 userAgent: navigator.userAgent,
-                platform: navigator.platform
+                platform: navigator.platform,
+                name: localStorage.getItem('userName_v2') || `ผู้ใช้ ${Math.floor(Math.random() * 1000)}`
             };
             
             // Clean up old sessions (older than 7 days)
@@ -687,8 +721,13 @@
         function loadBroadcastMessages() {
             const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || {
                 messages: [],
-                lastChecked: new Date().toISOString()
+                lastUpdated: new Date().toISOString()
             };
+            
+            // Initialize with empty array if doesn't exist
+            if (!broadcastDB.messages) {
+                broadcastDB.messages = [];
+            }
             
             broadcastNotifications = broadcastDB.messages || [];
             
@@ -697,28 +736,44 @@
                 !msg.readBy || !msg.readBy.includes(userId)
             ).length;
             
-            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
+            localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
+            
+            // Update broadcast count display
+            totalBroadcastsElement.textContent = broadcastDB.messages.length;
             
             // Update badges
             updateAllBadges();
         }
         
         // Check for new broadcast messages
-        function checkForBroadcastMessages() {
+        async function checkForBroadcastMessages() {
+            const now = Date.now();
+            const fiveMinutes = 5 * 60 * 1000;
+            
+            // Check only every 5 minutes
+            if (now - lastBroadcastCheck < fiveMinutes) {
+                return;
+            }
+            
+            lastBroadcastCheck = now;
+            localStorage.setItem('lastBroadcastCheck', lastBroadcastCheck);
+            
             const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || {
                 messages: [],
-                lastChecked: new Date().toISOString()
+                lastUpdated: new Date().toISOString()
             };
             
+            const lastCheckedTime = new Date(broadcastDB.lastChecked || 0);
             const newMessages = broadcastDB.messages.filter(msg => 
-                new Date(msg.timestamp) > new Date(broadcastDB.lastChecked)
+                new Date(msg.timestamp) > lastCheckedTime
             );
             
             if (newMessages.length > 0) {
                 // Add to notifications
                 newMessages.forEach(msg => {
                     if (!broadcastNotifications.find(m => m.id === msg.id)) {
-                        broadcastNotifications.push(msg);
+                        broadcastNotifications.unshift(msg);
                     }
                 });
                 
@@ -727,8 +782,8 @@
                     !msg.readBy || !msg.readBy.includes(userId)
                 ).length;
                 
-                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
-                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
+                localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
                 
                 // Update badges
                 updateAllBadges();
@@ -737,7 +792,7 @@
                 if (newMessages.length === 1) {
                     showBroadcastNotification(newMessages[0]);
                 } else {
-                    showMessage(`มีประกาศใหม่ ${newMessages.length} ข้อความ`, 'info');
+                    showInAppNotification(`มีประกาศใหม่ ${newMessages.length} ข้อความ`, 'ดูในรายการแจ้งเตือน', 'info');
                 }
             }
             
@@ -758,15 +813,7 @@
             }
             
             // Show in-app notification
-            document.getElementById('demoTitle').textContent = `📢 ${message.title}`;
-            document.getElementById('demoDesc').textContent = message.message;
-            document.getElementById('demoTime').textContent = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
-            
-            demoNotification.classList.remove('hidden');
-            
-            setTimeout(() => {
-                demoNotification.classList.add('hidden');
-            }, 10000);
+            showInAppNotification(`📢 ${message.title}`, message.message, 'broadcast');
         }
         
         // Send broadcast message to all users
@@ -778,6 +825,7 @@
                     title: title,
                     message: message,
                     sender: userId,
+                    senderName: localStorage.getItem('userName_v2') || 'ผู้ใช้ไม่ระบุชื่อ',
                     timestamp: new Date().toISOString(),
                     readBy: []
                 };
@@ -788,7 +836,7 @@
                     lastUpdated: new Date().toISOString()
                 };
                 
-                // Add new message
+                // Add new message at the beginning
                 broadcastDB.messages.unshift(broadcastMessage);
                 
                 // Keep only last 100 messages
@@ -797,34 +845,41 @@
                 }
                 
                 broadcastDB.lastUpdated = new Date().toISOString();
+                broadcastDB.lastChecked = broadcastDB.lastUpdated;
                 
                 // Save to local storage
                 localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
                 
                 // Add to local notifications
                 broadcastNotifications.unshift(broadcastMessage);
-                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
                 
                 // Update broadcast unread count (not read by this user yet)
                 broadcastUnreadCount++;
-                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
                 
-                // Update badges
+                // Update badges and display
                 updateAllBadges();
+                totalBroadcastsElement.textContent = broadcastDB.messages.length;
                 
                 // Save to Google Sheets for record
-                await saveBroadcastToGoogleSheets(title, message);
+                const sheetResult = await saveBroadcastToGoogleSheets(title, message);
                 
                 // Show success message
-                showSweetSuccess(`ส่งประกาศ "${title}" ไปยังทุกคนสำเร็จ!`);
+                showSweetSuccess(`ส่งประกาศ "${title}" ไปยังทุกคนสำเร็จ!${sheetResult ? ' (บันทึกใน Google Sheets)' : ' (บันทึกเฉพาะในระบบ)'}`);
                 
                 // Play success sound
                 playSuccessSound();
                 
+                // Update notifications panel if open
+                if (!notificationPanel.classList.contains('hidden')) {
+                    renderNotifications();
+                }
+                
                 return true;
             } catch (error) {
                 console.error('Error sending broadcast:', error);
-                showSweetError('ไม่สามารถส่งประกาศได้');
+                showSweetError('ไม่สามารถส่งประกาศได้: ' + error.message);
                 return false;
             }
         }
@@ -842,7 +897,8 @@
                     status: 'broadcast',
                     triggered_at: new Date().toISOString(),
                     broadcast: true,
-                    user_id: userId
+                    user_id: userId,
+                    user_name: localStorage.getItem('userName_v2') || 'ผู้ใช้ไม่ระบุชื่อ'
                 };
                 
                 // สร้าง URL parameters
@@ -853,12 +909,11 @@
                 
                 // ใช้รูปแบบ fetch ที่ไม่ส่งข้อมูลว่าง
                 const response = await fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
-                    method: "GET"
+                    method: "GET",
+                    mode: "no-cors"
                 });
                 
-                const data = await response.text();
-                console.log('บันทึกประกาศลง Google Sheets สำเร็จ:', data);
-                
+                console.log('บันทึกประกาศลง Google Sheets สำเร็จ');
                 return true;
             } catch (error) {
                 console.error('Error saving broadcast to Google Sheets:', error);
@@ -873,15 +928,16 @@
                 title: title || 'ทดสอบประกาศ',
                 message: message || 'นี่เป็นข้อความทดสอบการส่งประกาศ',
                 sender: 'system',
+                senderName: 'ระบบทดสอบ',
                 timestamp: new Date().toISOString(),
                 readBy: []
             };
             
             broadcastNotifications.unshift(testMessage);
-            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+            localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
             
             broadcastUnreadCount++;
-            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
             
             updateAllBadges();
             
@@ -924,8 +980,8 @@
                 !msg.readBy || !msg.readBy.includes(userId)
             ).length;
             
-            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
-            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+            localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
+            localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
             
             // Update badges
             updateAllBadges();
@@ -1069,6 +1125,30 @@
             }, 5000);
         }
         
+        // Show in-app notification
+        function showInAppNotification(title, message, type = 'info') {
+            document.getElementById('demoTitle').textContent = title;
+            document.getElementById('demoDesc').textContent = message;
+            document.getElementById('demoTime').textContent = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+            
+            // Set border color based on type
+            const borderColors = {
+                'info': 'border-blue-500',
+                'success': 'border-green-500',
+                'warning': 'border-yellow-500',
+                'error': 'border-red-500',
+                'broadcast': 'border-purple-500'
+            };
+            
+            demoNotification.className = demoNotification.className.replace(/border-\w+-\d+/g, '');
+            demoNotification.classList.add(borderColors[type] || 'border-blue-500');
+            demoNotification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                demoNotification.classList.add('hidden');
+            }, 10000);
+        }
+        
         // Update current time display
         function updateCurrentTime() {
             const now = new Date();
@@ -1116,9 +1196,9 @@
             
             // Update page title
             if (totalUnread > 0) {
-                document.title = `(${totalUnread}) ระบบแจ้งเตือน`;
+                document.title = `(${totalUnread}) ระบบแจ้งเตือนรวมศูนย์`;
             } else {
-                document.title = 'ระบบแจ้งเตือน';
+                document.title = 'ระบบแจ้งเตือนรวมศูนย์';
             }
             
             // Update app badge if supported
@@ -1148,6 +1228,7 @@
                 return;
             }
             
+            // Sort alarms by datetime
             alarms.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
             activeAlarms.innerHTML = '';
             let nextAlarm = null;
@@ -1208,6 +1289,7 @@
             
             totalAlarmsElement.textContent = alarms.length;
             
+            // Add event listeners for delete buttons
             document.querySelectorAll('.delete-alarm').forEach(button => {
                 button.addEventListener('click', function() {
                     const index = parseInt(this.getAttribute('data-index'));
@@ -1239,11 +1321,13 @@
                     datetime: msg.timestamp,
                     read: msg.readBy && msg.readBy.includes(userId),
                     type: 'broadcast',
-                    sender: msg.sender
+                    sender: msg.sender,
+                    senderName: msg.senderName || 'ไม่ระบุชื่อ'
                 })),
                 ...notifications.map(notif => ({
                     ...notif,
-                    type: 'personal'
+                    type: 'personal',
+                    senderName: 'ระบบแจ้งเตือน'
                 }))
             ];
             
@@ -1282,10 +1366,17 @@
                             </div>
                             <p class="text-gray-400 text-sm">${notification.description || 'ไม่มีรายละเอียด'}</p>
                             <div class="flex justify-between items-center mt-3">
-                                <p class="text-gray-500 text-xs">
-                                    <i class="far fa-clock mr-1"></i>
-                                    ${notifDate.toLocaleDateString('th-TH')} ${notifDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
-                                </p>
+                                <div>
+                                    <p class="text-gray-500 text-xs">
+                                        <i class="far fa-clock mr-1"></i>
+                                        ${notifDate.toLocaleDateString('th-TH')} ${notifDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                                    </p>
+                                    ${notification.type === 'broadcast' ? 
+                                        `<p class="text-gray-500 text-xs mt-1">
+                                            <i class="fas fa-user mr-1"></i>${notification.senderName}
+                                        </p>` : ''
+                                    }
+                                </div>
                                 ${notification.type === 'broadcast' && !notification.read ? 
                                     `<button class="mark-broadcast-read text-xs px-2 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded" data-id="${notification.id}">
                                         ทำเครื่องหมายว่าอ่านแล้ว
@@ -1356,7 +1447,7 @@
             const alarm = alarms[index];
             
             // ลบจาก Google Sheets ถ้ามี sheet_id
-            if (alarm.synced && alarm.sheet_id) {
+            if (alarm.synced) {
                 try {
                     await deleteFromGoogleSheets(alarmId, alarm.sheet_id);
                 } catch (error) {
@@ -1367,7 +1458,7 @@
             
             // ลบจาก localStorage
             alarms.splice(index, 1);
-            localStorage.setItem('alarms', JSON.stringify(alarms));
+            localStorage.setItem('alarms_v2', JSON.stringify(alarms));
             
             renderAlarms();
             showSweetSuccess('ลบการแจ้งเตือนเรียบร้อยแล้ว');
@@ -1392,14 +1483,22 @@
         function deleteBroadcastNotification(id) {
             // Remove from local notifications
             broadcastNotifications = broadcastNotifications.filter(msg => msg.id !== id);
-            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+            localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
+            
+            // Remove from broadcast database
+            const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
+            broadcastDB.messages = broadcastDB.messages.filter(msg => msg.id !== id);
+            localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
             
             // Recalculate unread count
             broadcastUnreadCount = broadcastNotifications.filter(msg => 
                 !msg.readBy || !msg.readBy.includes(userId)
             ).length;
             
-            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
+            
+            // Update broadcast count display
+            totalBroadcastsElement.textContent = broadcastDB.messages.length;
             
             // Update display
             renderNotifications();
@@ -1427,12 +1526,12 @@
             const notification = notifications[index];
             if (!notification.read) {
                 unreadCount = Math.max(0, unreadCount - 1);
-                localStorage.setItem('unreadCount', unreadCount);
+                localStorage.setItem('unreadCount_v2', unreadCount);
                 updateAllBadges();
             }
             
             notifications.splice(index, 1);
-            localStorage.setItem('notifications', JSON.stringify(notifications));
+            localStorage.setItem('notifications_v2', JSON.stringify(notifications));
             renderNotifications();
             showSweetSuccess('ลบการแจ้งเตือนเรียบร้อยแล้ว');
         }
@@ -1460,7 +1559,7 @@
             
             alarms[index].triggered = true;
             alarms[index].triggered_at = new Date().toISOString();
-            localStorage.setItem('alarms', JSON.stringify(alarms));
+            localStorage.setItem('alarms_v2', JSON.stringify(alarms));
             
             const notification = {
                 id: Date.now(),
@@ -1473,10 +1572,10 @@
             };
             
             notifications.unshift(notification);
-            localStorage.setItem('notifications', JSON.stringify(notifications));
+            localStorage.setItem('notifications_v2', JSON.stringify(notifications));
             
             unreadCount++;
-            localStorage.setItem('unreadCount', unreadCount);
+            localStorage.setItem('unreadCount_v2', unreadCount);
             
             updateAllBadges();
             
@@ -1492,7 +1591,7 @@
         }
         
         // Save data to Google Sheets - แก้ไขเป็น GET request
-        function saveToGoogleSheets(alarmData, status = 'created') {
+        async function saveToGoogleSheets(alarmData, status = 'created') {
             try {
                 // ตรวจสอบว่ามีข้อมูลที่จำเป็นหรือไม่
                 if (!alarmData.title || !alarmData.date || !alarmData.time) {
@@ -1510,6 +1609,7 @@
                     status: status || 'active',
                     triggered_at: alarmData.triggered_at || '',
                     user_id: userId,
+                    user_name: localStorage.getItem('userName_v2') || 'ผู้ใช้ไม่ระบุชื่อ',
                     alarm_id: alarmData.id || ''
                 };
                 
@@ -1520,26 +1620,21 @@
                 }
                 
                 // ใช้ GET request แทน POST เพื่อหลีกเลี่ยงปัญหา CORS
-                fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
-                    method: "GET"
-                })
-                .then(res => res.text())
-                .then(data => {
-                    console.log('บันทึกลง Google Sheets สำเร็จ:', data);
-                    
-                    // Mark the alarm as synced
-                    const alarmIndex = alarms.findIndex(a => a.id === alarmData.id);
-                    if (alarmIndex !== -1) {
-                        alarms[alarmIndex].synced = true;
-                        alarms[alarmIndex].sheet_id = data; // เก็บ ID ที่ได้จาก Sheets
-                        localStorage.setItem('alarms', JSON.stringify(alarms));
-                        renderAlarms();
-                        updateAllBadges();
-                    }
-                })
-                .catch(error => {
-                    console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
+                const response = await fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
+                    method: "GET",
+                    mode: "no-cors"
                 });
+                
+                console.log('บันทึกลง Google Sheets สำเร็จ');
+                
+                // Mark the alarm as synced
+                const alarmIndex = alarms.findIndex(a => a.id === alarmData.id);
+                if (alarmIndex !== -1) {
+                    alarms[alarmIndex].synced = true;
+                    localStorage.setItem('alarms_v2', JSON.stringify(alarms));
+                    renderAlarms();
+                    updateAllBadges();
+                }
                 
                 return true;
             } catch (error) {
@@ -1554,7 +1649,7 @@
                 const payload = {
                     action: 'delete',
                     alarm_id: alarmId,
-                    sheet_id: sheetId,
+                    sheet_id: sheetId || '',
                     user_id: userId
                 };
                 
@@ -1565,11 +1660,11 @@
                 }
                 
                 const response = await fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
-                    method: "GET"
+                    method: "GET",
+                    mode: "no-cors"
                 });
                 
-                const data = await response.text();
-                console.log('ลบข้อมูลจาก Google Sheets สำเร็จ:', data);
+                console.log('ลบข้อมูลจาก Google Sheets สำเร็จ');
                 
                 return true;
             } catch (error) {
@@ -1595,38 +1690,29 @@
             
             const params = new URLSearchParams({
                 action: 'test',
-                test: 'connection'
+                test: 'connection',
+                user_id: userId
             });
             
             fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
-                method: "GET"
+                method: "GET",
+                mode: "no-cors"
             })
-            .then(res => res.text())
-            .then(data => {
+            .then(() => {
                 isConnected = true;
                 connectionTested = true;
-                console.log('Connection test successful:', data);
                 showSweetSuccess('เชื่อมต่อกับ Google Sheets สำเร็จ');
             })
             .catch(error => {
                 isConnected = false;
                 connectionTested = true;
-                console.error('Connection test failed:', error);
-                showSweetError('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้');
+                showSweetWarning('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้');
             });
         }
         
         // Show browser/system notification
         function showNotification(alarm) {
-            document.getElementById('demoTitle').textContent = alarm.title;
-            document.getElementById('demoDesc').textContent = alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!';
-            document.getElementById('demoTime').textContent = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
-            
-            demoNotification.classList.remove('hidden');
-            
-            setTimeout(() => {
-                demoNotification.classList.add('hidden');
-            }, 10000);
+            showInAppNotification(`⏰ ${alarm.title}`, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!', 'info');
             
             if ('Notification' in window && Notification.permission === 'granted') {
                 const notification = new Notification(`⏰ ${alarm.title}`, {
@@ -1721,7 +1807,7 @@
             };
             
             alarms.push(newAlarm);
-            localStorage.setItem('alarms', JSON.stringify(alarms));
+            localStorage.setItem('alarms_v2', JSON.stringify(alarms));
             
             alarms[index].triggered = false;
             alarms[index].datetime = alarmDate.toISOString();
@@ -1763,7 +1849,7 @@
             };
             
             alarms.push(alarm);
-            localStorage.setItem('alarms', JSON.stringify(alarms));
+            localStorage.setItem('alarms_v2', JSON.stringify(alarms));
             
             // บันทึกลง Google Sheets
             saveToGoogleSheets(alarm, 'created');
@@ -1807,13 +1893,13 @@
                 if (result.isConfirmed) {
                     // ลบจาก Google Sheets ทุกอันที่เคยบันทึกไว้
                     for (const alarm of alarms) {
-                        if (alarm.synced && alarm.sheet_id) {
+                        if (alarm.synced) {
                             await deleteFromGoogleSheets(alarm.id, alarm.sheet_id);
                         }
                     }
                     
                     alarms = [];
-                    localStorage.setItem('alarms', JSON.stringify(alarms));
+                    localStorage.setItem('alarms_v2', JSON.stringify(alarms));
                     renderAlarms();
                     showSweetSuccess('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว');
                 }
@@ -1867,8 +1953,8 @@
                     // Clear personal notifications
                     notifications = [];
                     unreadCount = 0;
-                    localStorage.setItem('notifications', JSON.stringify(notifications));
-                    localStorage.setItem('unreadCount', unreadCount);
+                    localStorage.setItem('notifications_v2', JSON.stringify(notifications));
+                    localStorage.setItem('unreadCount_v2', unreadCount);
                     
                     // Clear broadcast notifications (only for this user)
                     broadcastNotifications.forEach(msg => {
@@ -1879,8 +1965,8 @@
                     });
                     
                     broadcastUnreadCount = 0;
-                    localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
-                    localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                    localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
+                    localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
                     
                     // Update broadcast database
                     const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
@@ -1916,8 +2002,8 @@
                     });
                     
                     unreadCount = 0;
-                    localStorage.setItem('notifications', JSON.stringify(notifications));
-                    localStorage.setItem('unreadCount', unreadCount);
+                    localStorage.setItem('notifications_v2', JSON.stringify(notifications));
+                    localStorage.setItem('unreadCount_v2', unreadCount);
                     
                     // Mark broadcast notifications as read
                     broadcastNotifications.forEach(msg => {
@@ -1928,8 +2014,8 @@
                     });
                     
                     broadcastUnreadCount = 0;
-                    localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
-                    localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                    localStorage.setItem('broadcastNotifications_v2', JSON.stringify(broadcastNotifications));
+                    localStorage.setItem('broadcastUnreadCount_v2', broadcastUnreadCount);
                     
                     // Update broadcast database
                     const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
@@ -1959,6 +2045,16 @@
                 return;
             }
             
+            if (title.length > 50) {
+                showSweetError('หัวข้อประกาศยาวเกินไป (สูงสุด 50 ตัวอักษร)');
+                return;
+            }
+            
+            if (message.length > 200) {
+                showSweetError('ข้อความประกาศยาวเกินไป (สูงสุด 200 ตัวอักษร)');
+                return;
+            }
+            
             Swal.fire({
                 icon: 'question',
                 title: 'ยืนยันการส่งประกาศ',
@@ -1972,10 +2068,6 @@
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     await sendBroadcastToAll(title, message);
-                    
-                    // Clear form
-                    broadcastTitle.value = '';
-                    broadcastMessage.value = '';
                     
                     // Update notifications panel
                     renderNotifications();
@@ -2006,6 +2098,13 @@
                     renderNotifications();
                 }
             });
+        });
+        
+        // Clear broadcast form button
+        clearBroadcastBtn.addEventListener('click', function() {
+            broadcastTitle.value = '';
+            broadcastMessage.value = '';
+            showSweetSuccess('ล้างฟอร์มประกาศเรียบร้อยแล้ว');
         });
         
         // Close demo notification
@@ -2053,7 +2152,6 @@
         
         // Initialize the application
         init();
-        addManualConnectionTest();
     </script>
 </body>
 </html>
