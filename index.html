@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
         body {
             background-color: #121826;
@@ -109,9 +111,37 @@
             border: none;
             cursor: pointer;
         }
+        
+        /* Custom Swal2 styles */
+        .swal2-popup {
+            font-family: 'Sarabun', sans-serif !important;
+            border-radius: 1rem !important;
+            background-color: #1f2937 !important;
+            color: #e5e7eb !important;
+        }
+        
+        .swal2-title {
+            font-family: 'Prompt', sans-serif !important;
+            color: #e5e7eb !important;
+        }
+        
+        .swal2-html-container {
+            color: #9ca3af !important;
+        }
+        
+        .swal2-confirm {
+            background-color: #3b82f6 !important;
+        }
+        
+        .swal2-cancel {
+            background-color: #6b7280 !important;
+        }
     </style>
 </head>
 <body class="min-h-screen">
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+    
     <!-- Floating Action Button for Mobile -->
     <button id="fabNotification" class="fab md:hidden">
         <i class="fas fa-bell"></i>
@@ -546,6 +576,21 @@
         let broadcastUnreadCount = parseInt(localStorage.getItem('broadcastUnreadCount')) || 0;
         let connectionTested = false;
         
+        // Custom SweetAlert2 configuration
+        const SwalConfig = {
+            confirmButtonText: 'ใช่, ยืนยัน',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#6b7280',
+            reverseButtons: true,
+            showClass: {
+                popup: 'animate__animated animate__fadeInDown'
+            },
+            hideClass: {
+                popup: 'animate__animated animate__fadeOutUp'
+            }
+        };
+        
         // Initialize the app
         function init() {
             // Generate user ID if not exists
@@ -771,7 +816,7 @@
                 await saveBroadcastToGoogleSheets(title, message);
                 
                 // Show success message
-                showMessage(`ส่งประกาศ "${title}" ไปยังทุกคนสำเร็จ!`, 'success');
+                showSweetSuccess(`ส่งประกาศ "${title}" ไปยังทุกคนสำเร็จ!`);
                 
                 // Play success sound
                 playSuccessSound();
@@ -779,7 +824,7 @@
                 return true;
             } catch (error) {
                 console.error('Error sending broadcast:', error);
-                showMessage('ไม่สามารถส่งประกาศได้', 'error');
+                showSweetError('ไม่สามารถส่งประกาศได้');
                 return false;
             }
         }
@@ -841,7 +886,7 @@
             updateAllBadges();
             
             showBroadcastNotification(testMessage);
-            showMessage('ส่งการทดสอบประกาศสำเร็จ!', 'success');
+            showSweetSuccess('ส่งการทดสอบประกาศสำเร็จ!');
             playSuccessSound();
         }
         
@@ -957,7 +1002,58 @@
                    document.referrer.includes('android-app://');
         }
         
-        // Show message function
+        // SweetAlert2 Helper Functions
+        function showSweetSuccess(message) {
+            Swal.fire({
+                icon: 'success',
+                title: 'สำเร็จ',
+                text: message,
+                ...SwalConfig
+            });
+        }
+        
+        function showSweetError(message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด',
+                text: message,
+                ...SwalConfig
+            });
+        }
+        
+        function showSweetWarning(message) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'คำเตือน',
+                text: message,
+                ...SwalConfig
+            });
+        }
+        
+        function showSweetInfo(message) {
+            Swal.fire({
+                icon: 'info',
+                title: 'ข้อมูล',
+                text: message,
+                ...SwalConfig
+            });
+        }
+        
+        function showSweetConfirm(title, text, confirmCallback) {
+            Swal.fire({
+                icon: 'question',
+                title: title,
+                text: text,
+                showCancelButton: true,
+                ...SwalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    confirmCallback();
+                }
+            });
+        }
+        
+        // Show message function (เดิม)
         function showMessage(message, type = 'success') {
             msgElement.innerHTML = message;
             msgElement.className = type === 'success' ? 
@@ -1116,7 +1212,7 @@
                 button.addEventListener('click', function() {
                     const index = parseInt(this.getAttribute('data-index'));
                     const alarmId = this.getAttribute('data-id');
-                    deleteAlarm(index, alarmId);
+                    confirmDeleteAlarm(index, alarmId);
                 });
             });
         }
@@ -1213,10 +1309,10 @@
                     const id = this.getAttribute('data-id');
                     
                     if (type === 'broadcast') {
-                        deleteBroadcastNotification(id);
+                        confirmDeleteBroadcastNotification(id);
                     } else {
                         const index = parseInt(this.getAttribute('data-index'));
-                        deleteNotification(index);
+                        confirmDeleteNotification(index);
                     }
                 });
             });
@@ -1227,30 +1323,118 @@
                     markBroadcastAsRead(id);
                     renderNotifications();
                     updateAllBadges();
-                    showMessage('ทำเครื่องหมายว่าอ่านแล้ว', 'success');
+                    showSweetSuccess('ทำเครื่องหมายว่าอ่านแล้ว');
                 });
+            });
+        }
+        
+        // Confirm delete alarm with SweetAlert
+        function confirmDeleteAlarm(index, alarmId) {
+            const alarm = alarms[index];
+            const alarmDate = new Date(alarm.datetime);
+            
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยืนยันการลบ',
+                html: `คุณต้องการลบการแจ้งเตือน<br>
+                      <strong>"${alarm.title}"</strong><br>
+                      วันที่ ${alarmDate.toLocaleDateString('th-TH')} เวลา ${alarmDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}<br>
+                      <small class="text-gray-400">(จะลบจาก Google Sheets ด้วย)</small>`,
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ลบทันที',
+                cancelButtonText: 'ยกเลิก',
+                ...SwalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    deleteAlarm(index, alarmId);
+                }
+            });
+        }
+        
+        // Delete an alarm (พร้อมลบจาก Google Sheets)
+        async function deleteAlarm(index, alarmId) {
+            const alarm = alarms[index];
+            
+            // ลบจาก Google Sheets ถ้ามี sheet_id
+            if (alarm.synced && alarm.sheet_id) {
+                try {
+                    await deleteFromGoogleSheets(alarmId, alarm.sheet_id);
+                } catch (error) {
+                    console.error('Error deleting from Google Sheets:', error);
+                    showSweetWarning('ลบจาก Google Sheets ไม่สำเร็จ แต่ลบจากระบบแล้ว');
+                }
+            }
+            
+            // ลบจาก localStorage
+            alarms.splice(index, 1);
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            renderAlarms();
+            showSweetSuccess('ลบการแจ้งเตือนเรียบร้อยแล้ว');
+        }
+        
+        // Confirm delete broadcast notification
+        function confirmDeleteBroadcastNotification(id) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยืนยันการลบประกาศ',
+                text: 'คุณแน่ใจว่าต้องการลบประกาศนี้?',
+                showCancelButton: true,
+                ...SwalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    deleteBroadcastNotification(id);
+                }
             });
         }
         
         // Delete broadcast notification
         function deleteBroadcastNotification(id) {
-            if (confirm('คุณแน่ใจว่าต้องการลบประกาศนี้?')) {
-                // Remove from local notifications
-                broadcastNotifications = broadcastNotifications.filter(msg => msg.id !== id);
-                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
-                
-                // Recalculate unread count
-                broadcastUnreadCount = broadcastNotifications.filter(msg => 
-                    !msg.readBy || !msg.readBy.includes(userId)
-                ).length;
-                
-                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
-                
-                // Update display
-                renderNotifications();
+            // Remove from local notifications
+            broadcastNotifications = broadcastNotifications.filter(msg => msg.id !== id);
+            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+            
+            // Recalculate unread count
+            broadcastUnreadCount = broadcastNotifications.filter(msg => 
+                !msg.readBy || !msg.readBy.includes(userId)
+            ).length;
+            
+            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            
+            // Update display
+            renderNotifications();
+            updateAllBadges();
+            showSweetSuccess('ลบประกาศเรียบร้อยแล้ว');
+        }
+        
+        // Confirm delete notification
+        function confirmDeleteNotification(index) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยืนยันการลบ',
+                text: 'คุณแน่ใจว่าต้องการลบการแจ้งเตือนนี้?',
+                showCancelButton: true,
+                ...SwalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    deleteNotification(index);
+                }
+            });
+        }
+        
+        // Delete a notification
+        function deleteNotification(index) {
+            const notification = notifications[index];
+            if (!notification.read) {
+                unreadCount = Math.max(0, unreadCount - 1);
+                localStorage.setItem('unreadCount', unreadCount);
                 updateAllBadges();
-                showMessage('ลบประกาศเรียบร้อยแล้ว', 'success');
             }
+            
+            notifications.splice(index, 1);
+            localStorage.setItem('notifications', JSON.stringify(notifications));
+            renderNotifications();
+            showSweetSuccess('ลบการแจ้งเตือนเรียบร้อยแล้ว');
         }
         
         // Check for alarms that need to be triggered
@@ -1422,13 +1606,13 @@
                 isConnected = true;
                 connectionTested = true;
                 console.log('Connection test successful:', data);
-                showMessage('เชื่อมต่อกับ Google Sheets สำเร็จ', 'success');
+                showSweetSuccess('เชื่อมต่อกับ Google Sheets สำเร็จ');
             })
             .catch(error => {
                 isConnected = false;
                 connectionTested = true;
                 console.error('Connection test failed:', error);
-                showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้', 'error');
+                showSweetError('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้');
             });
         }
         
@@ -1548,39 +1732,6 @@
             renderAlarms();
         }
         
-        // Delete an alarm (พร้อมลบจาก Google Sheets)
-        async function deleteAlarm(index, alarmId) {
-            if (confirm('คุณแน่ใจว่าต้องการลบการแจ้งเตือนนี้?')) {
-                const alarm = alarms[index];
-                
-                // ลบจาก Google Sheets ถ้ามี sheet_id
-                if (alarm.synced && alarm.sheet_id) {
-                    await deleteFromGoogleSheets(alarmId, alarm.sheet_id);
-                }
-                
-                // ลบจาก localStorage
-                alarms.splice(index, 1);
-                localStorage.setItem('alarms', JSON.stringify(alarms));
-                
-                renderAlarms();
-                showMessage('ลบการแจ้งเตือนเรียบร้อยแล้ว', 'success');
-            }
-        }
-        
-        // Delete a notification
-        function deleteNotification(index) {
-            const notification = notifications[index];
-            if (!notification.read) {
-                unreadCount = Math.max(0, unreadCount - 1);
-                localStorage.setItem('unreadCount', unreadCount);
-                updateAllBadges();
-            }
-            
-            notifications.splice(index, 1);
-            localStorage.setItem('notifications', JSON.stringify(notifications));
-            renderNotifications();
-        }
-        
         // Form submission handler
         alarmForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -1593,7 +1744,7 @@
             
             // ตรวจสอบว่าข้อมูลครบหรือไม่
             if (!title || !date || !time) {
-                showMessage('กรุณากรอกข้อมูลให้ครบ (หัวข้อ, วันที่, เวลา)', 'error');
+                showSweetError('กรุณากรอกข้อมูลให้ครบ (หัวข้อ, วันที่, เวลา)');
                 return;
             }
             
@@ -1624,7 +1775,7 @@
             document.querySelector('input[name="repeat"][value="none"]').checked = true;
             
             renderAlarms();
-            showMessage(`ตั้งเวลาแจ้งเตือน "${title}" สำเร็จ!`, 'success');
+            showSweetSuccess(`ตั้งเวลาแจ้งเตือน "${title}" สำเร็จ!`);
             playSuccessSound();
         });
         
@@ -1637,25 +1788,36 @@
         });
         
         // Clear all alarms button
-        clearAllBtn.addEventListener('click', async function() {
+        clearAllBtn.addEventListener('click', function() {
             if (alarms.length === 0) {
-                showMessage('ไม่มีเวลาที่ตั้งไว้', 'error');
+                showSweetWarning('ไม่มีเวลาที่ตั้งไว้');
                 return;
             }
             
-            if (confirm(`คุณแน่ใจว่าต้องการลบการแจ้งเตือนทั้งหมด ${alarms.length} รายการ?`)) {
-                // ลบจาก Google Sheets ทุกอันที่เคยบันทึกไว้
-                for (const alarm of alarms) {
-                    if (alarm.synced && alarm.sheet_id) {
-                        await deleteFromGoogleSheets(alarm.id, alarm.sheet_id);
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยืนยันการลบทั้งหมด',
+                html: `คุณต้องการลบการแจ้งเตือนทั้งหมด <strong>${alarms.length}</strong> รายการ?<br>
+                      <small class="text-gray-400">(จะลบจาก Google Sheets ด้วย)</small>`,
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ลบทั้งหมด',
+                cancelButtonText: 'ยกเลิก',
+                ...SwalConfig
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    // ลบจาก Google Sheets ทุกอันที่เคยบันทึกไว้
+                    for (const alarm of alarms) {
+                        if (alarm.synced && alarm.sheet_id) {
+                            await deleteFromGoogleSheets(alarm.id, alarm.sheet_id);
+                        }
                     }
+                    
+                    alarms = [];
+                    localStorage.setItem('alarms', JSON.stringify(alarms));
+                    renderAlarms();
+                    showSweetSuccess('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว');
                 }
-                
-                alarms = [];
-                localStorage.setItem('alarms', JSON.stringify(alarms));
-                renderAlarms();
-                showMessage('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว', 'success');
-            }
+            });
         });
         
         // Toggle notification panel
@@ -1683,7 +1845,7 @@
                 notificationPanel.classList.remove('hidden');
                 renderNotifications();
             } else {
-                showMessage('ไม่มีข้อความแจ้งเตือนใหม่', 'info');
+                showSweetInfo('ไม่มีข้อความแจ้งเตือนใหม่');
             }
         });
         
@@ -1694,79 +1856,97 @@
         
         // Clear all notifications button
         clearAllNotificationsBtn.addEventListener('click', function() {
-            if (confirm('คุณแน่ใจว่าต้องการลบการแจ้งเตือนทั้งหมด?')) {
-                // Clear personal notifications
-                notifications = [];
-                unreadCount = 0;
-                localStorage.setItem('notifications', JSON.stringify(notifications));
-                localStorage.setItem('unreadCount', unreadCount);
-                
-                // Clear broadcast notifications (only for this user)
-                broadcastNotifications.forEach(msg => {
-                    if (!msg.readBy) msg.readBy = [];
-                    if (!msg.readBy.includes(userId)) {
-                        msg.readBy.push(userId);
-                    }
-                });
-                
-                broadcastUnreadCount = 0;
-                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
-                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
-                
-                // Update broadcast database
-                const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
-                broadcastDB.messages.forEach(msg => {
-                    if (!msg.readBy) msg.readBy = [];
-                    if (!msg.readBy.includes(userId)) {
-                        msg.readBy.push(userId);
-                    }
-                });
-                localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
-                
-                // Update display
-                renderNotifications();
-                updateAllBadges();
-                showMessage('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว', 'success');
-            }
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยืนยันการลบทั้งหมด',
+                text: 'คุณแน่ใจว่าต้องการลบการแจ้งเตือนทั้งหมด?',
+                showCancelButton: true,
+                ...SwalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Clear personal notifications
+                    notifications = [];
+                    unreadCount = 0;
+                    localStorage.setItem('notifications', JSON.stringify(notifications));
+                    localStorage.setItem('unreadCount', unreadCount);
+                    
+                    // Clear broadcast notifications (only for this user)
+                    broadcastNotifications.forEach(msg => {
+                        if (!msg.readBy) msg.readBy = [];
+                        if (!msg.readBy.includes(userId)) {
+                            msg.readBy.push(userId);
+                        }
+                    });
+                    
+                    broadcastUnreadCount = 0;
+                    localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                    localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                    
+                    // Update broadcast database
+                    const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
+                    broadcastDB.messages.forEach(msg => {
+                        if (!msg.readBy) msg.readBy = [];
+                        if (!msg.readBy.includes(userId)) {
+                            msg.readBy.push(userId);
+                        }
+                    });
+                    localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
+                    
+                    // Update display
+                    renderNotifications();
+                    updateAllBadges();
+                    showSweetSuccess('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว');
+                }
+            });
         });
         
         // Mark all notifications as read
         markAllReadBtn.addEventListener('click', function() {
-            // Mark personal notifications as read
-            notifications.forEach(notification => {
-                notification.read = true;
-            });
-            
-            unreadCount = 0;
-            localStorage.setItem('notifications', JSON.stringify(notifications));
-            localStorage.setItem('unreadCount', unreadCount);
-            
-            // Mark broadcast notifications as read
-            broadcastNotifications.forEach(msg => {
-                if (!msg.readBy) msg.readBy = [];
-                if (!msg.readBy.includes(userId)) {
-                    msg.readBy.push(userId);
+            Swal.fire({
+                icon: 'info',
+                title: 'ยืนยันการทำเครื่องหมาย',
+                text: 'ทำเครื่องหมายว่าอ่านแล้วทั้งหมด?',
+                showCancelButton: true,
+                ...SwalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Mark personal notifications as read
+                    notifications.forEach(notification => {
+                        notification.read = true;
+                    });
+                    
+                    unreadCount = 0;
+                    localStorage.setItem('notifications', JSON.stringify(notifications));
+                    localStorage.setItem('unreadCount', unreadCount);
+                    
+                    // Mark broadcast notifications as read
+                    broadcastNotifications.forEach(msg => {
+                        if (!msg.readBy) msg.readBy = [];
+                        if (!msg.readBy.includes(userId)) {
+                            msg.readBy.push(userId);
+                        }
+                    });
+                    
+                    broadcastUnreadCount = 0;
+                    localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                    localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                    
+                    // Update broadcast database
+                    const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
+                    broadcastDB.messages.forEach(msg => {
+                        if (!msg.readBy) msg.readBy = [];
+                        if (!msg.readBy.includes(userId)) {
+                            msg.readBy.push(userId);
+                        }
+                    });
+                    localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
+                    
+                    // Update display
+                    renderNotifications();
+                    updateAllBadges();
+                    showSweetSuccess('ทำเครื่องหมายว่าอ่านแล้วทั้งหมดเรียบร้อย');
                 }
             });
-            
-            broadcastUnreadCount = 0;
-            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
-            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
-            
-            // Update broadcast database
-            const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
-            broadcastDB.messages.forEach(msg => {
-                if (!msg.readBy) msg.readBy = [];
-                if (!msg.readBy.includes(userId)) {
-                    msg.readBy.push(userId);
-                }
-            });
-            localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
-            
-            // Update display
-            renderNotifications();
-            updateAllBadges();
-            showMessage('ทำเครื่องหมายว่าอ่านแล้วทั้งหมดเรียบร้อย', 'success');
         });
         
         // Send broadcast button
@@ -1775,18 +1955,32 @@
             const message = broadcastMessage.value.trim();
             
             if (!title || !message) {
-                showMessage('กรุณากรอกหัวข้อและข้อความประกาศ', 'error');
+                showSweetError('กรุณากรอกหัวข้อและข้อความประกาศ');
                 return;
             }
             
-            await sendBroadcastToAll(title, message);
-            
-            // Clear form
-            broadcastTitle.value = '';
-            broadcastMessage.value = '';
-            
-            // Update notifications panel
-            renderNotifications();
+            Swal.fire({
+                icon: 'question',
+                title: 'ยืนยันการส่งประกาศ',
+                html: `คุณต้องการส่งประกาศ<br>
+                      <strong>"${title}"</strong><br>
+                      ไปยังทุกคนที่ใช้ระบบ?`,
+                showCancelButton: true,
+                confirmButtonText: 'ใช่, ส่งประกาศ',
+                cancelButtonText: 'ยกเลิก',
+                ...SwalConfig
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await sendBroadcastToAll(title, message);
+                    
+                    // Clear form
+                    broadcastTitle.value = '';
+                    broadcastMessage.value = '';
+                    
+                    // Update notifications panel
+                    renderNotifications();
+                }
+            });
         });
         
         // Test broadcast button
@@ -1794,10 +1988,24 @@
             const title = broadcastTitle.value.trim() || 'ทดสอบประกาศ';
             const message = broadcastMessage.value.trim() || 'นี่เป็นข้อความทดสอบการส่งประกาศ';
             
-            testBroadcast(title, message);
-            
-            // Update notifications panel
-            renderNotifications();
+            Swal.fire({
+                icon: 'info',
+                title: 'ทดสอบส่งประกาศ',
+                html: `ส่งประกาศทดสอบ:<br>
+                      <strong>"${title}"</strong><br>
+                      ${message}`,
+                showCancelButton: true,
+                confirmButtonText: 'ส่งทดสอบ',
+                cancelButtonText: 'ยกเลิก',
+                ...SwalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    testBroadcast(title, message);
+                    
+                    // Update notifications panel
+                    renderNotifications();
+                }
+            });
         });
         
         // Close demo notification
@@ -1807,14 +2015,14 @@
         
         // Network status monitoring
         window.addEventListener('online', () => {
-            showMessage('เชื่อมต่ออินเทอร์เน็ตแล้ว', 'success');
+            showSweetSuccess('เชื่อมต่ออินเทอร์เน็ตแล้ว');
             isConnected = true;
             syncPendingData();
             checkForBroadcastMessages();
         });
         
         window.addEventListener('offline', () => {
-            showMessage('กำลังทำงานแบบออฟไลน์', 'warning');
+            showSweetWarning('กำลังทำงานแบบออฟไลน์');
             isConnected = false;
         });
         
@@ -1831,7 +2039,7 @@
             document.querySelector('#broadcastSection').scrollIntoView({ behavior: 'smooth' });
         }
         
-        // Manual connection test button (เพิ่มปุ่มนี้ใน UI)
+        // Manual connection test button
         function addManualConnectionTest() {
             const statusDiv = document.querySelector('#connectionStatus');
             if (statusDiv) {
