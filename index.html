@@ -544,6 +544,7 @@
         let userId = localStorage.getItem('userId') || generateUserId();
         let broadcastNotifications = JSON.parse(localStorage.getItem('broadcastNotifications')) || [];
         let broadcastUnreadCount = parseInt(localStorage.getItem('broadcastUnreadCount')) || 0;
+        let connectionTested = false;
         
         // Initialize the app
         function init() {
@@ -560,10 +561,8 @@
             // Register user session
             registerUserSession();
             
-            // อัตโนมัติเชื่อมต่อกับ Google Sheets
-            setTimeout(() => {
-                testConnection();
-            }, 1000);
+            // อย่าเรียก testConnection อัตโนมัติเมื่อโหลดหน้า
+            // testConnection(); // เอาออก
             
             // Check for alarms every second
             alarmCheckInterval = setInterval(checkAlarms, 1000);
@@ -789,6 +788,7 @@
         async function saveBroadcastToGoogleSheets(title, message) {
             try {
                 const payload = {
+                    action: 'add',
                     date: new Date().toLocaleDateString('th-TH'),
                     time: new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}),
                     title: `📢 ${title}`,
@@ -796,27 +796,23 @@
                     repeat: 'none',
                     status: 'broadcast',
                     triggered_at: new Date().toISOString(),
-                    broadcast: true
+                    broadcast: true,
+                    user_id: userId
                 };
                 
-                // สร้าง FormData object
-                const formData = new FormData();
+                // สร้าง URL parameters
+                const params = new URLSearchParams();
                 for (const key in payload) {
-                    formData.append(key, payload[key]);
+                    params.append(key, payload[key]);
                 }
                 
-                // ใช้รูปแบบ fetch ตามที่ต้องการ
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    body: formData
-                })
-                .then(res => res.text())
-                .then(data => {
-                    console.log('บันทึกประกาศลง Google Sheets สำเร็จ:', data);
-                })
-                .catch(error => {
-                    console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
+                // ใช้รูปแบบ fetch ที่ไม่ส่งข้อมูลว่าง
+                const response = await fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
+                    method: "GET"
                 });
+                
+                const data = await response.text();
+                console.log('บันทึกประกาศลง Google Sheets สำเร็จ:', data);
                 
                 return true;
             } catch (error) {
@@ -1098,7 +1094,7 @@
                                 }
                             </div>
                         </div>
-                        <button class="delete-alarm ml-2 text-gray-500 hover:text-red-400" data-index="${index}">
+                        <button class="delete-alarm ml-2 text-gray-500 hover:text-red-400" data-index="${index}" data-id="${alarm.id}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -1119,7 +1115,8 @@
             document.querySelectorAll('.delete-alarm').forEach(button => {
                 button.addEventListener('click', function() {
                     const index = parseInt(this.getAttribute('data-index'));
-                    deleteAlarm(index);
+                    const alarmId = this.getAttribute('data-id');
+                    deleteAlarm(index, alarmId);
                 });
             });
         }
@@ -1310,10 +1307,17 @@
             playNotificationSound();
         }
         
-        // Save data to Google Sheets - ใช้รูปแบบ fetch ตามที่ต้องการ
+        // Save data to Google Sheets - แก้ไขเป็น GET request
         function saveToGoogleSheets(alarmData, status = 'created') {
             try {
+                // ตรวจสอบว่ามีข้อมูลที่จำเป็นหรือไม่
+                if (!alarmData.title || !alarmData.date || !alarmData.time) {
+                    console.log('ข้อมูลไม่ครบ ไม่ส่งไปยัง Google Sheets');
+                    return false;
+                }
+                
                 const payload = {
+                    action: 'add',
                     date: alarmData.date || new Date(alarmData.datetime).toLocaleDateString('th-TH'),
                     time: alarmData.time || new Date(alarmData.datetime).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}),
                     title: alarmData.title,
@@ -1321,19 +1325,19 @@
                     repeat: alarmData.repeat || 'none',
                     status: status || 'active',
                     triggered_at: alarmData.triggered_at || '',
-                    user_id: userId
+                    user_id: userId,
+                    alarm_id: alarmData.id || ''
                 };
                 
-                // สร้าง FormData object
-                const formData = new FormData();
+                // สร้าง URL parameters
+                const params = new URLSearchParams();
                 for (const key in payload) {
-                    formData.append(key, payload[key]);
+                    params.append(key, payload[key]);
                 }
                 
-                // ใช้รูปแบบ fetch ตามที่ต้องการ
-                fetch(GOOGLE_SCRIPT_URL, {
-                    method: "POST",
-                    body: formData
+                // ใช้ GET request แทน POST เพื่อหลีกเลี่ยงปัญหา CORS
+                fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
+                    method: "GET"
                 })
                 .then(res => res.text())
                 .then(data => {
@@ -1343,6 +1347,7 @@
                     const alarmIndex = alarms.findIndex(a => a.id === alarmData.id);
                     if (alarmIndex !== -1) {
                         alarms[alarmIndex].synced = true;
+                        alarms[alarmIndex].sheet_id = data; // เก็บ ID ที่ได้จาก Sheets
                         localStorage.setItem('alarms', JSON.stringify(alarms));
                         renderAlarms();
                         updateAllBadges();
@@ -1359,29 +1364,71 @@
             }
         }
         
+        // Delete from Google Sheets
+        async function deleteFromGoogleSheets(alarmId, sheetId = '') {
+            try {
+                const payload = {
+                    action: 'delete',
+                    alarm_id: alarmId,
+                    sheet_id: sheetId,
+                    user_id: userId
+                };
+                
+                // สร้าง URL parameters
+                const params = new URLSearchParams();
+                for (const key in payload) {
+                    params.append(key, payload[key]);
+                }
+                
+                const response = await fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
+                    method: "GET"
+                });
+                
+                const data = await response.text();
+                console.log('ลบข้อมูลจาก Google Sheets สำเร็จ:', data);
+                
+                return true;
+            } catch (error) {
+                console.error('ข้อผิดพลาดในการลบข้อมูลจาก Google Sheets:', error);
+                return false;
+            }
+        }
+        
         // Sync pending data when online
         function syncPendingData() {
-            // Implement sync logic here if needed
+            // Sync alarms that are not synced yet
+            alarms.forEach(alarm => {
+                if (!alarm.synced && alarm.title && alarm.date && alarm.time) {
+                    saveToGoogleSheets(alarm, 'created');
+                }
+            });
         }
         
         // Test connection to Google Apps Script
         function testConnection() {
-            // สร้าง FormData สำหรับการทดสอบ
-            const formData = new FormData();
-            formData.append('test', 'connection');
-            formData.append('action', 'test');
+            // ตรวจสอบว่าทดสอบการเชื่อมต่อแล้วหรือยัง
+            if (connectionTested) return;
             
-            // ใช้รูปแบบ fetch ตามที่ต้องการ
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: "POST",
-                body: formData
+            const params = new URLSearchParams({
+                action: 'test',
+                test: 'connection'
+            });
+            
+            fetch(GOOGLE_SCRIPT_URL + '?' + params.toString(), {
+                method: "GET"
             })
             .then(res => res.text())
             .then(data => {
                 isConnected = true;
+                connectionTested = true;
+                console.log('Connection test successful:', data);
+                showMessage('เชื่อมต่อกับ Google Sheets สำเร็จ', 'success');
             })
             .catch(error => {
                 isConnected = false;
+                connectionTested = true;
+                console.error('Connection test failed:', error);
+                showMessage('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้', 'error');
             });
         }
         
@@ -1501,11 +1548,20 @@
             renderAlarms();
         }
         
-        // Delete an alarm
-        function deleteAlarm(index) {
+        // Delete an alarm (พร้อมลบจาก Google Sheets)
+        async function deleteAlarm(index, alarmId) {
             if (confirm('คุณแน่ใจว่าต้องการลบการแจ้งเตือนนี้?')) {
+                const alarm = alarms[index];
+                
+                // ลบจาก Google Sheets ถ้ามี sheet_id
+                if (alarm.synced && alarm.sheet_id) {
+                    await deleteFromGoogleSheets(alarmId, alarm.sheet_id);
+                }
+                
+                // ลบจาก localStorage
                 alarms.splice(index, 1);
                 localStorage.setItem('alarms', JSON.stringify(alarms));
+                
                 renderAlarms();
                 showMessage('ลบการแจ้งเตือนเรียบร้อยแล้ว', 'success');
             }
@@ -1534,6 +1590,12 @@
             const date = document.getElementById('date').value;
             const time = document.getElementById('time').value;
             const repeat = document.querySelector('input[name="repeat"]:checked').value;
+            
+            // ตรวจสอบว่าข้อมูลครบหรือไม่
+            if (!title || !date || !time) {
+                showMessage('กรุณากรอกข้อมูลให้ครบ (หัวข้อ, วันที่, เวลา)', 'error');
+                return;
+            }
             
             const datetime = new Date(`${date}T${time}`);
             
@@ -1575,13 +1637,20 @@
         });
         
         // Clear all alarms button
-        clearAllBtn.addEventListener('click', function() {
+        clearAllBtn.addEventListener('click', async function() {
             if (alarms.length === 0) {
                 showMessage('ไม่มีเวลาที่ตั้งไว้', 'error');
                 return;
             }
             
             if (confirm(`คุณแน่ใจว่าต้องการลบการแจ้งเตือนทั้งหมด ${alarms.length} รายการ?`)) {
+                // ลบจาก Google Sheets ทุกอันที่เคยบันทึกไว้
+                for (const alarm of alarms) {
+                    if (alarm.synced && alarm.sheet_id) {
+                        await deleteFromGoogleSheets(alarm.id, alarm.sheet_id);
+                    }
+                }
+                
                 alarms = [];
                 localStorage.setItem('alarms', JSON.stringify(alarms));
                 renderAlarms();
@@ -1762,8 +1831,21 @@
             document.querySelector('#broadcastSection').scrollIntoView({ behavior: 'smooth' });
         }
         
+        // Manual connection test button (เพิ่มปุ่มนี้ใน UI)
+        function addManualConnectionTest() {
+            const statusDiv = document.querySelector('#connectionStatus');
+            if (statusDiv) {
+                const testBtn = document.createElement('button');
+                testBtn.className = 'ml-4 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm';
+                testBtn.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>ทดสอบการเชื่อมต่อ';
+                testBtn.onclick = testConnection;
+                statusDiv.appendChild(testBtn);
+            }
+        }
+        
         // Initialize the application
         init();
+        addManualConnectionTest();
     </script>
 </body>
 </html>
