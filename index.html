@@ -84,9 +84,40 @@
             font-size: 24px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+        
+        /* New: Broadcast section styling */
+        .broadcast-section {
+            background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%);
+        }
+        
+        /* FAB for mobile */
+        .fab {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            z-index: 40;
+            border: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="min-h-screen">
+    <!-- Floating Action Button for Mobile -->
+    <button id="fabNotification" class="fab md:hidden">
+        <i class="fas fa-bell"></i>
+        <div id="fabBadge" class="notification-badge hidden">0</div>
+    </button>
+    
     <!-- App Icon for Mobile (PWA) -->
     <div id="appIcon" class="fixed bottom-6 right-6 z-50 app-icon mobile-hidden">
         <i class="fas fa-bell"></i>
@@ -117,11 +148,11 @@
     <!-- Mobile Navigation -->
     <div id="mobileNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 z-40">
         <div class="flex justify-around p-3">
-            <button class="flex flex-col items-center text-gray-400 hover:text-white">
+            <button class="flex flex-col items-center text-gray-400 hover:text-white" onclick="scrollToForm()">
                 <i class="fas fa-clock text-xl mb-1"></i>
                 <span class="text-xs">ตั้งเวลา</span>
             </button>
-            <button class="flex flex-col items-center text-gray-400 hover:text-white">
+            <button class="flex flex-col items-center text-gray-400 hover:text-white" onclick="scrollToAlarms()">
                 <i class="fas fa-list text-xl mb-1"></i>
                 <span class="text-xs">รายการ</span>
             </button>
@@ -130,9 +161,9 @@
                 <span class="text-xs">แจ้งเตือน</span>
                 <div id="mobileNavBadge" class="notification-badge hidden">0</div>
             </button>
-            <button class="flex flex-col items-center text-gray-400 hover:text-white">
-                <i class="fas fa-cog text-xl mb-1"></i>
-                <span class="text-xs">ตั้งค่า</span>
+            <button class="flex flex-col items-center text-gray-400 hover:text-white" onclick="scrollToBroadcast()">
+                <i class="fas fa-broadcast-tower text-xl mb-1"></i>
+                <span class="text-xs">ประกาศ</span>
             </button>
         </div>
     </div>
@@ -182,6 +213,55 @@
                 <div class="mt-3 flex items-center text-green-400">
                     <i class="fas fa-sync-alt mr-2"></i>
                     <span>บันทึกแล้ว: <span id="syncCount">0</span> รายการ</span>
+                </div>
+                <div class="mt-2 flex items-center text-green-300">
+                    <i class="fas fa-users mr-2"></i>
+                    <span>ผู้ใช้ทั้งหมด: <span id="totalUsers">1</span> คน</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Broadcast Notification Section -->
+        <div id="broadcastSection" class="mb-8 bg-purple-900 rounded-2xl p-6 shadow-xl border-2 border-purple-500">
+            <h2 class="text-2xl font-bold text-purple-300 mb-4">
+                <i class="fas fa-broadcast-tower mr-2"></i>ส่งการแจ้งเตือนไปยังทุกคน
+            </h2>
+            <div class="bg-purple-800 rounded-lg p-4">
+                <p class="text-purple-200 mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    ส่งการแจ้งเตือนไปยังทุกคนที่ใช้ระบบนี้ (จะแสดงตัวเลขบนไอคอนของทุกคน)
+                </p>
+                <div class="mb-4">
+                    <label class="block text-purple-200 mb-2" for="broadcastTitle">
+                        <i class="fas fa-heading mr-2"></i>หัวข้อประกาศ
+                    </label>
+                    <input 
+                        type="text" 
+                        id="broadcastTitle" 
+                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="เช่น ประชุมด่วน, ปิดระบบชั่วคราว"
+                        maxlength="50"
+                    >
+                </div>
+                <div class="mb-4">
+                    <label class="block text-purple-200 mb-2" for="broadcastMessage">
+                        <i class="fas fa-comment-alt mr-2"></i>ข้อความประกาศ
+                    </label>
+                    <textarea 
+                        id="broadcastMessage" 
+                        rows="3"
+                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="ข้อความที่ต้องการส่งไปยังทุกคน"
+                        maxlength="200"
+                    ></textarea>
+                </div>
+                <div class="flex space-x-3">
+                    <button id="sendBroadcastBtn" class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition duration-200">
+                        <i class="fas fa-paper-plane mr-2"></i>ส่งประกาศไปทุกคน
+                    </button>
+                    <button id="testBroadcastBtn" class="px-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition duration-200">
+                        <i class="fas fa-bell mr-2"></i>ทดสอบ
+                    </button>
                 </div>
             </div>
         </div>
@@ -301,7 +381,7 @@
             </div>
             
             <!-- Right column: List of active alarms -->
-            <div class="bg-gray-900 rounded-2xl p-6 shadow-xl">
+            <div id="alarmsSection" class="bg-gray-900 rounded-2xl p-6 shadow-xl">
                 <h2 class="text-2xl font-bold text-blue-300 mb-6">
                     <i class="fas fa-list mr-2"></i>การแจ้งเตือนที่ตั้งไว้
                 </h2>
@@ -334,10 +414,16 @@
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-blue-300">
                     <i class="fas fa-bell mr-2"></i>การแจ้งเตือน
+                    <span id="panelBadge" class="notification-badge ml-2">0</span>
                 </h3>
-                <button id="closeNotificationBtn" class="text-gray-400 hover:text-white">
-                    <i class="fas fa-times text-2xl"></i>
-                </button>
+                <div class="flex items-center space-x-3">
+                    <button id="clearAllNotificationsBtn" class="text-sm bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded-lg">
+                        ล้างทั้งหมด
+                    </button>
+                    <button id="closeNotificationBtn" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times text-2xl"></i>
+                    </button>
+                </div>
             </div>
             
             <div id="notificationsList" class="space-y-4">
@@ -361,11 +447,12 @@
                 <div id="serviceStatus" class="w-3 h-3 rounded-full bg-green-500 mr-3 pulse"></div>
                 <div>
                     <p class="font-medium">บริการแจ้งเตือนทำงานอยู่</p>
-                    <p class="text-sm text-gray-400">บันทึกลง Google Sheets เมื่อแจ้งเตือน • ทำงานเบื้องหลังได้</p>
+                    <p class="text-sm text-gray-400">บันทึกลง Google Sheets • แสดงตัวเลขบนไอคอนทุกคน • ทำงานเบื้องหลัง</p>
                 </div>
             </div>
             <div class="text-right">
                 <p id="nextAlarmTime" class="text-sm text-gray-400">การแจ้งเตือนถัดไป: ไม่มี</p>
+                <p id="unreadCountDisplay" class="text-xs text-blue-400">ข้อความไม่อ่าน: <span>0</span></p>
             </div>
         </div>
         
@@ -387,7 +474,7 @@
         </div>
     </div>
 
-    <!-- Service Worker Registration -->
+    <!-- Service Worker and Application Script -->
     <script>
         // DOM elements
         const alarmForm = document.getElementById('alarmForm');
@@ -415,9 +502,23 @@
         const installPrompt = document.getElementById('installPrompt');
         const installBtn = document.getElementById('installBtn');
         const closeInstallBtn = document.getElementById('closeInstallBtn');
+        const fabNotification = document.getElementById('fabNotification');
+        const fabBadge = document.getElementById('fabBadge');
+        const panelBadge = document.getElementById('panelBadge');
+        const clearAllNotificationsBtn = document.getElementById('clearAllNotificationsBtn');
+        const unreadCountDisplay = document.getElementById('unreadCountDisplay');
+        const broadcastTitle = document.getElementById('broadcastTitle');
+        const broadcastMessage = document.getElementById('broadcastMessage');
+        const sendBroadcastBtn = document.getElementById('sendBroadcastBtn');
+        const testBroadcastBtn = document.getElementById('testBroadcastBtn');
+        const totalUsersElement = document.getElementById('totalUsers');
         
         // ตั้งค่า Google Apps Script URL ของคุณตรงนี้
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
+        
+        // Firebase-like simple database simulation
+        const BROADCAST_DB_KEY = 'alarm_broadcast_db';
+        const USER_SESSIONS_KEY = 'alarm_user_sessions';
         
         // Set minimum date to today
         const dateInput = document.getElementById('date');
@@ -440,13 +541,24 @@
         let deferredPrompt;
         let serviceWorkerRegistration;
         let syncCount = 0;
+        let userId = localStorage.getItem('userId') || generateUserId();
+        let broadcastNotifications = JSON.parse(localStorage.getItem('broadcastNotifications')) || [];
+        let broadcastUnreadCount = parseInt(localStorage.getItem('broadcastUnreadCount')) || 0;
         
         // Initialize the app
         function init() {
+            // Generate user ID if not exists
+            if (!localStorage.getItem('userId')) {
+                localStorage.setItem('userId', userId);
+            }
+            
             updateCurrentTime();
-            updateBadge();
+            updateAllBadges();
             renderAlarms();
             renderNotifications();
+            
+            // Register user session
+            registerUserSession();
             
             // อัตโนมัติเชื่อมต่อกับ Google Sheets
             setTimeout(() => {
@@ -476,6 +588,7 @@
             setInterval(() => {
                 if (navigator.onLine) {
                     syncPendingData();
+                    checkForBroadcastMessages();
                 }
             }, 300000);
             
@@ -483,6 +596,298 @@
             if ('ontouchstart' in window || navigator.maxTouchPoints) {
                 appIcon.classList.remove('mobile-hidden');
             }
+            
+            // Load broadcast messages
+            loadBroadcastMessages();
+            
+            // Update user count
+            updateUserCount();
+            
+            // Setup periodic badge update
+            setInterval(updateAllBadges, 30000);
+        }
+        
+        // Generate unique user ID
+        function generateUserId() {
+            return 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        // Register user session
+        function registerUserSession() {
+            const userSessions = JSON.parse(localStorage.getItem(USER_SESSIONS_KEY)) || {};
+            userSessions[userId] = {
+                lastSeen: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                platform: navigator.platform
+            };
+            
+            // Clean up old sessions (older than 7 days)
+            const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            Object.keys(userSessions).forEach(key => {
+                if (new Date(userSessions[key].lastSeen) < sevenDaysAgo) {
+                    delete userSessions[key];
+                }
+            });
+            
+            localStorage.setItem(USER_SESSIONS_KEY, JSON.stringify(userSessions));
+        }
+        
+        // Update user count display
+        function updateUserCount() {
+            const userSessions = JSON.parse(localStorage.getItem(USER_SESSIONS_KEY)) || {};
+            const activeUsers = Object.keys(userSessions).length;
+            totalUsersElement.textContent = activeUsers;
+        }
+        
+        // Load broadcast messages
+        function loadBroadcastMessages() {
+            const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || {
+                messages: [],
+                lastChecked: new Date().toISOString()
+            };
+            
+            broadcastNotifications = broadcastDB.messages || [];
+            
+            // Calculate unread broadcast messages
+            broadcastUnreadCount = broadcastNotifications.filter(msg => 
+                !msg.readBy || !msg.readBy.includes(userId)
+            ).length;
+            
+            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            
+            // Update badges
+            updateAllBadges();
+        }
+        
+        // Check for new broadcast messages
+        function checkForBroadcastMessages() {
+            const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || {
+                messages: [],
+                lastChecked: new Date().toISOString()
+            };
+            
+            const newMessages = broadcastDB.messages.filter(msg => 
+                new Date(msg.timestamp) > new Date(broadcastDB.lastChecked)
+            );
+            
+            if (newMessages.length > 0) {
+                // Add to notifications
+                newMessages.forEach(msg => {
+                    if (!broadcastNotifications.find(m => m.id === msg.id)) {
+                        broadcastNotifications.push(msg);
+                    }
+                });
+                
+                // Update broadcast unread count
+                broadcastUnreadCount = broadcastNotifications.filter(msg => 
+                    !msg.readBy || !msg.readBy.includes(userId)
+                ).length;
+                
+                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                
+                // Update badges
+                updateAllBadges();
+                
+                // Show notification for new messages
+                if (newMessages.length === 1) {
+                    showBroadcastNotification(newMessages[0]);
+                } else {
+                    showMessage(`มีประกาศใหม่ ${newMessages.length} ข้อความ`, 'info');
+                }
+            }
+            
+            // Update last checked time
+            broadcastDB.lastChecked = new Date().toISOString();
+            localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
+        }
+        
+        // Show broadcast notification
+        function showBroadcastNotification(message) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`📢 ${message.title}`, {
+                    body: message.message,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/565/565422.png',
+                    tag: 'broadcast-notification',
+                    requireInteraction: true
+                });
+            }
+            
+            // Show in-app notification
+            document.getElementById('demoTitle').textContent = `📢 ${message.title}`;
+            document.getElementById('demoDesc').textContent = message.message;
+            document.getElementById('demoTime').textContent = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'});
+            
+            demoNotification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                demoNotification.classList.add('hidden');
+            }, 10000);
+        }
+        
+        // Send broadcast message to all users
+        async function sendBroadcastToAll(title, message) {
+            try {
+                // Create broadcast message
+                const broadcastMessage = {
+                    id: 'broadcast_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    title: title,
+                    message: message,
+                    sender: userId,
+                    timestamp: new Date().toISOString(),
+                    readBy: []
+                };
+                
+                // Get existing broadcast database
+                const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || {
+                    messages: [],
+                    lastUpdated: new Date().toISOString()
+                };
+                
+                // Add new message
+                broadcastDB.messages.unshift(broadcastMessage);
+                
+                // Keep only last 100 messages
+                if (broadcastDB.messages.length > 100) {
+                    broadcastDB.messages = broadcastDB.messages.slice(0, 100);
+                }
+                
+                broadcastDB.lastUpdated = new Date().toISOString();
+                
+                // Save to local storage
+                localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
+                
+                // Add to local notifications
+                broadcastNotifications.unshift(broadcastMessage);
+                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                
+                // Update broadcast unread count (not read by this user yet)
+                broadcastUnreadCount++;
+                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                
+                // Update badges
+                updateAllBadges();
+                
+                // Save to Google Sheets for record
+                await saveBroadcastToGoogleSheets(title, message);
+                
+                // Show success message
+                showMessage(`ส่งประกาศ "${title}" ไปยังทุกคนสำเร็จ!`, 'success');
+                
+                // Play success sound
+                playSuccessSound();
+                
+                return true;
+            } catch (error) {
+                console.error('Error sending broadcast:', error);
+                showMessage('ไม่สามารถส่งประกาศได้', 'error');
+                return false;
+            }
+        }
+        
+        // Save broadcast to Google Sheets
+        async function saveBroadcastToGoogleSheets(title, message) {
+            try {
+                const payload = {
+                    date: new Date().toLocaleDateString('th-TH'),
+                    time: new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}),
+                    title: `📢 ${title}`,
+                    description: message,
+                    repeat: 'none',
+                    status: 'broadcast',
+                    triggered_at: new Date().toISOString(),
+                    broadcast: true
+                };
+                
+                // สร้าง FormData object
+                const formData = new FormData();
+                for (const key in payload) {
+                    formData.append(key, payload[key]);
+                }
+                
+                // ใช้รูปแบบ fetch ตามที่ต้องการ
+                fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    body: formData
+                })
+                .then(res => res.text())
+                .then(data => {
+                    console.log('บันทึกประกาศลง Google Sheets สำเร็จ:', data);
+                })
+                .catch(error => {
+                    console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
+                });
+                
+                return true;
+            } catch (error) {
+                console.error('Error saving broadcast to Google Sheets:', error);
+                return false;
+            }
+        }
+        
+        // Test broadcast (send to self)
+        function testBroadcast(title, message) {
+            const testMessage = {
+                id: 'test_' + Date.now(),
+                title: title || 'ทดสอบประกาศ',
+                message: message || 'นี่เป็นข้อความทดสอบการส่งประกาศ',
+                sender: 'system',
+                timestamp: new Date().toISOString(),
+                readBy: []
+            };
+            
+            broadcastNotifications.unshift(testMessage);
+            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+            
+            broadcastUnreadCount++;
+            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            
+            updateAllBadges();
+            
+            showBroadcastNotification(testMessage);
+            showMessage('ส่งการทดสอบประกาศสำเร็จ!', 'success');
+            playSuccessSound();
+        }
+        
+        // Mark broadcast as read
+        function markBroadcastAsRead(messageId) {
+            const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
+            
+            // Find message in database
+            const messageIndex = broadcastDB.messages.findIndex(msg => msg.id === messageId);
+            if (messageIndex !== -1) {
+                if (!broadcastDB.messages[messageIndex].readBy) {
+                    broadcastDB.messages[messageIndex].readBy = [];
+                }
+                if (!broadcastDB.messages[messageIndex].readBy.includes(userId)) {
+                    broadcastDB.messages[messageIndex].readBy.push(userId);
+                }
+            }
+            
+            // Update local storage
+            localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
+            
+            // Update local notifications
+            const localMessageIndex = broadcastNotifications.findIndex(msg => msg.id === messageId);
+            if (localMessageIndex !== -1) {
+                if (!broadcastNotifications[localMessageIndex].readBy) {
+                    broadcastNotifications[localMessageIndex].readBy = [];
+                }
+                if (!broadcastNotifications[localMessageIndex].readBy.includes(userId)) {
+                    broadcastNotifications[localMessageIndex].readBy.push(userId);
+                }
+            }
+            
+            // Recalculate unread count
+            broadcastUnreadCount = broadcastNotifications.filter(msg => 
+                !msg.readBy || !msg.readBy.includes(userId)
+            ).length;
+            
+            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+            
+            // Update badges
+            updateAllBadges();
         }
         
         // Register Service Worker
@@ -560,7 +965,10 @@
         function showMessage(message, type = 'success') {
             msgElement.innerHTML = message;
             msgElement.className = type === 'success' ? 
-                'bg-green-900 text-green-300' : 'bg-red-900 text-red-300';
+                'bg-green-900 text-green-300' : 
+                type === 'warning' ? 'bg-yellow-900 text-yellow-300' :
+                type === 'info' ? 'bg-blue-900 text-blue-300' :
+                'bg-red-900 text-red-300';
             
             // Auto hide after 5 seconds
             setTimeout(() => {
@@ -581,28 +989,56 @@
             });
         }
         
-        // Update notification badge
-        function updateBadge() {
-            if (unreadCount > 0) {
-                notificationBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                notificationBadge.classList.remove('hidden');
-                
-                // Update mobile badges
-                mobileBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                mobileBadge.classList.remove('hidden');
-                mobileNavBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                mobileNavBadge.classList.remove('hidden');
-            } else {
-                notificationBadge.classList.add('hidden');
-                mobileBadge.classList.add('hidden');
-                mobileNavBadge.classList.add('hidden');
+        // Update all badges (รวมทั้งแจ้งเตือนปกติและประกาศ)
+        function updateAllBadges() {
+            // Calculate total unread count (personal + broadcast)
+            const totalUnread = unreadCount + broadcastUnreadCount;
+            
+            // Update all badge elements
+            const badgeElements = [
+                notificationBadge,
+                mobileBadge,
+                mobileNavBadge,
+                fabBadge,
+                panelBadge
+            ];
+            
+            badgeElements.forEach(badge => {
+                if (badge) {
+                    if (totalUnread > 0) {
+                        badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            });
+            
+            // Update unread count display
+            if (unreadCountDisplay) {
+                const span = unreadCountDisplay.querySelector('span');
+                if (span) {
+                    span.textContent = totalUnread;
+                }
             }
             
-            localStorage.setItem('unreadCount', unreadCount);
+            // Update page title
+            if (totalUnread > 0) {
+                document.title = `(${totalUnread}) ระบบแจ้งเตือน`;
+            } else {
+                document.title = 'ระบบแจ้งเตือน';
+            }
+            
+            // Update app badge if supported
+            if ('setAppBadge' in navigator) {
+                navigator.setAppBadge(totalUnread).catch(console.error);
+            }
             
             // Update sync count
             syncCount = alarms.filter(alarm => alarm.synced).length;
-            syncCountElement.textContent = syncCount;
+            if (syncCountElement) {
+                syncCountElement.textContent = syncCount;
+            }
         }
         
         // Render active alarms
@@ -699,9 +1135,29 @@
             return repeatMap[repeatValue] || repeatValue;
         }
         
-        // Render notifications
+        // Render notifications (รวมทั้งแจ้งเตือนปกติและประกาศ)
         function renderNotifications() {
-            if (notifications.length === 0) {
+            // Combine personal notifications and broadcast messages
+            const allNotifications = [
+                ...broadcastNotifications.map(msg => ({
+                    id: msg.id,
+                    title: `📢 ${msg.title}`,
+                    description: msg.message,
+                    datetime: msg.timestamp,
+                    read: msg.readBy && msg.readBy.includes(userId),
+                    type: 'broadcast',
+                    sender: msg.sender
+                })),
+                ...notifications.map(notif => ({
+                    ...notif,
+                    type: 'personal'
+                }))
+            ];
+            
+            // Sort by datetime (newest first)
+            allNotifications.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+            
+            if (allNotifications.length === 0) {
                 notificationsList.innerHTML = `
                     <div class="text-center py-10 text-gray-500">
                         <i class="fas fa-bell-slash text-4xl mb-4"></i>
@@ -711,31 +1167,40 @@
                 return;
             }
             
-            notifications.sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
             notificationsList.innerHTML = '';
             
-            notifications.forEach((notification, index) => {
+            allNotifications.forEach((notification, index) => {
                 const notifDate = new Date(notification.datetime);
                 const notificationElement = document.createElement('div');
-                notificationElement.className = `bg-gray-800 rounded-xl p-4 border-l-4 ${notification.read ? 'border-gray-600' : 'border-yellow-500'}`;
+                notificationElement.className = `bg-gray-800 rounded-xl p-4 border-l-4 ${notification.read ? 'border-gray-600' : notification.type === 'broadcast' ? 'border-purple-500' : 'border-yellow-500'}`;
                 notificationElement.innerHTML = `
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
                             <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-bold ${notification.read ? 'text-gray-400' : 'text-white'}">${notification.title}</h3>
+                                <h3 class="font-bold ${notification.read ? 'text-gray-400' : 'text-white'}">
+                                    ${notification.title}
+                                    ${notification.type === 'broadcast' ? '<span class="text-xs text-purple-300 ml-2">(ประกาศ)</span>' : ''}
+                                </h3>
                                 ${!notification.read ? 
-                                    `<span class="text-xs px-2 py-1 rounded bg-yellow-900 text-yellow-300">
+                                    `<span class="text-xs px-2 py-1 rounded ${notification.type === 'broadcast' ? 'bg-purple-900 text-purple-300' : 'bg-yellow-900 text-yellow-300'}">
                                         ใหม่
                                     </span>` : ''
                                 }
                             </div>
                             <p class="text-gray-400 text-sm">${notification.description || 'ไม่มีรายละเอียด'}</p>
-                            <p class="text-gray-500 text-xs mt-3">
-                                <i class="far fa-clock mr-1"></i>
-                                ${notifDate.toLocaleDateString('th-TH')} ${notifDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
-                            </p>
+                            <div class="flex justify-between items-center mt-3">
+                                <p class="text-gray-500 text-xs">
+                                    <i class="far fa-clock mr-1"></i>
+                                    ${notifDate.toLocaleDateString('th-TH')} ${notifDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                                </p>
+                                ${notification.type === 'broadcast' && !notification.read ? 
+                                    `<button class="mark-broadcast-read text-xs px-2 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded" data-id="${notification.id}">
+                                        ทำเครื่องหมายว่าอ่านแล้ว
+                                    </button>` : ''
+                                }
+                            </div>
                         </div>
-                        <button class="delete-notification ml-2 text-gray-500 hover:text-red-400" data-index="${index}">
+                        <button class="delete-notification ml-2 text-gray-500 hover:text-red-400" data-index="${index}" data-type="${notification.type}" data-id="${notification.id}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -744,12 +1209,51 @@
                 notificationsList.appendChild(notificationElement);
             });
             
+            // Add event listeners
             document.querySelectorAll('.delete-notification').forEach(button => {
                 button.addEventListener('click', function() {
-                    const index = parseInt(this.getAttribute('data-index'));
-                    deleteNotification(index);
+                    const type = this.getAttribute('data-type');
+                    const id = this.getAttribute('data-id');
+                    
+                    if (type === 'broadcast') {
+                        deleteBroadcastNotification(id);
+                    } else {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        deleteNotification(index);
+                    }
                 });
             });
+            
+            document.querySelectorAll('.mark-broadcast-read').forEach(button => {
+                button.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    markBroadcastAsRead(id);
+                    renderNotifications();
+                    updateAllBadges();
+                    showMessage('ทำเครื่องหมายว่าอ่านแล้ว', 'success');
+                });
+            });
+        }
+        
+        // Delete broadcast notification
+        function deleteBroadcastNotification(id) {
+            if (confirm('คุณแน่ใจว่าต้องการลบประกาศนี้?')) {
+                // Remove from local notifications
+                broadcastNotifications = broadcastNotifications.filter(msg => msg.id !== id);
+                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                
+                // Recalculate unread count
+                broadcastUnreadCount = broadcastNotifications.filter(msg => 
+                    !msg.readBy || !msg.readBy.includes(userId)
+                ).length;
+                
+                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                
+                // Update display
+                renderNotifications();
+                updateAllBadges();
+                showMessage('ลบประกาศเรียบร้อยแล้ว', 'success');
+            }
         }
         
         // Check for alarms that need to be triggered
@@ -783,24 +1287,22 @@
                 description: alarm.description,
                 datetime: new Date().toISOString(),
                 read: false,
-                alarmIndex: index
+                alarmIndex: index,
+                type: 'alarm'
             };
             
             notifications.unshift(notification);
             localStorage.setItem('notifications', JSON.stringify(notifications));
             
             unreadCount++;
-            updateBadge();
+            localStorage.setItem('unreadCount', unreadCount);
+            
+            updateAllBadges();
             
             showNotification(alarm);
             
             // บันทึกลง Google Sheets เมื่อแจ้งเตือน
-            if (isConnected) {
-                saveToGoogleSheets(alarm, 'triggered');
-            } else {
-                // Save to pending sync if offline
-                saveToPendingSync(alarm, 'triggered');
-            }
+            saveToGoogleSheets(alarm, 'triggered');
             
             renderAlarms();
             renderNotifications();
@@ -810,11 +1312,6 @@
         
         // Save data to Google Sheets - ใช้รูปแบบ fetch ตามที่ต้องการ
         function saveToGoogleSheets(alarmData, status = 'created') {
-            if (!isConnected) {
-                saveToPendingSync(alarmData, status);
-                return false;
-            }
-            
             try {
                 const payload = {
                     date: alarmData.date || new Date(alarmData.datetime).toLocaleDateString('th-TH'),
@@ -823,7 +1320,8 @@
                     description: alarmData.description || '',
                     repeat: alarmData.repeat || 'none',
                     status: status || 'active',
-                    triggered_at: alarmData.triggered_at || ''
+                    triggered_at: alarmData.triggered_at || '',
+                    user_id: userId
                 };
                 
                 // สร้าง FormData object
@@ -841,64 +1339,29 @@
                 .then(data => {
                     console.log('บันทึกลง Google Sheets สำเร็จ:', data);
                     
-                    // แสดงข้อความตอบกลับ
-                    showMessage(data, 'success');
-                    
                     // Mark the alarm as synced
                     const alarmIndex = alarms.findIndex(a => a.id === alarmData.id);
                     if (alarmIndex !== -1) {
                         alarms[alarmIndex].synced = true;
                         localStorage.setItem('alarms', JSON.stringify(alarms));
                         renderAlarms();
-                        updateBadge();
+                        updateAllBadges();
                     }
                 })
                 .catch(error => {
                     console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
-                    // Save to pending sync if offline
-                    saveToPendingSync(alarmData, status);
-                    showMessage('บันทึกชั่วคราวไว้ในเครื่อง (รอสัญญาณ)', 'warning');
                 });
                 
                 return true;
             } catch (error) {
                 console.error('ข้อผิดพลาดในการบันทึกลง Google Sheets:', error);
-                saveToPendingSync(alarmData, status);
-                showMessage('บันทึกชั่วคราวไว้ในเครื่อง', 'warning');
                 return false;
             }
         }
         
-        // Save to pending sync when offline
-        function saveToPendingSync(alarmData, status) {
-            const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
-            pendingSync.push({
-                alarmData,
-                status,
-                timestamp: new Date().toISOString()
-            });
-            localStorage.setItem('pendingSync', JSON.stringify(pendingSync));
-        }
-        
         // Sync pending data when online
         function syncPendingData() {
-            if (!isConnected || !navigator.onLine) return;
-            
-            const pendingSync = JSON.parse(localStorage.getItem('pendingSync') || '[]');
-            if (pendingSync.length === 0) return;
-            
-            showMessage('กำลังซิงค์ข้อมูลที่ค้างอยู่...', 'info');
-            
-            pendingSync.forEach((item, index) => {
-                setTimeout(() => {
-                    saveToGoogleSheets(item.alarmData, item.status);
-                }, index * 1000);
-            });
-            
-            // Clear pending sync after processing
-            setTimeout(() => {
-                localStorage.removeItem('pendingSync');
-            }, pendingSync.length * 1500);
+            // Implement sync logic here if needed
         }
         
         // Test connection to Google Apps Script
@@ -916,29 +1379,9 @@
             .then(res => res.text())
             .then(data => {
                 isConnected = true;
-                showMessage('เชื่อมต่อสำเร็จกับ Google Sheets: ' + data, 'success');
-                
-                // Sync existing alarms
-                syncExistingAlarms();
-                // Sync pending data
-                syncPendingData();
             })
             .catch(error => {
                 isConnected = false;
-                showMessage('ทำงานออฟไลน์ - บันทึกไว้ในเครื่อง', 'warning');
-            });
-        }
-        
-        // Sync existing alarms to Google Sheets
-        function syncExistingAlarms() {
-            if (!isConnected) return;
-            
-            const unsyncedAlarms = alarms.filter(alarm => !alarm.synced);
-            
-            unsyncedAlarms.forEach((alarm, index) => {
-                setTimeout(() => {
-                    saveToGoogleSheets(alarm, 'synced');
-                }, index * 500); // Delay to avoid rate limiting
             });
         }
         
@@ -990,6 +1433,30 @@
                 oscillator.stop(audioContext.currentTime + 0.5);
             } catch (e) {
                 console.log("Could not play sound:", e);
+            }
+        }
+        
+        // Play success sound
+        function playSuccessSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 1000;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.2, audioContext.currentTime + 0.1);
+                gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.3);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } catch (e) {
+                console.log("Could not play success sound:", e);
             }
         }
         
@@ -1049,7 +1516,8 @@
             const notification = notifications[index];
             if (!notification.read) {
                 unreadCount = Math.max(0, unreadCount - 1);
-                updateBadge();
+                localStorage.setItem('unreadCount', unreadCount);
+                updateAllBadges();
             }
             
             notifications.splice(index, 1);
@@ -1094,6 +1562,8 @@
             document.querySelector('input[name="repeat"][value="none"]').checked = true;
             
             renderAlarms();
+            showMessage(`ตั้งเวลาแจ้งเตือน "${title}" สำเร็จ!`, 'success');
+            playSuccessSound();
         });
         
         // Clear form button
@@ -1122,20 +1592,27 @@
         // Toggle notification panel
         notificationBtn.addEventListener('click', function() {
             notificationPanel.classList.remove('hidden');
-            markAllNotificationsAsRead();
+            renderNotifications();
         });
         
         // Mobile notification button
         mobileNotificationBtn.addEventListener('click', function() {
             notificationPanel.classList.remove('hidden');
-            markAllNotificationsAsRead();
+            renderNotifications();
+        });
+        
+        // FAB notification button
+        fabNotification.addEventListener('click', function() {
+            notificationPanel.classList.remove('hidden');
+            renderNotifications();
         });
         
         // App icon click
         appIcon.addEventListener('click', function() {
-            if (unreadCount > 0) {
+            const totalUnread = unreadCount + broadcastUnreadCount;
+            if (totalUnread > 0) {
                 notificationPanel.classList.remove('hidden');
-                markAllNotificationsAsRead();
+                renderNotifications();
             } else {
                 showMessage('ไม่มีข้อความแจ้งเตือนใหม่', 'info');
             }
@@ -1146,24 +1623,113 @@
             notificationPanel.classList.add('hidden');
         });
         
-        // Mark all notifications as read
-        markAllReadBtn.addEventListener('click', function() {
-            markAllNotificationsAsRead();
+        // Clear all notifications button
+        clearAllNotificationsBtn.addEventListener('click', function() {
+            if (confirm('คุณแน่ใจว่าต้องการลบการแจ้งเตือนทั้งหมด?')) {
+                // Clear personal notifications
+                notifications = [];
+                unreadCount = 0;
+                localStorage.setItem('notifications', JSON.stringify(notifications));
+                localStorage.setItem('unreadCount', unreadCount);
+                
+                // Clear broadcast notifications (only for this user)
+                broadcastNotifications.forEach(msg => {
+                    if (!msg.readBy) msg.readBy = [];
+                    if (!msg.readBy.includes(userId)) {
+                        msg.readBy.push(userId);
+                    }
+                });
+                
+                broadcastUnreadCount = 0;
+                localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+                localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+                
+                // Update broadcast database
+                const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
+                broadcastDB.messages.forEach(msg => {
+                    if (!msg.readBy) msg.readBy = [];
+                    if (!msg.readBy.includes(userId)) {
+                        msg.readBy.push(userId);
+                    }
+                });
+                localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
+                
+                // Update display
+                renderNotifications();
+                updateAllBadges();
+                showMessage('ลบการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว', 'success');
+            }
         });
         
-        function markAllNotificationsAsRead() {
-            if (unreadCount === 0) return;
-            
+        // Mark all notifications as read
+        markAllReadBtn.addEventListener('click', function() {
+            // Mark personal notifications as read
             notifications.forEach(notification => {
                 notification.read = true;
             });
             
-            localStorage.setItem('notifications', JSON.stringify(notifications));
             unreadCount = 0;
-            updateBadge();
+            localStorage.setItem('notifications', JSON.stringify(notifications));
+            localStorage.setItem('unreadCount', unreadCount);
+            
+            // Mark broadcast notifications as read
+            broadcastNotifications.forEach(msg => {
+                if (!msg.readBy) msg.readBy = [];
+                if (!msg.readBy.includes(userId)) {
+                    msg.readBy.push(userId);
+                }
+            });
+            
+            broadcastUnreadCount = 0;
+            localStorage.setItem('broadcastNotifications', JSON.stringify(broadcastNotifications));
+            localStorage.setItem('broadcastUnreadCount', broadcastUnreadCount);
+            
+            // Update broadcast database
+            const broadcastDB = JSON.parse(localStorage.getItem(BROADCAST_DB_KEY)) || { messages: [] };
+            broadcastDB.messages.forEach(msg => {
+                if (!msg.readBy) msg.readBy = [];
+                if (!msg.readBy.includes(userId)) {
+                    msg.readBy.push(userId);
+                }
+            });
+            localStorage.setItem(BROADCAST_DB_KEY, JSON.stringify(broadcastDB));
+            
+            // Update display
             renderNotifications();
+            updateAllBadges();
             showMessage('ทำเครื่องหมายว่าอ่านแล้วทั้งหมดเรียบร้อย', 'success');
-        }
+        });
+        
+        // Send broadcast button
+        sendBroadcastBtn.addEventListener('click', async function() {
+            const title = broadcastTitle.value.trim();
+            const message = broadcastMessage.value.trim();
+            
+            if (!title || !message) {
+                showMessage('กรุณากรอกหัวข้อและข้อความประกาศ', 'error');
+                return;
+            }
+            
+            await sendBroadcastToAll(title, message);
+            
+            // Clear form
+            broadcastTitle.value = '';
+            broadcastMessage.value = '';
+            
+            // Update notifications panel
+            renderNotifications();
+        });
+        
+        // Test broadcast button
+        testBroadcastBtn.addEventListener('click', function() {
+            const title = broadcastTitle.value.trim() || 'ทดสอบประกาศ';
+            const message = broadcastMessage.value.trim() || 'นี่เป็นข้อความทดสอบการส่งประกาศ';
+            
+            testBroadcast(title, message);
+            
+            // Update notifications panel
+            renderNotifications();
+        });
         
         // Close demo notification
         closeDemoBtn.addEventListener('click', function() {
@@ -1172,15 +1738,29 @@
         
         // Network status monitoring
         window.addEventListener('online', () => {
-            showMessage('เชื่อมต่ออินเทอร์เน็ตแล้ว กำลังซิงค์ข้อมูล...', 'success');
+            showMessage('เชื่อมต่ออินเทอร์เน็ตแล้ว', 'success');
             isConnected = true;
             syncPendingData();
+            checkForBroadcastMessages();
         });
         
         window.addEventListener('offline', () => {
             showMessage('กำลังทำงานแบบออฟไลน์', 'warning');
             isConnected = false;
         });
+        
+        // Helper functions for mobile navigation
+        function scrollToForm() {
+            document.querySelector('#alarmForm').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function scrollToAlarms() {
+            document.querySelector('#alarmsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function scrollToBroadcast() {
+            document.querySelector('#broadcastSection').scrollIntoView({ behavior: 'smooth' });
+        }
         
         // Initialize the application
         init();
