@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบแจ้งเตือนรวมศูนย์</title>
-    <meta name="theme-color" content="#121826">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,128 +11,21 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            background-color: #121826;
+            background-color: #1a1a2e;
             color: #e5e7eb;
             font-family: 'Sarabun', sans-serif;
-            -webkit-tap-highlight-color: transparent;
         }
         
         h1, h2, h3, h4, h5, h6 {
             font-family: 'Prompt', sans-serif;
         }
-        
-        /* Mobile app style containers */
-        .app-container {
-            max-width: 480px;
-            margin: 0 auto;
-            background: #121826;
-            min-height: 100vh;
-            position: relative;
-        }
-        
-        /* iOS-style notifications */
-        .ios-notification {
-            background: rgba(40, 40, 40, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 14px;
-            padding: 16px;
-            margin: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .ios-notification::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #3B82F6, #8B5CF6);
-        }
-        
-        /* iOS-style buttons */
-        .ios-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 14px 20px;
-            border: none;
-            color: white;
-            font-weight: 500;
-            transition: all 0.2s;
-            backdrop-filter: blur(10px);
-            cursor: pointer;
-        }
-        
-        .ios-btn:active {
-            transform: scale(0.98);
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .ios-btn-primary {
-            background: linear-gradient(135deg, #3B82F6, #1D4ED8);
-        }
-        
-        /* Floating notification panel */
-        .notification-panel {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            transform: translateY(100%);
-            transition: transform 0.3s ease-out;
-        }
-        
-        .notification-panel.active {
-            transform: translateY(0);
-        }
-        
-        /* Animations */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-        
-        /* Status indicators */
-        .status-connected { color: #10b981; }
-        .status-disconnected { color: #ef4444; }
-        .status-connecting { color: #f59e0b; }
         
         /* Notification badge */
         .notification-badge {
@@ -153,39 +45,6 @@
             justify-content: center;
         }
         
-        /* Mobile navigation */
-        .mobile-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(30, 30, 40, 0.95);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 12px 0;
-            z-index: 50;
-        }
-        
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            color: #9ca3af;
-            transition: all 0.2s;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-        }
-        
-        .nav-item.active {
-            color: #3B82F6;
-        }
-        
-        .nav-item:active {
-            transform: scale(0.95);
-        }
-        
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
@@ -200,810 +59,478 @@
             border-radius: 3px;
         }
         
-        /* iOS-style switches */
-        .ios-switch {
-            position: relative;
-            display: inline-block;
-            width: 52px;
-            height: 32px;
+        /* Loading animation */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
         
-        .ios-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .ios-switch-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #4b5563;
-            transition: .4s;
-            border-radius: 34px;
-        }
-        
-        .ios-switch-slider:before {
-            position: absolute;
-            content: "";
-            height: 24px;
-            width: 24px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        
-        input:checked + .ios-switch-slider {
-            background-color: #3B82F6;
-        }
-        
-        input:checked + .ios-switch-slider:before {
-            transform: translateX(20px);
-        }
-        
-        /* Vibration effect */
-        @keyframes vibrate {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-2px); }
-            50% { transform: translateX(2px); }
-            75% { transform: translateX(-2px); }
-            100% { transform: translateX(0); }
-        }
-        
-        .vibrate {
-            animation: vibrate 0.3s linear;
-        }
-        
-        /* Mobile app launch animation */
-        .app-launch {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, #121826, #1f2937);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            transition: opacity 0.3s ease-out;
-        }
-        
-        .app-icon-large {
-            width: 80px;
-            height: 80px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 32px;
-            margin-bottom: 20px;
+        .pulse {
             animation: pulse 2s infinite;
+        }
+        
+        /* Slide in animation */
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .slide-in {
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        /* Fade in animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
         }
     </style>
 </head>
-<body class="min-h-screen">
-    <!-- App Launch Screen -->
-    <div id="appLaunch" class="app-launch">
-        <div class="app-icon-large">
-            <i class="fas fa-bell"></i>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-50">
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-6 pulse">
+            <i class="fas fa-bell text-white text-3xl"></i>
         </div>
-        <h1 class="text-2xl font-bold mt-4 mb-2">ระบบแจ้งเตือนรวมศูนย์</h1>
-        <p class="text-gray-400" id="loadingText">กำลังโหลด...</p>
-        <div class="mt-8 w-48 h-1 bg-gray-700 rounded-full overflow-hidden">
-            <div id="loadingBar" class="h-full bg-blue-500 transition-all duration-300" style="width: 0%"></div>
-        </div>
-    </div>
-    
-    <!-- iOS Style Push Notification -->
-    <div id="pushNotification" class="fixed top-4 left-4 right-4 z-50 ios-notification hidden" style="transform: translateY(-100%); transition: transform 0.3s ease-out">
-        <div class="flex items-start">
-            <div class="flex-shrink-0 mr-3">
-                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <i class="fas fa-bell text-white"></i>
-                </div>
-            </div>
-            <div class="flex-1">
-                <div class="flex justify-between items-start">
-                    <h3 id="pushTitle" class="font-bold text-white">การแจ้งเตือน</h3>
-                    <span id="pushTime" class="text-xs text-gray-400">ตอนนี้</span>
-                </div>
-                <p id="pushMessage" class="text-gray-300 text-sm mt-1">ข้อความแจ้งเตือน</p>
-            </div>
-            <button onclick="closePushNotification()" class="ml-2 text-gray-400 hover:text-white bg-transparent border-none">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="mt-3 flex space-x-2">
-            <button onclick="viewNotificationDetails()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">
-                ดูรายละเอียด
-            </button>
-            <button onclick="closePushNotification()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">
-                ปิด
-            </button>
+        <h1 class="text-2xl font-bold mb-2">ระบบแจ้งเตือนรวมศูนย์</h1>
+        <p class="text-gray-400 mb-6">กำลังโหลด...</p>
+        <div class="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
+            <div id="loadingProgress" class="h-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300" style="width: 0%"></div>
         </div>
     </div>
-    
-    <!-- Notification Panel -->
-    <div id="notificationPanel" class="notification-panel">
-        <div class="p-4 border-b border-gray-800">
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-bold">การแจ้งเตือน</h2>
-                <button onclick="closeNotificationPanel()" class="p-2 rounded-full bg-gray-800 border-none">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        </div>
-        <div id="notificationList" class="flex-1 overflow-y-auto p-4">
-            <!-- Notifications will be loaded here -->
-        </div>
-        <div class="p-4 border-t border-gray-800">
-            <button onclick="clearAllNotifications()" class="w-full py-3 bg-red-900/30 hover:bg-red-800/50 rounded-lg text-center">
-                ล้างการแจ้งเตือนทั้งหมด
-            </button>
-        </div>
-    </div>
-    
-    <!-- Main App Container -->
-    <div class="app-container pb-20 hidden" id="mainApp">
-        <!-- Header -->
-        <div class="sticky top-0 z-30 bg-gray-900/95 backdrop-blur-lg border-b border-gray-800">
-            <div class="flex items-center justify-between p-4">
-                <div class="flex items-center">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mr-3">
+
+    <!-- Push Notification -->
+    <div id="pushNotification" class="fixed top-4 right-4 bg-gray-800 rounded-xl shadow-2xl border-l-4 border-blue-500 z-40 hidden max-w-sm" style="animation: slideInRight 0.3s ease-out">
+        <div class="p-4">
+            <div class="flex justify-between items-start">
+                <div class="flex items-start">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
                         <i class="fas fa-bell text-white"></i>
                     </div>
                     <div>
-                        <h1 class="font-bold text-lg">ระบบแจ้งเตือน</h1>
-                        <div class="flex items-center">
-                            <div id="statusDot" class="w-2 h-2 rounded-full bg-green-500 mr-2 pulse"></div>
-                            <span id="statusText" class="text-xs text-green-400">ออนไลน์</span>
-                        </div>
+                        <h3 id="pushTitle" class="font-bold text-white">การแจ้งเตือน</h3>
+                        <p id="pushMessage" class="text-gray-300 text-sm mt-1">ข้อความแจ้งเตือน</p>
+                        <p id="pushTime" class="text-xs text-gray-500 mt-2">ตอนนี้</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <button onclick="openNotificationPanel()" class="relative bg-transparent border-none">
-                        <i class="fas fa-bell text-xl text-gray-300"></i>
-                        <div id="headerBadge" class="notification-badge hidden">0</div>
-                    </button>
-                    <button onclick="refreshData()" class="p-2 rounded-full bg-gray-800 border-none">
-                        <i class="fas fa-sync-alt text-gray-300"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Connection Status -->
-        <div id="connectionStatus" class="m-4 p-4 bg-green-900/30 rounded-xl border border-green-700/50">
-            <div class="flex items-center">
-                <div class="w-3 h-3 rounded-full bg-green-500 mr-3 pulse"></div>
-                <div class="flex-1">
-                    <h3 class="font-bold text-green-300">เชื่อมต่อกับ Google Sheets สำเร็จ</h3>
-                    <p class="text-sm text-green-400 mt-1">สามารถบันทึกและลบข้อมูลได้ทันที</p>
-                </div>
-            </div>
-            <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-                <div>
-                    <div class="text-2xl font-bold text-green-300" id="syncCount">0</div>
-                    <div class="text-xs text-green-400">บันทึกแล้ว</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-blue-300" id="totalAlarms">0</div>
-                    <div class="text-xs text-blue-400">แจ้งเตือน</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-purple-300" id="totalBroadcasts">0</div>
-                    <div class="text-xs text-purple-400">ประกาศ</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Current Time Display -->
-        <div class="px-4">
-            <div class="ios-notification">
-                <div class="text-center">
-                    <div id="currentTime" class="text-3xl font-bold mb-2">--:--:--</div>
-                    <div id="currentDate" class="text-gray-400">-</div>
-                    <div class="mt-4 flex justify-between items-center">
-                        <div class="text-left">
-                            <div class="text-sm text-gray-400">แจ้งเตือนถัดไป</div>
-                            <div id="nextAlarmTime" class="font-medium">ไม่มี</div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm text-gray-400">ผู้ใช้ทั้งหมด</div>
-                            <div class="font-medium">1</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Quick Actions -->
-        <div class="px-4 my-4">
-            <h2 class="text-lg font-bold mb-3">การดำเนินการด่วน</h2>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="scrollToForm()" class="ios-btn flex flex-col items-center p-4">
-                    <i class="fas fa-plus-circle text-blue-400 text-2xl mb-2"></i>
-                    <span class="text-sm font-medium">เพิ่มแจ้งเตือน</span>
-                </button>
-                <button onclick="openNotificationPanel()" class="ios-btn flex flex-col items-center p-4 relative">
-                    <i class="fas fa-bell text-yellow-400 text-2xl mb-2"></i>
-                    <span class="text-sm font-medium">ดูแจ้งเตือน</span>
-                    <div id="quickBadge" class="notification-badge hidden">0</div>
-                </button>
-                <button onclick="scrollToBroadcast()" class="ios-btn flex flex-col items-center p-4">
-                    <i class="fas fa-broadcast-tower text-purple-400 text-2xl mb-2"></i>
-                    <span class="text-sm font-medium">ส่งประกาศ</span>
-                </button>
-                <button onclick="testNotification()" class="ios-btn flex flex-col items-center p-4">
-                    <i class="fas fa-vibrate text-green-400 text-2xl mb-2"></i>
-                    <span class="text-sm font-medium">ทดสอบ</span>
-                </button>
-            </div>
-        </div>
-        
-        <!-- Add Alarm Form -->
-        <div id="addAlarmSection" class="p-4 bg-gray-900 mx-4 rounded-2xl mb-6">
-            <h2 class="text-lg font-bold mb-4">เพิ่มการแจ้งเตือนใหม่</h2>
-            <form id="alarmForm" class="space-y-4">
-                <div>
-                    <label class="block text-gray-400 text-sm mb-2">หัวข้อแจ้งเตือน</label>
-                    <input 
-                        type="text" 
-                        id="title" 
-                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="เช่น ประชุมทีม, นัดพบแพทย์"
-                        required
-                    >
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-gray-400 text-sm mb-2">วันที่</label>
-                        <input 
-                            type="date" 
-                            id="date" 
-                            class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            required
-                        >
-                    </div>
-                    <div>
-                        <label class="block text-gray-400 text-sm mb-2">เวลา</label>
-                        <input 
-                            type="time" 
-                            id="time" 
-                            class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            required
-                        >
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-gray-400 text-sm mb-2">รายละเอียด</label>
-                    <textarea 
-                        id="description" 
-                        rows="2"
-                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="รายละเอียดการแจ้งเตือน"
-                    ></textarea>
-                </div>
-                
-                <div>
-                    <label class="block text-gray-400 text-sm mb-3">ทำซ้ำ</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="setRepeat('none')" class="px-4 py-2 bg-blue-600 rounded-lg text-sm" id="repeatNone">ไม่ทำซ้ำ</button>
-                        <button type="button" onclick="setRepeat('daily')" class="px-4 py-2 bg-gray-800 rounded-lg text-sm" id="repeatDaily">ทุกวัน</button>
-                        <button type="button" onclick="setRepeat('weekly')" class="px-4 py-2 bg-gray-800 rounded-lg text-sm" id="repeatWeekly">ทุกสัปดาห์</button>
-                        <button type="button" onclick="setRepeat('monthly')" class="px-4 py-2 bg-gray-800 rounded-lg text-sm" id="repeatMonthly">ทุกเดือน</button>
-                    </div>
-                </div>
-                
-                <div class="pt-4">
-                    <button type="submit" class="w-full ios-btn ios-btn-primary py-3 rounded-xl">
-                        <i class="fas fa-plus-circle mr-2"></i>ตั้งเวลาแจ้งเตือน
-                    </button>
-                </div>
-            </form>
-        </div>
-        
-        <!-- All Alarms Section -->
-        <div id="allAlarmsSection" class="px-4 mb-6">
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="text-lg font-bold">การแจ้งเตือนทั้งหมด</h2>
-                <button onclick="refreshAlarms()" class="text-sm text-blue-400">รีเฟรช</button>
-            </div>
-            <div id="allAlarms" class="space-y-3">
-                <!-- All alarms will be loaded here -->
-                <div class="ios-notification text-center py-6">
-                    <i class="fas fa-clock text-3xl text-gray-500 mb-3"></i>
-                    <p class="text-gray-400">ไม่มีกำหนดการแจ้งเตือน</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Broadcast Section -->
-        <div id="broadcastSection" class="p-4 bg-purple-900/30 mx-4 rounded-2xl mb-6">
-            <h2 class="text-lg font-bold mb-4 text-purple-300">
-                <i class="fas fa-broadcast-tower mr-2"></i>ส่งประกาศด่วน
-            </h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-gray-400 text-sm mb-2">หัวข้อประกาศ</label>
-                    <input 
-                        type="text" 
-                        id="broadcastTitle" 
-                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="เช่น ประชุมด่วน, ปิดระบบชั่วคราว"
-                    >
-                </div>
-                <div>
-                    <label class="block text-gray-400 text-sm mb-2">ข้อความประกาศ</label>
-                    <textarea 
-                        id="broadcastMessage" 
-                        rows="2"
-                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="ข้อความที่ต้องการส่งประกาศด่วน"
-                    ></textarea>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="sendBroadcast()" class="ios-btn bg-purple-600 hover:bg-purple-700">
-                        <i class="fas fa-paper-plane mr-2"></i>ส่งประกาศ
-                    </button>
-                    <button onclick="clearBroadcastForm()" class="ios-btn bg-gray-800 hover:bg-gray-700">
-                        <i class="fas fa-trash mr-2"></i>ล้าง
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Settings -->
-        <div class="p-4 mb-24" id="settingsSection">
-            <h2 class="text-lg font-bold mb-4">การตั้งค่า</h2>
-            <div class="space-y-4">
-                <div class="ios-notification">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="font-bold">แจ้งเตือนแบบ Push</h3>
-                            <p class="text-sm text-gray-400">รับการแจ้งเตือนแบบ Mobile App</p>
-                        </div>
-                        <label class="ios-switch">
-                            <input type="checkbox" id="pushToggle" checked>
-                            <span class="ios-switch-slider"></span>
-                        </label>
-                    </div>
-                    
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="font-bold">สั่นเมื่อแจ้งเตือน</h3>
-                            <p class="text-sm text-gray-400">สั่นเครื่องเมื่อมีการแจ้งเตือน</p>
-                        </div>
-                        <label class="ios-switch">
-                            <input type="checkbox" id="vibrationToggle" checked>
-                            <span class="ios-switch-slider"></span>
-                        </label>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="font-bold">เสียงแจ้งเตือน</h3>
-                            <p class="text-sm text-gray-400">เล่นเสียงเมื่อมีการแจ้งเตือน</p>
-                        </div>
-                        <label class="ios-switch">
-                            <input type="checkbox" id="soundToggle" checked>
-                            <span class="ios-switch-slider"></span>
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="ios-notification">
-                    <div class="space-y-3">
-                        <button onclick="requestNotificationPermission()" class="w-full ios-btn">
-                            <i class="fas fa-bell mr-2"></i>ขออนุญาตการแจ้งเตือน
-                        </button>
-                        <button onclick="showInstallPrompt()" class="w-full ios-btn">
-                            <i class="fas fa-download mr-2"></i>ติดตั้งเป็นแอป
-                        </button>
-                        <button onclick="testConnection()" class="w-full ios-btn">
-                            <i class="fas fa-wifi mr-2"></i>ทดสอบการเชื่อมต่อ
-                        </button>
-                        <button onclick="showClearAllDialog()" class="w-full ios-btn bg-red-900/30 hover:bg-red-800/50">
-                            <i class="fas fa-trash mr-2"></i>ล้างข้อมูลทั้งหมด
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Mobile Navigation -->
-        <div class="mobile-nav">
-            <div class="flex justify-around">
-                <button onclick="scrollToTop()" class="nav-item">
-                    <i class="fas fa-home text-xl mb-1"></i>
-                    <span class="text-xs">หน้าแรก</span>
-                </button>
-                <button onclick="scrollToForm()" class="nav-item">
-                    <i class="fas fa-plus text-xl mb-1"></i>
-                    <span class="text-xs">เพิ่ม</span>
-                </button>
-                <button onclick="openNotificationPanel()" class="nav-item relative">
-                    <i class="fas fa-bell text-xl mb-1"></i>
-                    <span class="text-xs">แจ้งเตือน</span>
-                    <div id="navBadge" class="notification-badge hidden">0</div>
-                </button>
-                <button onclick="scrollToBroadcast()" class="nav-item">
-                    <i class="fas fa-broadcast-tower text-xl mb-1"></i>
-                    <span class="text-xs">ประกาศ</span>
-                </button>
-                <button onclick="scrollToSettings()" class="nav-item">
-                    <i class="fas fa-cog text-xl mb-1"></i>
-                    <span class="text-xs">ตั้งค่า</span>
+                <button onclick="closePushNotification()" class="text-gray-400 hover:text-white ml-4">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- SweetAlert2 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
-    
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <header class="sticky top-0 z-30 bg-gray-900/90 backdrop-blur-lg border-b border-gray-800">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mr-3">
+                            <i class="fas fa-bell text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg">ระบบแจ้งเตือน</h1>
+                            <div class="flex items-center">
+                                <div id="statusDot" class="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                                <span id="statusText" class="text-xs text-green-400">พร้อมใช้งาน</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="openNotifications()" class="relative bg-gray-800 hover:bg-gray-700 w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                            <i class="fas fa-bell text-lg"></i>
+                            <div id="headerBadge" class="notification-badge hidden">0</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Connection Status -->
+        <div class="container mx-auto px-4 py-6">
+            <div class="bg-gradient-to-r from-green-900/50 to-green-800/30 rounded-xl p-4 border border-green-700/50">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-green-500 mr-3"></div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-green-300">เชื่อมต่อกับ Google Sheets สำเร็จ</h3>
+                        <p class="text-sm text-green-400 mt-1">บันทึกและลบข้อมูลได้ทันที</p>
+                    </div>
+                </div>
+                <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div class="text-2xl font-bold text-blue-300" id="alarmCount">0</div>
+                        <div class="text-xs text-blue-400 mt-1">แจ้งเตือน</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-green-300" id="syncedCount">0</div>
+                        <div class="text-xs text-green-400 mt-1">บันทึกแล้ว</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-purple-300" id="notificationCount">0</div>
+                        <div class="text-xs text-purple-400 mt-1">แจ้งเตือนใหม่</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Time -->
+        <div class="container mx-auto px-4 mb-6">
+            <div class="bg-gray-800 rounded-xl p-6">
+                <div class="text-center">
+                    <div id="currentTime" class="text-3xl font-bold mb-2">--:--:--</div>
+                    <div id="currentDate" class="text-gray-400 mb-4">-</div>
+                    <div class="flex justify-between">
+                        <div>
+                            <div class="text-sm text-gray-400">แจ้งเตือนถัดไป</div>
+                            <div id="nextAlarm" class="font-medium">ไม่มี</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-gray-400">ผู้ใช้</div>
+                            <div class="font-medium">คุณ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="container mx-auto px-4 mb-6">
+            <h2 class="text-lg font-bold mb-3">การดำเนินการด่วน</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="scrollToForm()" class="bg-gray-800 hover:bg-gray-700 rounded-xl p-4 flex flex-col items-center transition-colors">
+                    <i class="fas fa-plus-circle text-blue-400 text-2xl mb-2"></i>
+                    <span class="text-sm">เพิ่มแจ้งเตือน</span>
+                </button>
+                <button onclick="openNotifications()" class="bg-gray-800 hover:bg-gray-700 rounded-xl p-4 flex flex-col items-center transition-colors relative">
+                    <i class="fas fa-bell text-yellow-400 text-2xl mb-2"></i>
+                    <span class="text-sm">ดูแจ้งเตือน</span>
+                    <div id="actionBadge" class="notification-badge hidden">0</div>
+                </button>
+                <button onclick="scrollToBroadcast()" class="bg-gray-800 hover:bg-gray-700 rounded-xl p-4 flex flex-col items-center transition-colors">
+                    <i class="fas fa-broadcast-tower text-purple-400 text-2xl mb-2"></i>
+                    <span class="text-sm">ส่งประกาศ</span>
+                </button>
+                <button onclick="testNotification()" class="bg-gray-800 hover:bg-gray-700 rounded-xl p-4 flex flex-col items-center transition-colors">
+                    <i class="fas fa-vibrate text-green-400 text-2xl mb-2"></i>
+                    <span class="text-sm">ทดสอบ</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Add Alarm Form -->
+        <div id="alarmFormSection" class="container mx-auto px-4 mb-8">
+            <div class="bg-gray-800 rounded-xl p-6">
+                <h2 class="text-lg font-bold mb-4">เพิ่มการแจ้งเตือนใหม่</h2>
+                <form id="alarmForm" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">หัวข้อแจ้งเตือน *</label>
+                        <input type="text" id="alarmTitle" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="เช่น ประชุมทีม, นัดพบแพทย์" required>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-400 text-sm mb-2">วันที่ *</label>
+                            <input type="date" id="alarmDate" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                        </div>
+                        <div>
+                            <label class="block text-gray-400 text-sm mb-2">เวลา *</label>
+                            <input type="time" id="alarmTime" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">รายละเอียด</label>
+                        <textarea id="alarmDescription" rows="2" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="รายละเอียดการแจ้งเตือน"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">ทำซ้ำ</label>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="setRepeat('none')" class="px-4 py-2 bg-blue-600 rounded-lg text-sm" id="repeatNone">ไม่ทำซ้ำ</button>
+                            <button type="button" onclick="setRepeat('daily')" class="px-4 py-2 bg-gray-700 rounded-lg text-sm" id="repeatDaily">ทุกวัน</button>
+                            <button type="button" onclick="setRepeat('weekly')" class="px-4 py-2 bg-gray-700 rounded-lg text-sm" id="repeatWeekly">ทุกสัปดาห์</button>
+                            <button type="button" onclick="setRepeat('monthly')" class="px-4 py-2 bg-gray-700 rounded-lg text-sm" id="repeatMonthly">ทุกเดือน</button>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-plus-circle mr-2"></i>ตั้งเวลาแจ้งเตือน
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Active Alarms -->
+        <div class="container mx-auto px-4 mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">การแจ้งเตือนทั้งหมด</h2>
+                <button onclick="loadAlarms()" class="text-blue-400 text-sm hover:text-blue-300">
+                    <i class="fas fa-sync-alt mr-1"></i>รีเฟรช
+                </button>
+            </div>
+            <div id="alarmsList" class="space-y-3">
+                <!-- Alarms will be loaded here -->
+                <div class="bg-gray-800 rounded-xl p-6 text-center">
+                    <i class="fas fa-clock text-3xl text-gray-500 mb-3"></i>
+                    <p class="text-gray-400">ยังไม่มีกำหนดการแจ้งเตือน</p>
+                    <p class="text-sm text-gray-500 mt-2">เพิ่มการแจ้งเตือนใหม่โดยใช้แบบฟอร์มด้านบน</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Broadcast Section -->
+        <div id="broadcastSection" class="container mx-auto px-4 mb-20">
+            <div class="bg-gradient-to-r from-purple-900/50 to-purple-800/30 rounded-xl p-6 border border-purple-700/50">
+                <h2 class="text-lg font-bold mb-4 text-purple-300">
+                    <i class="fas fa-broadcast-tower mr-2"></i>ส่งประกาศด่วน
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">หัวข้อประกาศ *</label>
+                        <input type="text" id="broadcastTitle" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="เช่น ประชุมด่วน, ปิดระบบชั่วคราว" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">ข้อความประกาศ *</label>
+                        <textarea id="broadcastMessage" rows="2" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="ข้อความที่ต้องการส่งประกาศ" required></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="sendBroadcast()" class="bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-paper-plane mr-2"></i>ส่งประกาศ
+                        </button>
+                        <button onclick="clearBroadcast()" class="bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-trash mr-2"></i>ล้าง
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Panel -->
+        <div id="notificationsPanel" class="fixed inset-0 bg-black/90 z-50 hidden">
+            <div class="h-full flex flex-col">
+                <div class="p-4 border-b border-gray-800 bg-gray-900">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold">การแจ้งเตือน</h2>
+                        <button onclick="closeNotifications()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="notificationsList" class="flex-1 overflow-y-auto p-4">
+                    <!-- Notifications will be loaded here -->
+                </div>
+                <div class="p-4 border-t border-gray-800 bg-gray-900">
+                    <button onclick="clearAllNotifications()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-trash mr-2"></i>ล้างการแจ้งเตือนทั้งหมด
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 z-40">
+            <div class="flex justify-around p-3">
+                <button onclick="scrollToTop()" class="flex flex-col items-center text-gray-400 hover:text-white transition-colors p-2">
+                    <i class="fas fa-home text-xl mb-1"></i>
+                    <span class="text-xs">หน้าแรก</span>
+                </button>
+                <button onclick="scrollToForm()" class="flex flex-col items-center text-gray-400 hover:text-white transition-colors p-2">
+                    <i class="fas fa-plus text-xl mb-1"></i>
+                    <span class="text-xs">เพิ่ม</span>
+                </button>
+                <button onclick="openNotifications()" class="flex flex-col items-center text-gray-400 hover:text-white transition-colors p-2 relative">
+                    <i class="fas fa-bell text-xl mb-1"></i>
+                    <span class="text-xs">แจ้งเตือน</span>
+                    <div id="bottomBadge" class="notification-badge hidden">0</div>
+                </button>
+                <button onclick="scrollToBroadcast()" class="flex flex-col items-center text-gray-400 hover:text-white transition-colors p-2">
+                    <i class="fas fa-broadcast-tower text-xl mb-1"></i>
+                    <span class="text-xs">ประกาศ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         // ============================================
-        // ตัวแปรและค่าคงที่
+        // ตัวแปรหลัก
         // ============================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
         
         let alarms = [];
         let notifications = [];
-        let broadcastMessages = [];
         let userId = '';
-        let userName = '';
-        let settings = {};
+        let currentRepeat = 'none';
         
         // ============================================
-        // ฟังก์ชันเริ่มต้นระบบ (แก้ไขแล้ว)
+        // เริ่มต้นแอปพลิเคชัน
         // ============================================
         function initApp() {
-            console.log('🚀 กำลังเริ่มต้นระบบแจ้งเตือน...');
+            console.log('🚀 เริ่มต้นระบบแจ้งเตือน...');
             
-            // เริ่มโหลด
-            updateLoadingText('กำลังเตรียมระบบ...', 10);
-            
-            // ตั้งค่าเริ่มต้นอย่างรวดเร็ว
-            setTimeout(() => {
-                setupInitialConfig();
-                updateLoadingText('กำลังโหลดข้อมูล...', 30);
-            }, 500);
-            
-            setTimeout(() => {
-                loadAllData();
-                updateLoadingText('กำลังเตรียมอินเทอร์เฟซ...', 60);
-            }, 1000);
-            
-            setTimeout(() => {
-                setupEventListeners();
-                updateLoadingText('กำลังเริ่มต้นเสร็จสิ้น...', 80);
-            }, 1500);
-            
-            setTimeout(() => {
-                finishLoading();
-            }, 2000);
-        }
-        
-        function updateLoadingText(text, progress) {
-            document.getElementById('loadingText').textContent = text;
-            document.getElementById('loadingBar').style.width = progress + '%';
-        }
-        
-        function setupInitialConfig() {
-            // สร้างหรือดึง User ID
+            // สร้าง user ID
             userId = localStorage.getItem('userId');
             if (!userId) {
                 userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('userId', userId);
             }
             
-            // สร้างหรือดึง User Name
-            userName = localStorage.getItem('userName');
-            if (!userName) {
-                userName = `ผู้ใช้ ${Math.floor(Math.random() * 1000)}`;
-                localStorage.setItem('userName', userName);
-            }
+            // โหลดข้อมูล
+            loadData();
             
-            // โหลดการตั้งค่า
-            settings = JSON.parse(localStorage.getItem('notificationSettings')) || {
-                pushEnabled: true,
-                vibrationEnabled: true,
-                soundEnabled: true,
-                notificationPermission: 'default'
-            };
+            // ตั้งค่าเริ่มต้น
+            setupForm();
             
-            // ตั้งค่าเริ่มต้นของฟอร์ม
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('date').min = today;
-            document.getElementById('date').value = today;
-            
-            const nextHour = new Date();
-            nextHour.setHours(nextHour.getHours() + 1);
-            document.getElementById('time').value = `${nextHour.getHours().toString().padStart(2, '0')}:00`;
-            
-            // ตั้งค่าเริ่มต้นของปุ่มทำซ้ำ
-            setRepeat('none');
-        }
-        
-        function loadAllData() {
-            // โหลดข้อมูลจาก localStorage
-            alarms = JSON.parse(localStorage.getItem('alarms')) || [];
-            notifications = JSON.parse(localStorage.getItem('notifications')) || [];
-            broadcastMessages = JSON.parse(localStorage.getItem('broadcastMessages')) || [];
-            
-            // อัปเดต UI เริ่มต้น
-            renderAlarms();
-            updateBadges();
-            updateCounts();
+            // อัปเดต UI
             updateCurrentTime();
             
-            // ตั้งค่า switches ตามการตั้งค่า
-            document.getElementById('pushToggle').checked = settings.pushEnabled;
-            document.getElementById('vibrationToggle').checked = settings.vibrationEnabled;
-            document.getElementById('soundToggle').checked = settings.soundEnabled;
-        }
-        
-        function setupEventListeners() {
-            // Event listener สำหรับฟอร์ม
-            document.getElementById('alarmForm').addEventListener('submit', handleAlarmFormSubmit);
-            
-            // Event listeners สำหรับการตั้งค่า
-            document.getElementById('pushToggle').addEventListener('change', saveSettings);
-            document.getElementById('vibrationToggle').addEventListener('change', saveSettings);
-            document.getElementById('soundToggle').addEventListener('change', saveSettings);
-            
-            // เริ่มอัปเดตเวลาแบบเรียลไทม์
+            // เริ่มตัวจับเวลา
             setInterval(updateCurrentTime, 1000);
             setInterval(checkAlarms, 1000);
             
-            // ทดสอบการเชื่อมต่อ
-            testConnection();
+            // ซ่อนหน้าจอโหลด
+            setTimeout(hideLoadingScreen, 1500);
+            
+            // ขออนุญาตแจ้งเตือน
+            requestNotificationPermission();
         }
         
-        function finishLoading() {
-            updateLoadingText('พร้อมใช้งาน!', 100);
+        function loadData() {
+            // โหลดข้อมูลจาก localStorage
+            alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+            notifications = JSON.parse(localStorage.getItem('notifications')) || [];
             
-            // ซ่อนหน้าจอโหลดและแสดงแอปหลัก
+            // เรียงลำดับ alarms
+            alarms.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+            
+            // อัปเดต UI
+            updateAlarmsList();
+            updateCounts();
+            updateBadges();
+        }
+        
+        function setupForm() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('alarmDate').min = today;
+            document.getElementById('alarmDate').value = today;
+            
+            const nextHour = new Date();
+            nextHour.setHours(nextHour.getHours() + 1);
+            document.getElementById('alarmTime').value = nextHour.getHours().toString().padStart(2, '0') + ':00';
+            
+            setRepeat('none');
+        }
+        
+        function hideLoadingScreen() {
+            document.getElementById('loadingProgress').style.width = '100%';
+            
             setTimeout(() => {
-                document.getElementById('appLaunch').style.opacity = '0';
-                setTimeout(() => {
-                    document.getElementById('appLaunch').style.display = 'none';
-                    document.getElementById('mainApp').classList.remove('hidden');
-                    
-                    // ขออนุญาตการแจ้งเตือน
-                    if (Notification.permission === 'default') {
-                        setTimeout(requestNotificationPermission, 1000);
-                    }
-                    
-                    console.log('✅ ระบบพร้อมใช้งาน');
-                }, 300);
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
             }, 500);
         }
         
         // ============================================
-        // ฟังก์ชันจัดการข้อมูล
-        // ============================================
-        function saveSettings() {
-            settings.pushEnabled = document.getElementById('pushToggle').checked;
-            settings.vibrationEnabled = document.getElementById('vibrationToggle').checked;
-            settings.soundEnabled = document.getElementById('soundToggle').checked;
-            localStorage.setItem('notificationSettings', JSON.stringify(settings));
-        }
-        
-        function renderAlarms() {
-            const allAlarmsContainer = document.getElementById('allAlarms');
-            
-            if (alarms.length === 0) {
-                allAlarmsContainer.innerHTML = `
-                    <div class="ios-notification text-center py-6">
-                        <i class="fas fa-clock text-3xl text-gray-500 mb-3"></i>
-                        <p class="text-gray-400">ไม่มีกำหนดการแจ้งเตือน</p>
-                        <p class="text-sm text-gray-500 mt-2">เพิ่มการแจ้งเตือนใหม่โดยใช้แบบฟอร์มด้านบน</p>
-                    </div>
-                `;
-                updateNextAlarm();
-                updateCounts();
-                return;
-            }
-            
-            // เรียงลำดับตามเวลา
-            alarms.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
-            
-            allAlarmsContainer.innerHTML = '';
-            const now = new Date();
-            
-            alarms.forEach(alarm => {
-                const alarmDate = new Date(alarm.datetime);
-                const isPast = alarmDate < now;
-                const isTriggered = alarm.triggered || false;
-                
-                // คำนวณเวลาที่เหลือ
-                const timeDiff = alarmDate - now;
-                const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
-                
-                let timeBadge = '';
-                if (isTriggered) {
-                    timeBadge = `<span class="text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded">แจ้งเตือนแล้ว</span>`;
-                } else if (isPast) {
-                    timeBadge = `<span class="text-xs px-2 py-1 bg-gray-900/30 text-gray-300 rounded">เลยเวลา</span>`;
-                } else if (hoursDiff < 24) {
-                    timeBadge = `<span class="text-xs px-2 py-1 bg-red-900/30 text-red-300 rounded">${hoursDiff} ชม.</span>`;
-                }
-                
-                const alarmElement = document.createElement('div');
-                alarmElement.className = 'ios-notification';
-                alarmElement.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <h3 class="font-bold ${isTriggered ? 'text-gray-400' : 'text-white'}">${alarm.title}</h3>
-                            <p class="text-sm text-gray-400 mt-1">${alarm.description || 'ไม่มีรายละเอียด'}</p>
-                        </div>
-                        <div class="text-right ml-4">
-                            <div class="text-sm font-medium">${alarmDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</div>
-                            <div class="text-xs text-gray-500">${alarmDate.toLocaleDateString('th-TH', {day: 'numeric', month: 'short'})}</div>
-                        </div>
-                    </div>
-                    <div class="mt-3 flex items-center justify-between">
-                        <div class="flex space-x-2">
-                            <span class="text-xs px-2 py-1 bg-blue-900/30 text-blue-300 rounded">${getRepeatText(alarm.repeat)}</span>
-                            ${timeBadge}
-                            ${alarm.synced ? '<span class="text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded"><i class="fas fa-cloud mr-1"></i>บันทึก</span>' : ''}
-                        </div>
-                        <div class="flex space-x-2">
-                            ${!isTriggered ? `
-                                <button onclick="testAlarmNow('${alarm.id}')" class="text-xs px-2 py-1 bg-yellow-900/30 text-yellow-300 rounded hover:bg-yellow-800/50">
-                                    <i class="fas fa-bell mr-1"></i>ทดสอบ
-                                </button>
-                            ` : ''}
-                            <button onclick="deleteAlarmPrompt('${alarm.id}')" class="text-xs px-2 py-1 bg-red-900/30 text-red-300 rounded hover:bg-red-800/50">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                allAlarmsContainer.appendChild(alarmElement);
-            });
-            
-            updateNextAlarm();
-            updateCounts();
-        }
-        
-        // ============================================
-        // ฟังก์ชันอัปเดต UI
+        // ฟังก์ชันจัดการเวลา
         // ============================================
         function updateCurrentTime() {
             const now = new Date();
-            document.getElementById('currentTime').textContent = now.toLocaleTimeString('th-TH', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('th-TH', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+            
+            // อัปเดตเวลา
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            document.getElementById('currentDate').textContent = 
+                now.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            // อัปเดตแจ้งเตือนถัดไป
+            updateNextAlarm();
         }
         
         function updateNextAlarm() {
             const now = new Date();
-            const upcomingAlarms = alarms.filter(alarm => 
-                !alarm.triggered && new Date(alarm.datetime) > now
-            );
+            const nextAlarm = alarms.find(alarm => !alarm.triggered && new Date(alarm.datetime) > now);
             
-            if (upcomingAlarms.length > 0) {
-                const nextAlarm = upcomingAlarms[0];
-                const nextAlarmDate = new Date(nextAlarm.datetime);
-                document.getElementById('nextAlarmTime').textContent = 
-                    `${nextAlarmDate.toLocaleDateString('th-TH', {day: 'numeric', month: 'short'})} ${nextAlarmDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}`;
+            if (nextAlarm) {
+                const alarmDate = new Date(nextAlarm.datetime);
+                document.getElementById('nextAlarm').textContent = 
+                    alarmDate.toLocaleDateString('th-TH', { month: 'short', day: 'numeric' }) + ' ' +
+                    alarmDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
             } else {
-                document.getElementById('nextAlarmTime').textContent = 'ไม่มี';
+                document.getElementById('nextAlarm').textContent = 'ไม่มี';
             }
-        }
-        
-        function updateBadges() {
-            const unreadCount = notifications.length;
-            
-            // อัปเดตทุกแบดจ์
-            const badges = ['headerBadge', 'navBadge', 'quickBadge'];
-            badges.forEach(badgeId => {
-                const badge = document.getElementById(badgeId);
-                if (unreadCount > 0) {
-                    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            });
-        }
-        
-        function updateCounts() {
-            // อัปเดตจำนวนแจ้งเตือนทั้งหมด
-            document.getElementById('totalAlarms').textContent = alarms.length;
-            
-            // อัปเดตจำนวนที่บันทึกลง Google Sheets
-            const syncedCount = alarms.filter(alarm => alarm.synced).length;
-            document.getElementById('syncCount').textContent = syncedCount;
-            
-            // อัปเดตจำนวนประกาศ
-            document.getElementById('totalBroadcasts').textContent = broadcastMessages.length;
         }
         
         // ============================================
         // ฟังก์ชันจัดการฟอร์ม
         // ============================================
-        function setRepeat(repeatValue) {
+        function setRepeat(value) {
+            currentRepeat = value;
+            
             // รีเซ็ตปุ่มทั้งหมด
             ['none', 'daily', 'weekly', 'monthly'].forEach(type => {
-                const btn = document.getElementById(`repeat${type.charAt(0).toUpperCase() + type.slice(1)}`);
-                if (btn) btn.className = 'px-4 py-2 bg-gray-800 rounded-lg text-sm';
+                const btn = document.getElementById('repeat' + type.charAt(0).toUpperCase() + type.slice(1));
+                btn.className = 'px-4 py-2 bg-gray-700 rounded-lg text-sm';
             });
             
             // ตั้งค่าปุ่มที่เลือก
-            const selectedBtn = document.getElementById(`repeat${repeatValue.charAt(0).toUpperCase() + repeatValue.slice(1)}`);
-            if (selectedBtn) selectedBtn.className = 'px-4 py-2 bg-blue-600 rounded-lg text-sm';
-            
-            // เก็บค่าที่เลือก
-            window.selectedRepeat = repeatValue;
+            const selectedBtn = document.getElementById('repeat' + value.charAt(0).toUpperCase() + value.slice(1));
+            selectedBtn.className = 'px-4 py-2 bg-blue-600 rounded-lg text-sm';
         }
         
-        async function handleAlarmFormSubmit(e) {
+        document.getElementById('alarmForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const title = document.getElementById('title').value.trim();
-            const description = document.getElementById('description').value.trim();
-            const date = document.getElementById('date').value;
-            const time = document.getElementById('time').value;
-            const repeat = window.selectedRepeat || 'none';
+            const title = document.getElementById('alarmTitle').value.trim();
+            const date = document.getElementById('alarmDate').value;
+            const time = document.getElementById('alarmTime').value;
+            const description = document.getElementById('alarmDescription').value.trim();
             
             if (!title || !date || !time) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ข้อมูลไม่ครบ',
-                    text: 'กรุณากรอกหัวข้อ, วันที่ และเวลา',
-                    background: '#1f2937',
-                    color: '#e5e7eb'
-                });
+                showAlert('error', 'กรุณากรอกข้อมูลให้ครบถ้วน');
                 return;
             }
             
-            const datetime = new Date(`${date}T${time}:00`);
+            const datetime = new Date(`${date}T${time}`);
             
             if (datetime <= new Date()) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'เวลาไม่ถูกต้อง',
-                    text: 'กรุณาตั้งเวลาในอนาคต',
-                    background: '#1f2937',
-                    color: '#e5e7eb'
-                });
+                showAlert('warning', 'กรุณาตั้งเวลาในอนาคต');
                 return;
             }
             
             const alarm = {
-                id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                title,
-                description,
-                date,
-                time,
+                id: 'alarm_' + Date.now(),
+                title: title,
+                description: description,
+                date: date,
+                time: time,
                 datetime: datetime.toISOString(),
-                repeat,
+                repeat: currentRepeat,
                 triggered: false,
                 synced: false,
-                created: new Date().toISOString()
+                createdAt: new Date().toISOString()
             };
             
             // เพิ่มลงในรายการ
@@ -1011,202 +538,137 @@
             localStorage.setItem('alarms', JSON.stringify(alarms));
             
             // พยายามบันทึกลง Google Sheets
-            let saved = false;
-            try {
-                saved = await saveToGoogleSheets(alarm);
-            } catch (error) {
-                console.log('⚠️ ไม่สามารถบันทึกไปยัง Google Sheets ได้:', error);
-            }
+            const saved = await saveAlarmToSheets(alarm);
             
             // รีเซ็ตฟอร์ม
             document.getElementById('alarmForm').reset();
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('date').value = today;
-            const nextHour = new Date();
-            nextHour.setHours(nextHour.getHours() + 1);
-            document.getElementById('time').value = `${nextHour.getHours().toString().padStart(2, '0')}:00`;
-            setRepeat('none');
+            setupForm();
             
             // อัปเดต UI
-            renderAlarms();
+            updateAlarmsList();
+            updateCounts();
             
             // แสดงผลสำเร็จ
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: `ตั้งเวลาแจ้งเตือน "${title}" สำเร็จ!${saved ? ' (บันทึกใน Google Sheets)' : ' (บันทึกเฉพาะในระบบ)'}`,
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
+            showAlert('success', `ตั้งเวลา "${title}" สำเร็จ!` + (saved ? ' (บันทึกใน Google Sheets)' : ' (บันทึกเฉพาะในระบบ)'));
             
-            // สั่นเครื่อง (ถ้าเปิด)
-            if (settings.vibrationEnabled && navigator.vibrate) {
+            // สั่นมือถือถ้าเปิด
+            if (navigator.vibrate) {
                 navigator.vibrate([100, 50, 100]);
             }
-        }
+        });
         
         // ============================================
-        // ฟังก์ชัน Google Sheets (แก้ไขให้เรียบง่าย)
+        // ฟังก์ชันจัดการ Google Sheets
         // ============================================
-        async function testConnection() {
+        async function saveAlarmToSheets(alarm) {
             try {
-                document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-green-500 mr-2 pulse';
-                document.getElementById('statusText').textContent = 'ออนไลน์';
-                document.getElementById('statusText').className = 'text-xs text-green-400';
-                
-                // ทดสอบการเชื่อมต่อเบื้องต้น
-                const testUrl = `${GOOGLE_SCRIPT_URL}?action=test&user_id=${userId}`;
-                const response = await fetch(testUrl, { mode: 'no-cors' });
-                
-                return true;
-            } catch (error) {
-                console.log('⚠️ ไม่สามารถทดสอบการเชื่อมต่อได้:', error);
-                document.getElementById('statusDot').className = 'w-2 h-2 rounded-full bg-yellow-500 mr-2 pulse';
-                document.getElementById('statusText').textContent = 'เชื่อมต่อบางส่วน';
-                document.getElementById('statusText').className = 'text-xs text-yellow-400';
-                return false;
-            }
-        }
-        
-        async function saveToGoogleSheets(alarmData) {
-            try {
-                const payload = {
+                const data = {
                     action: 'add',
-                    date: alarmData.date,
-                    time: alarmData.time,
-                    title: alarmData.title,
-                    description: alarmData.description || '',
-                    repeat: alarmData.repeat,
+                    date: alarm.date,
+                    time: alarm.time,
+                    title: alarm.title,
+                    description: alarm.description || '',
+                    repeat: alarm.repeat,
                     status: 'created',
                     user_id: userId,
-                    user_name: userName,
-                    alarm_id: alarmData.id
+                    alarm_id: alarm.id
                 };
                 
                 const params = new URLSearchParams();
-                for (const key in payload) {
-                    if (payload[key] !== undefined && payload[key] !== null) {
-                        params.append(key, payload[key].toString());
+                for (const key in data) {
+                    params.append(key, data[key]);
+                }
+                
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?${params.toString()}`);
+                
+                if (response.ok) {
+                    // อัปเดตสถานะ
+                    const index = alarms.findIndex(a => a.id === alarm.id);
+                    if (index !== -1) {
+                        alarms[index].synced = true;
+                        localStorage.setItem('alarms', JSON.stringify(alarms));
+                        updateCounts();
                     }
+                    return true;
                 }
-                
-                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
-                
-                // ใช้ fetch พร้อม timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-                
-                const response = await fetch(url, {
-                    signal: controller.signal,
-                    mode: 'no-cors'
-                });
-                
-                clearTimeout(timeoutId);
-                
-                // อัปเดตสถานะใน localStorage
-                const alarmIndex = alarms.findIndex(a => a.id === alarmData.id);
-                if (alarmIndex !== -1) {
-                    alarms[alarmIndex].synced = true;
-                    localStorage.setItem('alarms', JSON.stringify(alarms));
-                    updateCounts();
-                }
-                
-                return true;
             } catch (error) {
-                console.log('⚠️ บันทึกไม่สำเร็จ:', error);
-                return false;
+                console.error('ไม่สามารถบันทึกลง Google Sheets:', error);
             }
+            return false;
         }
         
-        async function deleteFromGoogleSheets(alarmId) {
+        async function deleteAlarmFromSheets(alarmId) {
             try {
-                const payload = {
+                const data = {
                     action: 'delete',
                     alarm_id: alarmId,
                     user_id: userId
                 };
                 
                 const params = new URLSearchParams();
-                for (const key in payload) {
-                    if (payload[key] !== undefined && payload[key] !== null) {
-                        params.append(key, payload[key].toString());
-                    }
+                for (const key in data) {
+                    params.append(key, data[key]);
                 }
                 
-                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
-                
-                // ใช้ fetch พร้อม timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-                
-                await fetch(url, {
-                    signal: controller.signal,
-                    mode: 'no-cors'
-                });
-                
-                clearTimeout(timeoutId);
-                return true;
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?${params.toString()}`);
+                return response.ok;
             } catch (error) {
-                console.log('⚠️ ลบไม่สำเร็จ:', error);
+                console.error('ไม่สามารถลบจาก Google Sheets:', error);
                 return false;
             }
         }
         
         // ============================================
-        // ฟังก์ชันตรวจสอบการแจ้งเตือน
+        // ฟังก์ชันจัดการการแจ้งเตือน
         // ============================================
         function checkAlarms() {
             const now = new Date();
             
             alarms.forEach((alarm, index) => {
                 if (!alarm.triggered && new Date(alarm.datetime) <= now) {
-                    triggerAlarm(alarm.id);
+                    triggerAlarm(alarm);
                 }
             });
         }
         
-        async function triggerAlarm(alarmId) {
-            const alarmIndex = alarms.findIndex(a => a.id === alarmId);
-            if (alarmIndex === -1) return;
-            
-            const alarm = alarms[alarmIndex];
-            
+        async function triggerAlarm(alarm) {
             // อัปเดตสถานะ
-            alarms[alarmIndex].triggered = true;
-            alarms[alarmIndex].triggered_at = new Date().toISOString();
+            alarm.triggered = true;
+            alarm.triggeredAt = new Date().toISOString();
             localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            // เพิ่มการแจ้งเตือนในรายการ
+            addNotification({
+                id: 'notif_' + Date.now(),
+                type: 'alarm',
+                title: alarm.title,
+                message: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
+                time: new Date().toISOString(),
+                alarmId: alarm.id
+            });
+            
+            // ส่งการแจ้งเตือน
+            showPushNotification(alarm.title, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!');
+            
+            // ถ้ามีการทำซ้ำ สร้างแจ้งเตือนใหม่
+            if (alarm.repeat !== 'none') {
+                createNextRepeatAlarm(alarm);
+            }
+            
+            // อัปเดต UI
+            updateAlarmsList();
+            updateCounts();
+            updateBadges();
             
             // พยายามอัปเดต Google Sheets
             try {
                 await updateAlarmStatusInSheets(alarm.id, 'triggered');
             } catch (error) {
-                console.log('⚠️ ไม่สามารถอัปเดต Google Sheets:', error);
+                console.error('ไม่สามารถอัปเดตสถานะใน Google Sheets:', error);
             }
-            
-            // เพิ่มในรายการการแจ้งเตือน
-            addNotification({
-                type: 'alarm',
-                title: alarm.title,
-                message: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
-                timestamp: new Date().toISOString(),
-                alarmId: alarm.id,
-                read: false
-            });
-            
-            // ส่ง Push Notification
-            sendPushNotification(alarm.title, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!', 'alarm');
-            
-            // หากมีการทำซ้ำ ให้สร้างการแจ้งเตือนใหม่
-            if (alarm.repeat !== 'none') {
-                scheduleNextRepeatingAlarm(alarm);
-            }
-            
-            // อัปเดต UI
-            renderAlarms();
-            updateBadges();
         }
         
-        function scheduleNextRepeatingAlarm(alarm) {
+        function createNextRepeatAlarm(alarm) {
             const alarmDate = new Date(alarm.datetime);
             
             switch (alarm.repeat) {
@@ -1223,27 +685,24 @@
             
             const newAlarm = {
                 ...alarm,
-                id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 datetime: alarmDate.toISOString(),
+                date: alarmDate.toISOString().split('T')[0],
+                time: alarmDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
                 triggered: false,
-                synced: false,
-                created: new Date().toISOString()
+                synced: false
             };
             
             alarms.push(newAlarm);
             localStorage.setItem('alarms', JSON.stringify(alarms));
             
-            // พยายามบันทึกลง Google Sheets
-            saveToGoogleSheets(newAlarm).catch(error => {
-                console.log('⚠️ ไม่สามารถบันทึกการแจ้งเตือนทำซ้ำ:', error);
-            });
-            
-            renderAlarms();
+            // บันทึกลง Google Sheets
+            saveAlarmToSheets(newAlarm);
         }
         
         async function updateAlarmStatusInSheets(alarmId, status) {
             try {
-                const payload = {
+                const data = {
                     action: 'update',
                     alarm_id: alarmId,
                     status: status,
@@ -1252,110 +711,62 @@
                 };
                 
                 const params = new URLSearchParams();
-                for (const key in payload) {
-                    if (payload[key] !== undefined && payload[key] !== null) {
-                        params.append(key, payload[key].toString());
-                    }
+                for (const key in data) {
+                    params.append(key, data[key]);
                 }
                 
-                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
-                await fetch(url, { mode: 'no-cors' });
-                return true;
+                await fetch(`${GOOGLE_SCRIPT_URL}?${params.toString()}`);
             } catch (error) {
-                console.log('⚠️ อัปเดตสถานะไม่สำเร็จ:', error);
-                return false;
+                console.error('ไม่สามารถอัปเดตสถานะ:', error);
             }
         }
         
         // ============================================
         // ฟังก์ชัน Push Notifications
         // ============================================
-        function sendPushNotification(title, message, type = 'info') {
-            // ตรวจสอบการตั้งค่า
-            if (!settings.pushEnabled) return;
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) return;
             
-            // 1. แสดงในแอป
-            showInAppPushNotification(title, message, type);
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+        
+        function showPushNotification(title, message) {
+            // แสดงในแอป
+            document.getElementById('pushTitle').textContent = title;
+            document.getElementById('pushMessage').textContent = message;
+            document.getElementById('pushTime').textContent = 'ตอนนี้';
+            document.getElementById('pushNotification').classList.remove('hidden');
             
-            // 2. แสดงในเบราว์เซอร์
-            if ('Notification' in window && Notification.permission === 'granted') {
-                try {
-                    const notification = new Notification(`🔔 ${title}`, {
-                        body: message,
-                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%233B82F6"/><text x="50" y="65" font-size="40" text-anchor="middle" fill="white">🔔</text></svg>',
-                        tag: 'notification-' + Date.now()
-                    });
-                    
-                    notification.onclick = function() {
-                        window.focus();
-                        this.close();
-                        openNotificationPanel();
-                    };
-                } catch (error) {
-                    console.log('⚠️ ไม่สามารถแสดง Notification:', error);
-                }
+            // ปิดอัตโนมัติหลังจาก 5 วินาที
+            setTimeout(() => {
+                closePushNotification();
+            }, 5000);
+            
+            // แจ้งเตือนเบราว์เซอร์
+            if (Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: message,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/565/565422.png'
+                });
             }
             
-            // 3. เล่นเสียง
-            if (settings.soundEnabled) {
-                playNotificationSound();
-            }
+            // เล่นเสียง
+            playNotificationSound();
             
-            // 4. สั่นเครื่อง
-            if (settings.vibrationEnabled && navigator.vibrate) {
+            // สั่นมือถือ
+            if (navigator.vibrate) {
                 navigator.vibrate([200, 100, 200]);
             }
         }
         
-        function showInAppPushNotification(title, message, type) {
-            const pushNotification = document.getElementById('pushNotification');
-            document.getElementById('pushTitle').textContent = title;
-            document.getElementById('pushMessage').textContent = message;
-            document.getElementById('pushTime').textContent = 'ตอนนี้';
-            
-            // ตั้งค่าสีตามประเภท
-            const iconDiv = pushNotification.querySelector('.w-10.h-10');
-            if (iconDiv) {
-                iconDiv.className = `w-10 h-10 rounded-full bg-gradient-to-br ${
-                    type === 'alarm' ? 'from-blue-500 to-purple-600' : 
-                    type === 'broadcast' ? 'from-purple-500 to-pink-600' : 
-                    'from-green-500 to-blue-600'
-                } flex items-center justify-center`;
-            }
-            
-            // เก็บข้อมูล notification ปัจจุบัน
-            window.currentNotification = { title, message, type };
-            
-            // แสดงการแจ้งเตือน
-            pushNotification.classList.remove('hidden');
-            setTimeout(() => {
-                pushNotification.style.transform = 'translateY(0)';
-            }, 100);
-            
-            // ปิดอัตโนมัติหลังจาก 10 วินาที
-            setTimeout(() => {
-                if (pushNotification.style.transform === 'translateY(0)') {
-                    closePushNotification();
-                }
-            }, 10000);
-        }
-        
         function closePushNotification() {
-            const pushNotification = document.getElementById('pushNotification');
-            pushNotification.style.transform = 'translateY(-100%)';
-            setTimeout(() => {
-                pushNotification.classList.add('hidden');
-            }, 300);
-        }
-        
-        function viewNotificationDetails() {
-            closePushNotification();
-            openNotificationPanel();
+            document.getElementById('pushNotification').classList.add('hidden');
         }
         
         function playNotificationSound() {
             try {
-                // สร้างเสียงแจ้งเตือนง่ายๆ
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
@@ -1373,33 +784,37 @@
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.5);
             } catch (e) {
-                console.log("⚠️ ไม่สามารถเล่นเสียงได้");
+                console.log("ไม่สามารถเล่นเสียงได้");
             }
         }
         
         // ============================================
-        // ฟังก์ชันเพิ่มเติม
+        // ฟังก์ชันจัดการ Notifications
         // ============================================
         function addNotification(notification) {
             notifications.unshift(notification);
-            if (notifications.length > 100) {
-                notifications = notifications.slice(0, 100);
+            
+            // จำกัดจำนวน notifications
+            if (notifications.length > 50) {
+                notifications = notifications.slice(0, 50);
             }
+            
             localStorage.setItem('notifications', JSON.stringify(notifications));
             updateBadges();
+            updateCounts();
         }
         
-        function openNotificationPanel() {
-            document.getElementById('notificationPanel').classList.add('active');
-            renderNotificationList();
+        function openNotifications() {
+            loadNotificationsList();
+            document.getElementById('notificationsPanel').classList.remove('hidden');
         }
         
-        function closeNotificationPanel() {
-            document.getElementById('notificationPanel').classList.remove('active');
+        function closeNotifications() {
+            document.getElementById('notificationsPanel').classList.add('hidden');
         }
         
-        function renderNotificationList() {
-            const container = document.getElementById('notificationList');
+        function loadNotificationsList() {
+            const container = document.getElementById('notificationsList');
             
             if (notifications.length === 0) {
                 container.innerHTML = `
@@ -1413,20 +828,18 @@
             
             container.innerHTML = '';
             notifications.forEach(notification => {
-                const time = new Date(notification.timestamp);
+                const time = new Date(notification.time);
                 const notificationElement = document.createElement('div');
-                notificationElement.className = 'ios-notification mb-3';
+                notificationElement.className = 'bg-gray-800 rounded-lg p-4 mb-3';
                 notificationElement.innerHTML = `
                     <div class="flex items-start">
-                        <div class="flex-shrink-0 mr-3">
-                            <div class="w-8 h-8 rounded-full ${notification.type === 'alarm' ? 'bg-blue-600' : 'bg-purple-600'} flex items-center justify-center">
-                                <i class="fas fa-${notification.type === 'alarm' ? 'clock' : 'broadcast-tower'} text-white text-sm"></i>
-                            </div>
+                        <div class="w-8 h-8 rounded-full ${notification.type === 'alarm' ? 'bg-blue-600' : 'bg-purple-600'} flex items-center justify-center mr-3">
+                            <i class="fas fa-${notification.type === 'alarm' ? 'clock' : 'broadcast-tower'} text-white"></i>
                         </div>
                         <div class="flex-1">
                             <h3 class="font-bold">${notification.title}</h3>
-                            <p class="text-sm text-gray-400 mt-1">${notification.message}</p>
-                            <p class="text-xs text-gray-500 mt-2">
+                            <p class="text-gray-400 text-sm mt-1">${notification.message}</p>
+                            <p class="text-gray-500 text-xs mt-2">
                                 ${time.toLocaleDateString('th-TH')} ${time.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
                             </p>
                         </div>
@@ -1440,111 +853,30 @@
             notifications = [];
             localStorage.setItem('notifications', JSON.stringify(notifications));
             updateBadges();
-            renderNotificationList();
+            updateCounts();
+            loadNotificationsList();
             
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'ล้างการแจ้งเตือนทั้งหมดเรียบร้อยแล้ว',
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
+            showAlert('success', 'ล้างการแจ้งเตือนทั้งหมดแล้ว');
         }
         
         // ============================================
-        // ฟังก์ชันใช้งานทั่วไป
-        // ============================================
-        function getRepeatText(repeatValue) {
-            const repeatMap = {
-                'none': 'ไม่ทำซ้ำ',
-                'daily': 'ทุกวัน',
-                'weekly': 'ทุกสัปดาห์',
-                'monthly': 'ทุกเดือน'
-            };
-            return repeatMap[repeatValue] || repeatValue;
-        }
-        
-        function scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        
-        function scrollToForm() {
-            document.getElementById('addAlarmSection').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function scrollToAlarms() {
-            document.getElementById('allAlarmsSection').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function scrollToBroadcast() {
-            document.getElementById('broadcastSection').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function scrollToSettings() {
-            document.getElementById('settingsSection').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        function refreshData() {
-            loadAllData();
-            
-            const refreshBtn = document.querySelector('[onclick="refreshData()"]');
-            refreshBtn.classList.add('animate-spin');
-            setTimeout(() => {
-                refreshBtn.classList.remove('animate-spin');
-            }, 1000);
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'รีเฟรชข้อมูลเรียบร้อยแล้ว',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
-        }
-        
-        function refreshAlarms() {
-            renderAlarms();
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'อัปเดตรายการแจ้งเตือนเรียบร้อยแล้ว',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
-        }
-        
-        // ============================================
-        // ฟังก์ชันประกาศ
+        // ฟังก์ชันจัดการ Broadcast
         // ============================================
         async function sendBroadcast() {
             const title = document.getElementById('broadcastTitle').value.trim();
             const message = document.getElementById('broadcastMessage').value.trim();
             
             if (!title || !message) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ข้อมูลไม่ครบ',
-                    text: 'กรุณากรอกหัวข้อและข้อความประกาศ',
-                    background: '#1f2937',
-                    color: '#e5e7eb'
-                });
+                showAlert('error', 'กรุณากรอกหัวข้อและข้อความประกาศ');
                 return;
             }
             
             const result = await Swal.fire({
-                icon: 'question',
                 title: 'ยืนยันการส่งประกาศ',
-                html: `ส่งประกาศ<br><strong>"${title}"</strong><br>หรือไม่?`,
+                text: `ส่งประกาศ "${title}" ไปยังทุกคน?`,
+                icon: 'question',
                 showCancelButton: true,
-                confirmButtonText: 'ส่งประกาศ',
+                confirmButtonText: 'ส่ง',
                 cancelButtonText: 'ยกเลิก',
                 background: '#1f2937',
                 color: '#e5e7eb'
@@ -1552,53 +884,37 @@
             
             if (!result.isConfirmed) return;
             
-            // บันทึกลง Google Sheets
-            try {
-                await saveBroadcastToGoogleSheets(title, message);
-            } catch (error) {
-                console.log('⚠️ ไม่สามารถบันทึกประกาศ:', error);
-            }
-            
-            // เพิ่มในรายการการแจ้งเตือน
-            addNotification({
+            // สร้าง broadcast message
+            const broadcast = {
+                id: 'broadcast_' + Date.now(),
                 type: 'broadcast',
                 title: `📢 ${title}`,
                 message: message,
-                timestamp: new Date().toISOString(),
-                read: false
-            });
+                time: new Date().toISOString()
+            };
             
-            // บันทึกลง broadcastMessages
-            broadcastMessages.unshift({
-                id: 'broadcast_' + Date.now(),
-                title,
-                message,
-                timestamp: new Date().toISOString(),
-                sender: userId
-            });
-            localStorage.setItem('broadcastMessages', JSON.stringify(broadcastMessages));
+            // เพิ่มใน notifications
+            addNotification(broadcast);
             
-            // ส่งการแจ้งเตือน
-            sendPushNotification(`📢 ${title}`, message, 'broadcast');
+            // แสดง push notification
+            showPushNotification(broadcast.title, broadcast.message);
             
-            // รีเซ็ตฟอร์ม
-            clearBroadcastForm();
+            // พยายามบันทึกลง Google Sheets
+            try {
+                await saveBroadcastToSheets(title, message);
+            } catch (error) {
+                console.error('ไม่สามารถบันทึกประกาศ:', error);
+            }
             
-            // อัปเดต UI
-            updateCounts();
+            // ล้างฟอร์ม
+            clearBroadcast();
             
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'ส่งประกาศเรียบร้อยแล้ว',
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
+            showAlert('success', 'ส่งประกาศสำเร็จ!');
         }
         
-        async function saveBroadcastToGoogleSheets(title, message) {
+        async function saveBroadcastToSheets(title, message) {
             try {
-                const payload = {
+                const data = {
                     action: 'add',
                     date: new Date().toLocaleDateString('th-TH'),
                     time: new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}),
@@ -1606,190 +922,117 @@
                     description: message,
                     status: 'broadcast',
                     user_id: userId,
-                    user_name: userName,
                     alarm_id: 'broadcast_' + Date.now()
                 };
                 
                 const params = new URLSearchParams();
-                for (const key in payload) {
-                    if (payload[key] !== undefined && payload[key] !== null) {
-                        params.append(key, payload[key].toString());
-                    }
+                for (const key in data) {
+                    params.append(key, data[key]);
                 }
                 
-                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
-                await fetch(url, { mode: 'no-cors' });
+                await fetch(`${GOOGLE_SCRIPT_URL}?${params.toString()}`);
                 return true;
             } catch (error) {
-                console.log('⚠️ บันทึกประกาศไม่สำเร็จ:', error);
+                console.error('ไม่สามารถบันทึกประกาศ:', error);
                 return false;
             }
         }
         
-        function clearBroadcastForm() {
+        function clearBroadcast() {
             document.getElementById('broadcastTitle').value = '';
             document.getElementById('broadcastMessage').value = '';
         }
         
         // ============================================
-        // ฟังก์ชันการตั้งค่า
+        // ฟังก์ชันจัดการ Alarms List
         // ============================================
-        function requestNotificationPermission() {
-            if (!('Notification' in window)) {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'ไม่รองรับ',
-                    text: 'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน',
-                    background: '#1f2937',
-                    color: '#e5e7eb'
-                });
+        function updateAlarmsList() {
+            const container = document.getElementById('alarmsList');
+            
+            if (alarms.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-gray-800 rounded-xl p-6 text-center">
+                        <i class="fas fa-clock text-3xl text-gray-500 mb-3"></i>
+                        <p class="text-gray-400">ยังไม่มีกำหนดการแจ้งเตือน</p>
+                        <p class="text-sm text-gray-500 mt-2">เพิ่มการแจ้งเตือนใหม่โดยใช้แบบฟอร์มด้านบน</p>
+                    </div>
+                `;
                 return;
             }
             
-            if (Notification.permission === 'granted') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'อนุญาตแล้ว',
-                    text: 'ได้รับอนุญาตการแจ้งเตือนแล้ว',
-                    background: '#1f2937',
-                    color: '#e5e7eb'
-                });
-                return;
-            }
+            // เรียงลำดับตามเวลา
+            alarms.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
             
-            if (Notification.permission === 'denied') {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'ถูกปฏิเสธ',
-                    text: 'การอนุญาตการแจ้งเตือนถูกปฏิเสธ กรุณาอนุญาตในเบราว์เซอร์',
-                    background: '#1f2937',
-                    color: '#e5e7eb'
-                });
-                return;
-            }
+            container.innerHTML = '';
+            const now = new Date();
             
-            Notification.requestPermission().then(permission => {
-                settings.notificationPermission = permission;
-                localStorage.setItem('notificationSettings', JSON.stringify(settings));
+            alarms.forEach(alarm => {
+                const alarmDate = new Date(alarm.datetime);
+                const isPast = alarmDate < now;
+                const isTriggered = alarm.triggered;
                 
-                if (permission === 'granted') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'สำเร็จ',
-                        text: 'ได้รับอนุญาตการแจ้งเตือนแล้ว',
-                        background: '#1f2937',
-                        color: '#e5e7eb'
-                    });
-                    setTimeout(() => testNotification(), 1000);
-                } else {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'ถูกปฏิเสธ',
-                        text: 'คุณปฏิเสธการอนุญาตการแจ้งเตือน',
-                        background: '#1f2937',
-                        color: '#e5e7eb'
-                    });
+                // คำนวณเวลาที่เหลือ
+                const timeDiff = alarmDate - now;
+                const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
+                
+                let timeStatus = '';
+                if (isTriggered) {
+                    timeStatus = '<span class="text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded">แจ้งเตือนแล้ว</span>';
+                } else if (isPast) {
+                    timeStatus = '<span class="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded">เลยเวลา</span>';
+                } else if (hoursDiff < 24) {
+                    timeStatus = `<span class="text-xs px-2 py-1 bg-red-900/30 text-red-300 rounded">${hoursDiff} ชม.</span>`;
                 }
+                
+                const alarmElement = document.createElement('div');
+                alarmElement.className = 'bg-gray-800 rounded-xl p-4';
+                alarmElement.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="font-bold ${isTriggered ? 'text-gray-400' : 'text-white'}">${alarm.title}</h3>
+                            <p class="text-gray-400 text-sm mt-1">${alarm.description || 'ไม่มีรายละเอียด'}</p>
+                            <div class="flex items-center mt-3">
+                                <span class="text-xs px-2 py-1 bg-blue-900/30 text-blue-300 rounded">
+                                    <i class="far fa-clock mr-1"></i>
+                                    ${alarmDate.toLocaleDateString('th-TH', {day: 'numeric', month: 'short'})} 
+                                    ${alarmDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                                <span class="text-xs px-2 py-1 bg-purple-900/30 text-purple-300 rounded ml-2">
+                                    <i class="fas fa-redo mr-1"></i>${getRepeatText(alarm.repeat)}
+                                </span>
+                                ${timeStatus}
+                                ${alarm.synced ? '<span class="text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded ml-2"><i class="fas fa-cloud mr-1"></i>บันทึก</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="ml-4 flex flex-col space-y-2">
+                            ${!isTriggered ? `
+                                <button onclick="testAlarm('${alarm.id}')" class="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-white">
+                                    <i class="fas fa-bell mr-1"></i>ทดสอบ
+                                </button>
+                            ` : ''}
+                            <button onclick="deleteAlarm('${alarm.id}')" class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white">
+                                <i class="fas fa-trash mr-1"></i>ลบ
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(alarmElement);
             });
         }
         
-        function testNotification() {
-            sendPushNotification(
-                'ทดสอบการแจ้งเตือน', 
-                'นี่คือการทดสอบระบบแจ้งเตือนแบบ Mobile App', 
-                'test'
-            );
-            
-            addNotification({
-                type: 'test',
-                title: 'ทดสอบการแจ้งเตือน',
-                message: 'นี่คือการทดสอบระบบแจ้งเตือน',
-                timestamp: new Date().toISOString(),
-                read: false
-            });
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'ส่งการทดสอบการแจ้งเตือนเรียบร้อยแล้ว',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
+        function loadAlarms() {
+            loadData();
+            showAlert('success', 'อัปเดตรายการแจ้งเตือนแล้ว');
         }
         
-        function testAlarmNow(alarmId) {
-            const alarm = alarms.find(a => a.id === alarmId);
-            if (!alarm) return;
-            
-            sendPushNotification(
-                `ทดสอบ: ${alarm.title}`,
-                alarm.description || 'นี่คือการทดสอบการแจ้งเตือน',
-                'test'
-            );
-            
-            addNotification({
-                type: 'test',
-                title: `ทดสอบ: ${alarm.title}`,
-                message: alarm.description || 'การทดสอบการแจ้งเตือน',
-                timestamp: new Date().toISOString(),
-                read: false
-            });
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'ส่งการทดสอบการแจ้งเตือนเรียบร้อยแล้ว',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000,
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
-        }
-        
-        function showInstallPrompt() {
-            if (!window.deferredPrompt) {
-                Swal.fire({
-                    icon: 'info',
-                    title: 'ติดตั้งแอป',
-                    html: 'คุณสามารถติดตั้งแอปได้โดย:<br>1. แตะที่เมนู "..."<br>2. เลือก "ติดตั้งแอป"<br>3. กด "ติดตั้ง"',
-                    background: '#1f2937',
-                    color: '#e5e7eb'
-                });
-                return;
-            }
-            
-            window.deferredPrompt.prompt();
-            window.deferredPrompt.userChoice.then(choiceResult => {
-                if (choiceResult.outcome === 'accepted') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'สำเร็จ',
-                        text: 'กำลังติดตั้งแอป...',
-                        background: '#1f2937',
-                        color: '#e5e7eb'
-                    });
-                }
-                window.deferredPrompt = null;
-            });
-        }
-        
-        // ============================================
-        // ฟังก์ชันลบข้อมูล
-        // ============================================
-        async function deleteAlarmPrompt(alarmId) {
+        async function deleteAlarm(alarmId) {
             const alarm = alarms.find(a => a.id === alarmId);
             if (!alarm) return;
             
             const result = await Swal.fire({
-                icon: 'warning',
                 title: 'ยืนยันการลบ',
-                html: `ลบการแจ้งเตือน<br><strong>"${alarm.title}"</strong><br>หรือไม่?<br><small class="text-gray-400">(จะลบจาก Google Sheets ด้วย)</small>`,
+                html: `ลบการแจ้งเตือน<br><strong>"${alarm.title}"</strong><br>หรือไม่?`,
+                icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'ลบ',
                 cancelButtonText: 'ยกเลิก',
@@ -1801,15 +1044,9 @@
             
             // ลบจาก Google Sheets ถ้ามีการบันทึก
             if (alarm.synced) {
-                const deleted = await deleteFromGoogleSheets(alarm.id);
+                const deleted = await deleteAlarmFromSheets(alarm.id);
                 if (!deleted) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'คำเตือน',
-                        text: 'ลบจาก Google Sheets ไม่สำเร็จ แต่ลบจากระบบแล้ว',
-                        background: '#1f2937',
-                        color: '#e5e7eb'
-                    });
+                    showAlert('warning', 'ลบจาก Google Sheets ไม่สำเร็จ แต่ลบจากระบบแล้ว');
                 }
             }
             
@@ -1818,78 +1055,116 @@
             localStorage.setItem('alarms', JSON.stringify(alarms));
             
             // อัปเดต UI
-            renderAlarms();
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                text: 'ลบการแจ้งเตือนเรียบร้อยแล้ว',
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
-        }
-        
-        async function showClearAllDialog() {
-            const result = await Swal.fire({
-                icon: 'warning',
-                title: 'ยืนยันการลบทั้งหมด',
-                html: `คุณต้องการลบข้อมูลทั้งหมดใช่หรือไม่?<br>
-                      <small class="text-gray-400">
-                      • การแจ้งเตือนทั้งหมด: ${alarms.length} รายการ<br>
-                      • การแจ้งเตือนในระบบ: ${notifications.length} รายการ<br>
-                      • ประกาศทั้งหมด: ${broadcastMessages.length} รายการ<br>
-                      </small>`,
-                showCancelButton: true,
-                confirmButtonText: 'ลบทั้งหมด',
-                cancelButtonText: 'ยกเลิก',
-                background: '#1f2937',
-                color: '#e5e7eb'
-            });
-            
-            if (!result.isConfirmed) return;
-            
-            // ลบจาก Google Sheets (เฉพาะที่บันทึกไว้)
-            let deleteCount = 0;
-            for (const alarm of alarms.filter(a => a.synced)) {
-                const deleted = await deleteFromGoogleSheets(alarm.id);
-                if (deleted) deleteCount++;
-            }
-            
-            // ลบจาก localStorage
-            alarms = [];
-            notifications = [];
-            broadcastMessages = [];
-            localStorage.setItem('alarms', JSON.stringify(alarms));
-            localStorage.setItem('notifications', JSON.stringify(notifications));
-            localStorage.setItem('broadcastMessages', JSON.stringify(broadcastMessages));
-            
-            // อัปเดต UI
-            renderAlarms();
-            updateBadges();
+            updateAlarmsList();
             updateCounts();
             
+            showAlert('success', 'ลบการแจ้งเตือนแล้ว');
+        }
+        
+        function testAlarm(alarmId) {
+            const alarm = alarms.find(a => a.id === alarmId);
+            if (!alarm) return;
+            
+            // แสดง push notification ทดสอบ
+            showPushNotification(`ทดสอบ: ${alarm.title}`, alarm.description || 'นี่คือการทดสอบการแจ้งเตือน');
+            
+            // เพิ่มใน notifications
+            addNotification({
+                id: 'test_' + Date.now(),
+                type: 'test',
+                title: `ทดสอบ: ${alarm.title}`,
+                message: alarm.description || 'การทดสอบการแจ้งเตือน',
+                time: new Date().toISOString()
+            });
+            
+            showAlert('success', 'ส่งการทดสอบการแจ้งเตือนแล้ว');
+        }
+        
+        function testNotification() {
+            showPushNotification('ทดสอบระบบแจ้งเตือน', 'นี่คือการทดสอบการแจ้งเตือนแบบ Mobile App');
+            
+            addNotification({
+                id: 'test_' + Date.now(),
+                type: 'test',
+                title: 'ทดสอบระบบแจ้งเตือน',
+                message: 'นี่คือการทดสอบการทำงานของระบบ',
+                time: new Date().toISOString()
+            });
+            
+            showAlert('success', 'ส่งการทดสอบการแจ้งเตือนแล้ว');
+        }
+        
+        // ============================================
+        // ฟังก์ชันอัพเดต UI
+        // ============================================
+        function updateCounts() {
+            // จำนวน alarms ทั้งหมด
+            document.getElementById('alarmCount').textContent = alarms.length;
+            
+            // จำนวนที่บันทึกลง Google Sheets
+            const syncedCount = alarms.filter(alarm => alarm.synced).length;
+            document.getElementById('syncedCount').textContent = syncedCount;
+            
+            // จำนวน notifications
+            document.getElementById('notificationCount').textContent = notifications.length;
+        }
+        
+        function updateBadges() {
+            const unreadCount = notifications.length;
+            
+            // อัปเดตทุก badge
+            const badges = ['headerBadge', 'actionBadge', 'bottomBadge'];
+            badges.forEach(badgeId => {
+                const badge = document.getElementById(badgeId);
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            });
+        }
+        
+        function getRepeatText(repeat) {
+            const texts = {
+                'none': 'ไม่ทำซ้ำ',
+                'daily': 'ทุกวัน',
+                'weekly': 'ทุกสัปดาห์',
+                'monthly': 'ทุกเดือน'
+            };
+            return texts[repeat] || repeat;
+        }
+        
+        // ============================================
+        // ฟังก์ชันช่วยเหลือ
+        // ============================================
+        function showAlert(icon, title) {
             Swal.fire({
-                icon: 'success',
-                title: 'สำเร็จ',
-                html: `ลบข้อมูลทั้งหมดเรียบร้อยแล้ว<br>
-                      <small class="text-gray-400">
-                      ลบ ${deleteCount} รายการจาก Google Sheets
-                      </small>`,
+                icon: icon,
+                title: title,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
                 background: '#1f2937',
                 color: '#e5e7eb'
             });
         }
         
-        // ============================================
-        // PWA Installation
-        // ============================================
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            window.deferredPrompt = e;
-        });
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function scrollToForm() {
+            document.getElementById('alarmFormSection').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function scrollToBroadcast() {
+            document.getElementById('broadcastSection').scrollIntoView({ behavior: 'smooth' });
+        }
         
         // ============================================
-        // เริ่มต้นแอปเมื่อโหลดหน้าเว็บเสร็จ
+        // เริ่มต้นแอปพลิเคชัน
         // ============================================
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
