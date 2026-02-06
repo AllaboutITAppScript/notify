@@ -1,16 +1,85 @@
 {
-  "name": "ระบบแจ้งเตือนรวมศูนย์",
+  "name": "ระบบแจ้งเตือนรวมศูนย์ข้ามเครื่อง",
   "short_name": "แจ้งเตือน",
-  "description": "ระบบแจ้งเตือนรวมศูนย์แบบเรียลไทม์",
+  "description": "ระบบแจ้งเตือนแบบข้ามเครื่องและข้ามแพลตฟอร์ม",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>",
-      "sizes": "72x72 96x96 128x128 144x144 152x152 192x192 384x384 512x512",
-      "type": "image/svg+xml"
+      "src": "/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "shortcuts": [
+    {
+      "name": "เพิ่มแจ้งเตือนใหม่",
+      "short_name": "เพิ่ม",
+      "description": "เพิ่มการแจ้งเตือนใหม่",
+      "url": "/#add",
+      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "ดูแจ้งเตือน",
+      "short_name": "แจ้งเตือน",
+      "description": "ดูการแจ้งเตือนทั้งหมด",
+      "url": "/#notifications",
+      "icons": [{ "src": "/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "web+notification",
+      "url": "/?notification=%s"
     }
   ]
 }
