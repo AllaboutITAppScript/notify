@@ -4,25 +4,10 @@
   "description": "ระบบแจ้งเตือนแบบข้ามเครื่อง ทำงานได้แม้ปิดแอปและล็อคหน้าจอ",
   "start_url": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
   "orientation": "portrait",
   "scope": "/",
-  "id": "/",
-  "categories": ["productivity", "utilities"],
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
-  "protocol_handlers": [
-    {
-      "protocol": "web+alarm",
-      "url": "/?alarm=%s"
-    }
-  ],
-  "edge_side_panel": {
-    "preferred_width": 360
-  },
   "icons": [
     {
       "src": "icons/icon-72x72.png",
@@ -63,45 +48,6 @@
       "src": "icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "screenshots/mobile.png",
-      "sizes": "375x812",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "หน้าจอแจ้งเตือนบนมือถือ"
-    },
-    {
-      "src": "screenshots/desktop.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "หน้าจอแจ้งเตือนบนคอมพิวเตอร์"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "เพิ่มแจ้งเตือน",
-      "short_name": "เพิ่ม",
-      "description": "เพิ่มการแจ้งเตือนใหม่",
-      "url": "/?add=true",
-      "icons": [{ "src": "icons/add-96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "ดูแจ้งเตือน",
-      "short_name": "แจ้งเตือน",
-      "description": "ดูการแจ้งเตือนทั้งหมด",
-      "url": "/?notifications=true",
-      "icons": [{ "src": "icons/bell-96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "ส่งประกาศ",
-      "short_name": "ประกาศ",
-      "description": "ส่งประกาศไปทุกเครื่อง",
-      "url": "/?broadcast=true",
-      "icons": [{ "src": "icons/broadcast-96.png", "sizes": "96x96" }]
     }
   ]
 }
