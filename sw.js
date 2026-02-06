@@ -1,85 +1,63 @@
 // Service Worker สำหรับระบบแจ้งเตือนข้ามเครื่อง
-const CACHE_NAME = 'notification-system-v4';
+const CACHE_NAME = 'notification-system-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
-  '/icons/icon-128x128.png',
-  '/icons/icon-144x144.png',
-  '/icons/icon-152x152.png',
-  '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png'
+  '/icon-192x192.png',
+  '/icon-512x512.png'
 ];
 
 // ติดตั้ง Service Worker
-self.addEventListener('install', (event) => {
-  console.log('📦 Installing Service Worker...');
-  
+self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('✅ Opened cache');
+      .then(cache => {
+        console.log('📦 Caching app shell');
         return cache.addAll(urlsToCache);
       })
-      .then(() => {
-        console.log('✅ All resources cached');
-        return self.skipWaiting();
-      })
+      .then(() => self.skipWaiting())
   );
 });
 
 // เปิดใช้งาน Service Worker
-self.addEventListener('activate', (event) => {
-  console.log('🚀 Activating Service Worker...');
-  
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
+        cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
             console.log('🗑️ Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => {
-      console.log('✅ Service Worker activated');
-      return self.clients.claim();
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
 // ดึงข้อมูลจาก cache หรือ network
-self.addEventListener('fetch', (event) => {
-  // ข้ามการ cache สำหรับ API calls
-  if (event.request.url.includes('script.google.com') || 
-      event.request.url.includes('firebase') ||
-      event.request.url.includes('fcm.googleapis.com')) {
+self.addEventListener('fetch', event => {
+  // ข้ามการ cache สำหรับ Google Script calls
+  if (event.request.url.includes('script.google.com')) {
     return;
   }
   
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
+      .then(response => {
         if (response) {
           return response;
         }
-        
-        return fetch(event.request).then((response) => {
+        return fetch(event.request).then(response => {
           // Cache dynamic content
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
+          if (event.request.url.startsWith('http') && 
+              (event.request.method === 'GET')) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseClone);
             });
-          
+          }
           return response;
         });
       })
@@ -92,22 +70,21 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// จัดการ Push Notifications (สำหรับ Firebase)
-self.addEventListener('push', (event) => {
-  console.log('📨 Push notification received in SW:', event);
+// จัดการ Push Notifications
+self.addEventListener('push', event => {
+  console.log('📨 Push notification received:', event);
   
   let data = {
-    title: 'ระบบแจ้งเตือน',
+    title: 'ระบบแจ้งเตือนข้ามเครื่อง',
     body: 'คุณมีการแจ้งเตือนใหม่',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-96x96.png',
-    tag: 'notification'
+    icon: '/icon-192x192.png',
+    badge: '/icon-96x96.png',
+    tag: 'cross-device-notification'
   };
   
   if (event.data) {
     try {
-      const jsonData = event.data.json();
-      data = { ...data, ...jsonData };
+      data = { ...data, ...event.data.json() };
     } catch (e) {
       console.log('Error parsing push data:', e);
       if (event.data.text()) {
@@ -118,16 +95,18 @@ self.addEventListener('push', (event) => {
   
   const options = {
     body: data.body,
-    icon: data.icon,
-    badge: data.badge,
-    tag: data.tag,
-    requireInteraction: data.urgent || false,
+    icon: data.icon || '/icon-192x192.png',
+    badge: data.badge || '/icon-96x96.png',
+    tag: data.tag || 'notification',
+    requireInteraction: data.important || data.type === 'alarm',
     vibrate: data.vibrate || [200, 100, 200],
     data: {
       url: data.url || '/',
       type: data.type || 'notification',
       timestamp: Date.now(),
-      ...data.data
+      alarm_id: data.alarm_id,
+      broadcast_id: data.broadcast_id,
+      urgent: data.urgent || false
     },
     actions: [
       {
@@ -141,10 +120,15 @@ self.addEventListener('push', (event) => {
     ]
   };
   
+  // เพิ่มภาพสำหรับ Desktop notifications
+  if (data.image) {
+    options.image = data.image;
+  }
+  
   // สำหรับ urgent notifications
   if (data.urgent) {
     options.requireInteraction = true;
-    options.vibrate = [500, 200, 500, 200, 500];
+    options.vibrate = [500, 200, 500];
   }
   
   event.waitUntil(
@@ -153,8 +137,8 @@ self.addEventListener('push', (event) => {
 });
 
 // จัดการการคลิกที่ Notification
-self.addEventListener('notificationclick', (event) => {
-  console.log('🖱️ Notification clicked in SW:', event.notification.data);
+self.addEventListener('notificationclick', event => {
+  console.log('🖱️ Notification clicked:', event.notification.data);
   
   event.notification.close();
   
@@ -168,7 +152,7 @@ self.addEventListener('notificationclick', (event) => {
     clients.matchAll({
       type: 'window',
       includeUncontrolled: true
-    }).then((clientList) => {
+    }).then(clientList => {
       // หา client ที่เปิดอยู่แล้ว
       for (const client of clientList) {
         if (client.url === urlToOpen && 'focus' in client) {
@@ -186,7 +170,7 @@ self.addEventListener('notificationclick', (event) => {
       
       // ถ้าไม่มี client อยู่ ให้เปิดใหม่
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen).then((newClient) => {
+        return clients.openWindow(urlToOpen).then(newClient => {
           if (newClient) {
             // รอให้หน้าโหลดแล้วส่งข้อความ
             setTimeout(() => {
@@ -203,34 +187,37 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // Background Sync
-self.addEventListener('sync', (event) => {
+self.addEventListener('sync', event => {
   console.log('🔄 Background sync:', event.tag);
   
   if (event.tag === 'sync-data') {
     event.waitUntil(syncData());
   }
+  
+  if (event.tag === 'sync-notifications') {
+    event.waitUntil(syncNotifications());
+  }
 });
 
 // Periodic Sync (ทุก 1 ชั่วโมง)
-self.addEventListener('periodicsync', (event) => {
+self.addEventListener('periodicsync', event => {
   if (event.tag === 'hourly-sync') {
     console.log('⏰ Periodic sync triggered');
     event.waitUntil(periodicSync());
   }
 });
 
-// ฟังก์ชัน Sync ข้อมูล
+// ฟังก์ชัน Sync
 async function syncData() {
   try {
-    // ดึงข้อมูลจากเซิร์ฟเวอร์
+    const cache = await caches.open(CACHE_NAME);
     const responses = await Promise.all([
-      fetch('/api/sync/alarms'),
-      fetch('/api/sync/broadcasts')
+      fetch('/api/sync/alarms').catch(() => null),
+      fetch('/api/sync/broadcasts').catch(() => null)
     ]);
     
     // บันทึกข้อมูลลง cache
-    const cache = await caches.open(CACHE_NAME);
-    responses.forEach(async (response, index) => {
+    responses.forEach((response, index) => {
       if (response && response.ok) {
         const urls = ['/api/alarms', '/api/broadcasts'];
         cache.put(urls[index], response);
@@ -238,87 +225,91 @@ async function syncData() {
     });
     
     console.log('✅ Background sync completed');
-    
   } catch (error) {
     console.error('❌ Background sync error:', error);
   }
 }
 
-async function periodicSync() {
-  await syncData();
-  
-  // แจ้งเตือนถ้ามีข้อมูลใหม่
+async function syncNotifications() {
   try {
-    const response = await fetch('/api/check-updates');
-    const data = await response.json();
-    
-    if (data.hasUpdates) {
-      self.registration.showNotification('มีข้อมูลใหม่', {
-        body: 'มีข้อมูลใหม่ที่รอการอัปเดต',
-        icon: '/icons/icon-192x192.png',
-        tag: 'update'
+    // ดึง notifications ใหม่จากเซิร์ฟเวอร์
+    const response = await fetch('/api/notifications/latest');
+    if (response.ok) {
+      const notifications = await response.json();
+      
+      // แสดง notifications ใหม่
+      notifications.forEach(notification => {
+        self.registration.showNotification(notification.title, {
+          body: notification.message,
+          icon: '/icon-192x192.png',
+          tag: `notification-${notification.id}`,
+          data: {
+            type: notification.type,
+            url: '/#notifications'
+          }
+        });
       });
     }
   } catch (error) {
-    console.error('❌ Periodic sync error:', error);
+    console.error('Sync notifications error:', error);
   }
 }
 
+async function periodicSync() {
+  await syncData();
+  await syncNotifications();
+}
+
 // รับข้อความจาก client
-self.addEventListener('message', (event) => {
+self.addEventListener('message', event => {
   console.log('📩 Message from client:', event.data);
   
   if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
   
-  if (event.data.type === 'CACHE_DATA') {
-    cacheData(event.data.payload);
+  if (event.data.type === 'REGISTER_DEVICE') {
+    registerDevice(event.data.payload);
   }
   
-  if (event.data.type === 'GET_CACHED_DATA') {
-    getCachedData(event.data.key).then((data) => {
-      event.ports[0].postMessage({ data: data });
-    });
+  if (event.data.type === 'SYNC_REQUEST') {
+    syncData();
   }
 });
 
-async function cacheData(payload) {
-  const cache = await caches.open(CACHE_NAME);
-  const response = new Response(JSON.stringify(payload.data));
-  await cache.put(payload.key, response);
-  console.log('✅ Data cached:', payload.key);
-}
-
-async function getCachedData(key) {
-  const cache = await caches.open(CACHE_NAME);
-  const response = await cache.match(key);
-  
-  if (response) {
-    return await response.json();
+async function registerDevice(payload) {
+  try {
+    const response = await fetch('/api/device/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (response.ok) {
+      console.log('✅ Device registered via Service Worker');
+    }
+  } catch (error) {
+    console.error('❌ Device registration error:', error);
   }
-  
-  return null;
 }
 
 // จัดการการออฟไลน์
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   if (!navigator.onLine && event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match('/').then((response) => {
+      caches.match('/').then(response => {
         if (response) {
           return response;
         }
-        return new Response(
-          '<h1>คุณออฟไลน์</h1><p>แอปพลิเคชันนี้ต้องใช้การเชื่อมต่ออินเทอร์เน็ต</p>',
-          {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: new Headers({
-              'Content-Type': 'text/html'
-            })
-          }
-        );
+        return new Response('You are offline', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({
+            'Content-Type': 'text/html'
+          })
+        });
       })
     );
   }
