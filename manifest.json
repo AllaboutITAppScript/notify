@@ -1,7 +1,7 @@
 {
-  "name": "ระบบแจ้งเตือนรวมศูนย์",
-  "short_name": "แจ้งเตือนรวมศูนย์",
-  "description": "ระบบแจ้งเตือนรวมศูนย์แบบข้ามเครื่อง",
+  "name": "ระบบแจ้งเตือนข้ามเครื่อง",
+  "short_name": "แจ้งเตือน",
+  "description": "ระบบแจ้งเตือนรวมศูนย์แบบข้ามเครื่อง ทำงานได้แม้ปิดแอป",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a2e",
@@ -9,31 +9,53 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f514.png",
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/1f514.png",
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
-  "categories": ["productivity", "utilities"],
-  "shortcuts": [
-    {
-      "name": "เพิ่มแจ้งเตือน",
-      "short_name": "เพิ่ม",
-      "description": "เพิ่มการแจ้งเตือนใหม่",
-      "url": "/?action=add",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "ดูแจ้งเตือน",
-      "short_name": "แจ้งเตือน",
-      "description": "ดูการแจ้งเตือนทั้งหมด",
-      "url": "/?action=notifications",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    }
+  "gcm_sender_id": "103953800507",
+  "permissions": [
+    "notifications",
+    "background"
+  ],
+  "categories": [
+    "productivity",
+    "utilities"
   ]
 }
