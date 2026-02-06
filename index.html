@@ -276,6 +276,79 @@
             z-index: 50;
             animation: slideInRight 0.3s ease-out;
         }
+        
+        /* Alarm card styles */
+        .alarm-card {
+            transition: all 0.3s ease;
+            border-left-width: 4px;
+            border-left-color: #3b82f6;
+        }
+        
+        .alarm-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Line clamp utilities */
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        /* Custom animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .app-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .emergency-alert {
+                top: 10px;
+                left: 10px;
+                right: 10px;
+                padding: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -905,9 +978,6 @@
             // ตรวจสอบการติดตั้งแอป
             checkAppInstallation();
             
-            // ตรวจสอบการอนุญาต Notification
-            checkNotificationPermission();
-            
             // เริ่ม Service Worker สำหรับแจ้งเตือนเบื้องหลัง
             await initServiceWorker();
             updateLoadingText('กำลังตั้งค่าการแจ้งเตือนเบื้องหลัง...', 20);
@@ -1107,20 +1177,38 @@
         async function initServiceWorker() {
             if ('serviceWorker' in navigator) {
                 try {
+                    // ขออนุญาตการแจ้งเตือนก่อน
+                    const hasPermission = await requestNotificationPermission();
+                    
+                    if (!hasPermission) {
+                        console.log('⚠️ ไม่มีสิทธิ์การแจ้งเตือน');
+                        document.getElementById('settingsSWStatus').textContent = 'ไม่มีสิทธิ์';
+                        document.getElementById('settingsSWStatus').className = 'text-red-400';
+                        return;
+                    }
+                    
                     // ลงทะเบียน Service Worker
-                    serviceWorkerRegistration = await navigator.serviceWorker.register('sw.js');
+                    serviceWorkerRegistration = await navigator.serviceWorker.register('sw.js', {
+                        scope: '/'
+                    });
+                    
                     console.log('✅ Service Worker ถูกติดตั้ง:', serviceWorkerRegistration);
                     
                     // รอจนกว่า Service Worker จะ active
-                    if (serviceWorkerRegistration.active) {
+                    if (serviceWorkerRegistration.installing) {
+                        serviceWorkerRegistration.installing.addEventListener('statechange', (event) => {
+                            if (event.target.state === 'activated') {
+                                isServiceWorkerReady = true;
+                                setupServiceWorkerCommunication();
+                                sendAlarmsToServiceWorker();
+                                console.log('✅ Service Worker active');
+                            }
+                        });
+                    } else if (serviceWorkerRegistration.active) {
                         isServiceWorkerReady = true;
-                        console.log('✅ Service Worker active');
-                        
-                        // ตั้งค่าการสื่อสาร
                         setupServiceWorkerCommunication();
-                        
-                        // ส่ง alarms ไปยัง Service Worker
-                        await sendAlarmsToServiceWorker();
+                        sendAlarmsToServiceWorker();
+                        console.log('✅ Service Worker active');
                     }
                     
                     document.getElementById('settingsSWStatus').textContent = 'ทำงาน';
@@ -1139,6 +1227,35 @@
                 
                 document.getElementById('settingsSWStatus').textContent = 'ไม่รองรับ';
                 document.getElementById('settingsSWStatus').className = 'text-yellow-400';
+            }
+        }
+        
+        async function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                console.log('❌ เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
+                return false;
+            }
+            
+            if (Notification.permission === 'granted') {
+                console.log('✅ ได้รับอนุญาตการแจ้งเตือนแล้ว');
+                return true;
+            }
+            
+            if (Notification.permission === 'denied') {
+                console.log('❌ การอนุญาตการแจ้งเตือนถูกปฏิเสธ');
+                showAlert('warning', 'คุณปฏิเสธการแจ้งเตือน กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์');
+                return false;
+            }
+            
+            // ขออนุญาต
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                console.log('✅ ได้รับอนุญาตการแจ้งเตือนแล้ว');
+                return true;
+            } else {
+                console.log('❌ ผู้ใช้ปฏิเสธการอนุญาตการแจ้งเตือน');
+                return false;
             }
         }
         
@@ -3100,26 +3217,6 @@
                 refreshBtn.classList.remove('animate-spin');
                 showAlert('success', 'รีเฟรชข้อมูลเรียบร้อยแล้ว');
             }, 1000);
-        }
-        
-        function checkNotificationPermission() {
-            if (!('Notification' in window)) {
-                console.log('❌ เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
-                return;
-            }
-            
-            if (Notification.permission === 'default') {
-                document.addEventListener('click', function requestPermissionOnce() {
-                    if (Notification.permission === 'default') {
-                        Notification.requestPermission().then(permission => {
-                            if (permission === 'granted') {
-                                console.log('✅ ได้รับอนุญาตการแจ้งเตือนแล้ว');
-                            }
-                        });
-                    }
-                    document.removeEventListener('click', requestPermissionOnce);
-                });
-            }
         }
         
         function showWelcomeGuide() {
