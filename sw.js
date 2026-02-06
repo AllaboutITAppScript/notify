@@ -1,203 +1,344 @@
-// Service Worker สำหรับระบบแจ้งเตือน
-const CACHE_NAME = 'notification-v2';
-const urlsToCache = [
+// sw.js - Service Worker สำหรับการแจ้งเตือนเบื้องหลัง
+const CACHE_NAME = 'notification-system-v1';
+const OFFLINE_URL = '/offline.html';
+
+// รายการไฟล์ที่จะเก็บใน Cache
+const CACHE_FILES = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon-72x72.png',
-  '/icons/icon-96x96.png',
-  '/icons/icon-128x128.png',
-  '/icons/icon-144x144.png',
-  '/icons/icon-152x152.png',
   '/icons/icon-192x192.png',
-  '/icons/icon-384x384.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-512x512.png',
+  '/sounds/notification.mp3'
 ];
 
 // ติดตั้ง Service Worker
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+  console.log('🟢 Service Worker: Installing...');
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching app shell');
-        return cache.addAll(urlsToCache);
+        console.log('🟢 Service Worker: Caching app shell');
+        return cache.addAll(CACHE_FILES);
       })
-      .then(() => self.skipWaiting())
+      .then(() => {
+        console.log('🟢 Service Worker: Skip waiting');
+        return self.skipWaiting();
+      })
   );
 });
 
-// เปิดใช้งาน
+// เปิดใช้งาน Service Worker
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activating...');
+  console.log('🟢 Service Worker: Activated');
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Deleting old cache', cacheName);
+            console.log('🟢 Service Worker: Clearing old cache');
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    })
+    .then(() => {
+      console.log('🟢 Service Worker: Claiming clients');
+      return self.clients.claim();
+    })
   );
 });
 
-// ดึงข้อมูล
+// ดักจับการ fetch
 self.addEventListener('fetch', (event) => {
-  // ข้าม API calls
-  if (event.request.url.includes('script.google.com') || 
-      event.request.url.includes('firebase') ||
-      event.request.url.includes('fcm.googleapis.com')) {
-    return;
-  }
-  
+  // ไม่ต้องทำอะไรพิเศษสำหรับ fetch
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
+        return response || fetch(event.request);
+      })
+      .catch(() => {
+        return caches.match(OFFLINE_URL);
       })
   );
 });
 
-// จัดการ Push Notifications
+// ============================================
+// ส่วนจัดการการแจ้งเตือนเบื้องหลัง
+// ============================================
+
+// ดักจับการ push notification
 self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push received', event);
+  console.log('📨 Service Worker: Push received', event.data.text());
   
-  let data = {
-    title: 'การแจ้งเตือน',
-    body: 'คุณมีการแจ้งเตือนใหม่',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-96x96.png'
-  };
-  
-  if (event.data) {
-    try {
-      const json = event.data.json();
-      data = { ...data, ...json };
-    } catch (e) {
-      console.log('Push data error:', e);
-      if (event.data.text()) {
-        data.body = event.data.text();
-      }
-    }
+  let data = {};
+  try {
+    data = event.data ? JSON.parse(event.data.text()) : {};
+  } catch (e) {
+    data = { title: 'การแจ้งเตือน', body: 'คุณมีข้อความใหม่' };
   }
   
   const options = {
-    body: data.body,
-    icon: data.icon || '/icons/icon-192x192.png',
-    badge: data.badge || '/icons/icon-96x96.png',
-    tag: 'notification',
-    requireInteraction: data.urgent || false,
-    vibrate: data.vibrate || [200, 100, 200],
-    data: data.data || {}
+    body: data.body || 'การแจ้งเตือนจากระบบ',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-96x96.png',
+    vibrate: [200, 100, 200, 100, 200],
+    data: {
+      url: data.url || '/',
+      type: data.type || 'general',
+      alarmId: data.alarmId,
+      timestamp: data.timestamp || Date.now()
+    },
+    actions: [
+      {
+        action: 'open',
+        title: 'เปิดแอป'
+      },
+      {
+        action: 'close',
+        title: 'ปิด'
+      }
+    ]
   };
   
   // สำหรับการแจ้งเตือนด่วน
   if (data.urgent) {
     options.requireInteraction = true;
-    options.vibrate = [500, 200, 500];
+    options.vibrate = [1000, 500, 1000, 500, 1000];
+    options.tag = 'urgent';
   }
   
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(
+      data.title || 'ระบบแจ้งเตือน',
+      options
+    )
   );
 });
 
-// จัดการการคลิกที่ Notification
+// ดักจับการคลิกที่ notification
 self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification click', event.notification.data);
+  console.log('🔘 Service Worker: Notification clicked');
   
   event.notification.close();
   
-  const urlToOpen = '/';
+  if (event.action === 'close') {
+    return;
+  }
   
   event.waitUntil(
-    clients.matchAll({
-      type: 'window',
-      includeUncontrolled: true
-    }).then((clientList) => {
-      // หาแอปที่เปิดอยู่
+    clients.matchAll({ 
+      type: 'window', 
+      includeUncontrolled: true 
+    })
+    .then((clientList) => {
+      // เปิดหน้าต่างที่มีอยู่หรือเปิดใหม่
       for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
+        if (client.url === '/' && 'focus' in client) {
           return client.focus();
         }
       }
       
-      // ถ้าไม่มี ให้เปิดใหม่
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
+        return clients.openWindow(event.notification.data.url || '/');
       }
     })
   );
 });
 
-// Background Sync
+// ============================================
+// ส่วนจัดการ Background Sync
+// ============================================
+
+// Background Sync สำหรับการ sync ข้อมูล
 self.addEventListener('sync', (event) => {
-  console.log('Service Worker: Background sync', event.tag);
+  console.log('🔄 Service Worker: Background sync', event.tag);
   
-  if (event.tag === 'sync-data') {
-    event.waitUntil(syncData());
+  if (event.tag === 'sync-alarms') {
+    event.waitUntil(syncAlarms());
+  } else if (event.tag === 'sync-notifications') {
+    event.waitUntil(syncNotifications());
   }
 });
 
-async function syncData() {
+// ฟังก์ชัน sync alarms
+async function syncAlarms() {
   try {
-    // พยายาม sync ข้อมูลเมื่อออนไลน์
-    const cache = await caches.open(CACHE_NAME);
-    const timestamp = Date.now();
+    // ดึงข้อมูล alarms จาก IndexedDB หรือ cache
+    const alarms = await getAlarmsFromDB();
     
-    // บันทึกเวลาล่าสุด
-    cache.put('/last-sync', new Response(timestamp.toString()));
+    // ส่งไปยังเซิร์ฟเวอร์ (ในที่นี้เราใช้ localStorage แบบง่ายๆ)
+    console.log('🔄 Syncing alarms:', alarms.length);
     
-    console.log('Service Worker: Data synced');
+    // ตัวอย่าง: ส่งข้อมูลไปยังเซิร์ฟเวอร์จริง
+    // const response = await fetch('https://your-api.com/sync', {
+    //   method: 'POST',
+    //   body: JSON.stringify({ alarms })
+    // });
+    
+    return Promise.resolve();
   } catch (error) {
-    console.error('Service Worker: Sync error', error);
+    console.error('❌ Sync alarms failed:', error);
+    return Promise.reject(error);
   }
 }
 
-// Periodic Background Sync
+// ฟังก์ชัน sync notifications
+async function syncNotifications() {
+  console.log('🔄 Syncing notifications');
+  return Promise.resolve();
+}
+
+// ดึงข้อมูล alarms จาก IndexedDB
+async function getAlarmsFromDB() {
+  return new Promise((resolve) => {
+    const request = indexedDB.open('NotificationDB', 1);
+    
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction(['alarms'], 'readonly');
+      const store = transaction.objectStore('alarms');
+      const getAllRequest = store.getAll();
+      
+      getAllRequest.onsuccess = () => {
+        resolve(getAllRequest.result || []);
+      };
+      
+      getAllRequest.onerror = () => {
+        resolve([]);
+      };
+    };
+    
+    request.onerror = () => {
+      resolve([]);
+    };
+  });
+}
+
+// ============================================
+// ส่วนจัดการ Periodic Sync (สำหรับ Chrome)
+// ============================================
+
+// Periodic Sync - อัปเดตข้อมูลเป็นระยะ
 self.addEventListener('periodicsync', (event) => {
-  if (event.tag === 'check-alarms') {
-    console.log('Service Worker: Periodic sync for alarms');
-    event.waitUntil(checkBackgroundAlarms());
+  if (event.tag === 'update-feeds') {
+    console.log('⏰ Periodic sync triggered');
+    event.waitUntil(updateFeeds());
   }
 });
+
+async function updateFeeds() {
+  console.log('⏰ Updating feeds in background');
+  // ดึงข้อมูลใหม่จากเซิร์ฟเวอร์
+  return Promise.resolve();
+}
+
+// ============================================
+// ฟังก์ชันตรวจสอบ alarms ในเบื้องหลัง
+// ============================================
+
+// ตรวจสอบ alarms ทุก 60 วินาที
+setInterval(() => {
+  checkBackgroundAlarms();
+}, 60000);
 
 async function checkBackgroundAlarms() {
-  try {
-    // ดึงข้อมูล alarms จาก cache
-    const cache = await caches.open(CACHE_NAME);
-    const response = await cache.match('/alarms-data');
-    
-    if (response) {
-      const alarms = await response.json();
-      const now = Date.now();
-      
-      // ตรวจสอบ alarms ที่ถึงเวลา
-      alarms.forEach(alarm => {
-        if (!alarm.triggered && new Date(alarm.datetime).getTime() <= now) {
-          // แจ้งเตือนใน background
-          self.registration.showNotification('แจ้งเตือน: ' + alarm.title, {
-            body: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว',
-            icon: '/icons/icon-192x192.png',
-            badge: '/icons/icon-96x96.png',
-            requireInteraction: true,
-            vibrate: [500, 200, 500],
-            tag: 'alarm-' + alarm.id
-          });
-        }
-      });
+  console.log('⏰ Background: Checking alarms');
+  
+  const alarms = await getAlarmsFromDB();
+  const now = new Date();
+  
+  alarms.forEach(alarm => {
+    if (!alarm.triggered && new Date(alarm.datetime) <= now) {
+      triggerBackgroundAlarm(alarm);
     }
-  } catch (error) {
-    console.error('Service Worker: Check alarms error', error);
-  }
+  });
 }
 
-console.log('Service Worker: Loaded successfully');
+function triggerBackgroundAlarm(alarm) {
+  console.log('🔔 Background: Triggering alarm', alarm.title);
+  
+  // สร้าง notification
+  self.registration.showNotification('⏰ ' + alarm.title, {
+    body: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-96x96.png',
+    vibrate: [500, 200, 500],
+    requireInteraction: true,
+    data: {
+      url: '/',
+      type: 'alarm',
+      alarmId: alarm.id,
+      timestamp: Date.now()
+    }
+  });
+  
+  // อัปเดตสถานะ alarm
+  updateAlarmStatus(alarm.id);
+}
+
+async function updateAlarmStatus(alarmId) {
+  // อัปเดตใน IndexedDB
+  return new Promise((resolve) => {
+    const request = indexedDB.open('NotificationDB', 1);
+    
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const transaction = db.transaction(['alarms'], 'readwrite');
+      const store = transaction.objectStore('alarms');
+      
+      const getRequest = store.get(alarmId);
+      getRequest.onsuccess = () => {
+        const alarm = getRequest.result;
+        if (alarm) {
+          alarm.triggered = true;
+          alarm.triggered_at = new Date().toISOString();
+          store.put(alarm);
+        }
+        resolve();
+      };
+    };
+  });
+}
+
+// ============================================
+// เริ่มต้น IndexedDB
+// ============================================
+
+function initIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('NotificationDB', 1);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      
+      // สร้าง object store สำหรับ alarms
+      if (!db.objectStoreNames.contains('alarms')) {
+        const alarmStore = db.createObjectStore('alarms', { keyPath: 'id' });
+        alarmStore.createIndex('datetime', 'datetime', { unique: false });
+        alarmStore.createIndex('triggered', 'triggered', { unique: false });
+      }
+      
+      // สร้าง object store สำหรับ notifications
+      if (!db.objectStoreNames.contains('notifications')) {
+        const notificationStore = db.createObjectStore('notifications', { keyPath: 'id' });
+        notificationStore.createIndex('time', 'time', { unique: false });
+      }
+    };
+    
+    request.onsuccess = (event) => {
+      console.log('✅ IndexedDB initialized');
+      resolve(event.target.result);
+    };
+    
+    request.onerror = (event) => {
+      console.error('❌ IndexedDB failed:', event.target.error);
+      reject(event.target.error);
+    };
+  });
+}
+
+// เริ่มต้น IndexedDB เมื่อ Service Worker ถูกเปิดใช้งาน
+initIndexedDB();
