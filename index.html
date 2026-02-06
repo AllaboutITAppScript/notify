@@ -8,8 +8,8 @@
     <meta name="description" content="ระบบแจ้งเตือนรวมศูนย์แบบข้ามเครื่อง ทำงานได้แม้ปิดแอปและล็อคหน้าจอ">
     
     <!-- PWA Configuration -->
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     
     <!-- CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -277,6 +277,46 @@
         .filter-active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
             color: white !important;
+        }
+        
+        /* ปรับปรุงสำหรับหน้าจอขนาดเล็ก */
+        @media (max-width: 640px) {
+            .grid-cols-4 {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .text-3xl {
+                font-size: 1.875rem;
+            }
+            
+            .text-2xl {
+                font-size: 1.5rem;
+            }
+        }
+        
+        /* เพิ่มสไตล์สำหรับการแจ้งเตือน */
+        .notification-item {
+            border-left-width: 4px;
+            transition: all 0.3s;
+        }
+        
+        .notification-item:hover {
+            background-color: rgba(75, 85, 99, 0.5);
+        }
+        
+        /* สไตล์สำหรับปุ่มกด */
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
@@ -801,7 +841,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-400">เวอร์ชัน</span>
-                                <span class="text-sm">1.1.0</span>
+                                <span class="text-sm">1.2.0</span>
                             </div>
                         </div>
                     </div>
@@ -860,7 +900,7 @@
         // ตัวแปรและค่าคงที่
         // ============================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
-        const VERSION = "1.1.0";
+        const VERSION = "1.2.0";
         
         let alarms = [];
         let notifications = [];
@@ -885,6 +925,7 @@
         let isOnline = true;
         let isServiceWorkerReady = false;
         let currentFilter = 'all';
+        let isBackgroundMode = false;
         
         // ============================================
         // เริ่มต้นแอปพลิเคชัน
@@ -1100,8 +1141,10 @@
         async function initServiceWorker() {
             if ('serviceWorker' in navigator) {
                 try {
-                    // ลงทะเบียน Service Worker
-                    serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
+                    // ลงทะเบียน Service Worker พร้อม scope ที่ถูกต้อง
+                    serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js', {
+                        scope: '/'
+                    });
                     console.log('✅ Service Worker ถูกติดตั้ง:', serviceWorkerRegistration);
                     
                     // รอจนกว่า Service Worker จะ active
@@ -1170,6 +1213,10 @@
                         console.log('✅ Service Worker พร้อมใช้งาน');
                         isServiceWorkerReady = true;
                         break;
+                        
+                    case 'BACKGROUND_SYNC':
+                        handleBackgroundSync();
+                        break;
                 }
             });
             
@@ -1179,7 +1226,8 @@
                     type: 'APP_READY',
                     timestamp: Date.now(),
                     userId: userId,
-                    deviceId: deviceId
+                    deviceId: deviceId,
+                    alarms: alarms.filter(a => !a.triggered)
                 });
             }
         }
@@ -1188,16 +1236,15 @@
             if (!serviceWorkerRegistration?.active) return;
             
             // ส่ง alarms ที่ยังไม่แจ้งเตือนไปยัง Service Worker
-            alarms.forEach(alarm => {
-                if (!alarm.triggered) {
-                    serviceWorkerRegistration.active.postMessage({
-                        type: 'SCHEDULE_ALARM',
-                        alarm: alarm
-                    });
-                }
-            });
+            const activeAlarms = alarms.filter(alarm => !alarm.triggered);
             
-            console.log('✅ ส่ง alarms ไปยัง Service Worker แล้ว');
+            if (activeAlarms.length > 0) {
+                serviceWorkerRegistration.active.postMessage({
+                    type: 'SYNC_ALARMS',
+                    alarms: activeAlarms
+                });
+                console.log(`✅ ส่ง ${activeAlarms.length} alarms ไปยัง Service Worker แล้ว`);
+            }
         }
         
         function showServiceWorkerUpdate() {
@@ -1218,6 +1265,12 @@
                     }
                 }
             });
+        }
+        
+        function handleBackgroundSync() {
+            console.log('🔄 Background Sync triggered');
+            syncDataWithServer();
+            checkForNewBroadcasts();
         }
         
         // ============================================
@@ -1920,7 +1973,6 @@
                     user_id: userId,
                     device_id: deviceId,
                     last_sync: localStorage.getItem('lastAlarmSync') || 0,
-                    // เพิ่มพารามิเตอร์สำหรับดึงแจ้งเตือนสาธารณะด้วย
                     include_public: 'true'
                 };
                 
@@ -1941,7 +1993,8 @@
                     const result = await response.json();
                     
                     if (result.status === 'success' && result.alarms) {
-                        // รวม alarms ใหม่
+                        // รวม alarms ใหม่ (เฉพาะ public alarms)
+                        let newAlarmsAdded = 0;
                         result.alarms.forEach(serverAlarm => {
                             const exists = alarms.find(a => a.id === serverAlarm.id);
                             if (!exists) {
@@ -1949,8 +2002,23 @@
                                 if (serverAlarm.type === 'public' || serverAlarm.user_id === userId) {
                                     alarms.push({
                                         ...serverAlarm,
-                                        synced: true
+                                        synced: true,
+                                        // ตรวจสอบว่าเป็น alarm จากคนอื่นที่เราควรได้รับ
+                                        isExternal: serverAlarm.user_id !== userId
                                     });
+                                    newAlarmsAdded++;
+                                    
+                                    // ถ้าเป็น alarm สาธารณะที่ยังไม่แจ้งเตือน ส่งไปยัง Service Worker
+                                    if (serverAlarm.type === 'public' && !serverAlarm.triggered && serviceWorkerRegistration?.active) {
+                                        serviceWorkerRegistration.active.postMessage({
+                                            type: 'SCHEDULE_ALARM',
+                                            alarm: {
+                                                ...serverAlarm,
+                                                synced: true,
+                                                isExternal: serverAlarm.user_id !== userId
+                                            }
+                                        });
+                                    }
                                 }
                             }
                         });
@@ -1958,8 +2026,16 @@
                         localStorage.setItem('alarms', JSON.stringify(alarms));
                         localStorage.setItem('lastAlarmSync', Date.now());
                         
-                        updateAlarmsList();
-                        updateCounts();
+                        if (newAlarmsAdded > 0) {
+                            console.log(`✅ เพิ่ม ${newAlarmsAdded} alarms ใหม่จากการ sync`);
+                            updateAlarmsList();
+                            updateCounts();
+                            
+                            // แจ้งเตือนผู้ใช้ถ้ามี alarms สาธารณะใหม่
+                            if (newAlarmsAdded > 0) {
+                                showNotification('มีแจ้งเตือนใหม่', `มี ${newAlarmsAdded} การแจ้งเตือนสาธารณะใหม่ในระบบ`, 'sync');
+                            }
+                        }
                     }
                 }
             } catch (error) {
@@ -2162,8 +2238,8 @@
             // สำหรับ Desktop และ Mobile (เมื่อเปิดแอป)
             const options = {
                 body: message,
-                icon: 'icons/icon-192x192.png',
-                badge: 'icons/icon-96x96.png',
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-96x96.png',
                 tag: type + '_' + Date.now(),
                 requireInteraction: type.includes('urgent') || type.includes('alarm'),
                 silent: !document.getElementById('soundEnabled').checked,
@@ -2179,6 +2255,11 @@
             if (type.includes('urgent') || type.includes('emergency')) {
                 options.requireInteraction = true;
                 options.vibrate = [1000, 500, 1000, 500, 1000];
+            }
+            
+            // สำหรับการแจ้งเตือนขณะล็อคหน้าจอ
+            if ('showTrigger' in Notification.prototype) {
+                options.showTrigger = true;
             }
             
             const notification = new Notification(title, options);
@@ -2480,6 +2561,9 @@
                 const priorityText = alarm.priority === 'low' ? 'ต่ำ' : alarm.priority === 'medium' ? 'กลาง' : 'สูง';
                 const priorityColor = alarm.priority === 'low' ? 'blue' : alarm.priority === 'medium' ? 'yellow' : 'red';
                 
+                // ตรวจสอบว่าเป็น alarm จากคนอื่นหรือไม่
+                const isExternal = alarm.userId !== userId;
+                
                 const alarmElement = document.createElement('div');
                 alarmElement.className = `bg-gray-800 rounded-xl p-4 hover:bg-gray-750 transition-colors border-l-4 ${priorityClass}`;
                 alarmElement.innerHTML = `
@@ -2491,7 +2575,7 @@
                                 </div>
                                 <div class="flex-1">
                                     <div class="flex justify-between items-start">
-                                        <h3 class="font-bold ${isTriggered ? 'text-gray-400' : 'text-white'}">${alarm.title}</h3>
+                                        <h3 class="font-bold ${isTriggered ? 'text-gray-400' : 'text-white'}">${alarm.title} ${isExternal ? '<span class="text-xs text-yellow-400">(จากภายนอก)</span>' : ''}</h3>
                                         <div class="flex space-x-1">
                                             <span class="text-xs px-2 py-1 ${typeClass} text-white rounded">
                                                 <i class="fas ${typeIcon} mr-1"></i>${typeText}
@@ -2530,7 +2614,7 @@
                                     <i class="fas fa-bell mr-1"></i>ทดสอบ
                                 </button>
                             ` : ''}
-                            ${alarm.userId === userId ? `
+                            ${!isExternal ? `
                                 <button onclick="deleteAlarm('${alarm.id}')" class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-white transition-colors whitespace-nowrap">
                                     <i class="fas fa-trash mr-1"></i>ลบ
                                 </button>
@@ -2601,7 +2685,7 @@
             
             // ตรวจสอบสิทธิ์ในการลบ (ลบได้เฉพาะของตัวเอง)
             if (alarm.userId !== userId) {
-                showAlert('error', 'คุณไม่มีสิทธิ์ลบแจ้งเตือนนี้');
+                showAlert('error', 'คุณไม่มีสิทธิ์ลบแจ้งเตือนนี้ (เป็นของคนอื่น)');
                 return;
             }
             
@@ -2629,6 +2713,14 @@
             // ลบจาก localStorage
             alarms = alarms.filter(a => a.id !== alarmId);
             localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            // บอก Service Worker เกี่ยวกับการลบ
+            if (serviceWorkerRegistration?.active) {
+                serviceWorkerRegistration.active.postMessage({
+                    type: 'CANCEL_ALARM',
+                    alarmId: alarmId
+                });
+            }
             
             // อัปเดต UI
             updateAlarmsList();
