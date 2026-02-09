@@ -1,8 +1,10 @@
 // sw.js - Service Worker สำหรับระบบแจ้งเตือน
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 const CACHE_NAME = 'notification-system-v' + VERSION;
 
-// สร้างฐานข้อมูลสำหรับแจ้งเตือน
+// ============================================
+// IndexedDB สำหรับเก็บ alarms
+// ============================================
 const openDatabase = () => {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open('NotificationAlarmsDB', 1);
@@ -15,12 +17,7 @@ const openDatabase = () => {
                 const alarmStore = db.createObjectStore('alarms', { keyPath: 'id' });
                 alarmStore.createIndex('datetime', 'datetime', { unique: false });
                 alarmStore.createIndex('triggered', 'triggered', { unique: false });
-            }
-            
-            // สร้าง store สำหรับ notifications
-            if (!db.objectStoreNames.contains('notifications')) {
-                const notificationStore = db.createObjectStore('notifications', { keyPath: 'id' });
-                notificationStore.createIndex('time', 'time', { unique: false });
+                alarmStore.createIndex('userId', 'userId', { unique: false });
             }
         };
         
@@ -41,11 +38,23 @@ const saveAlarmsToDB = async (alarms) => {
         const transaction = db.transaction(['alarms'], 'readwrite');
         const store = transaction.objectStore('alarms');
         
-        // ลบ alarms เก่าทั้งหมด
-        await new Promise((resolve) => {
-            const clearRequest = store.clear();
-            clearRequest.onsuccess = () => resolve();
+        // ลบ alarms เก่าของผู้ใช้นี้
+        const allAlarms = await new Promise((resolve, reject) => {
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = (e) => reject(e);
         });
+        
+        // ลบเฉพาะ alarms ของผู้ใช้นี้
+        for (const alarm of allAlarms) {
+            if (alarm.userId === alarms[0]?.userId) {
+                await new Promise((resolve, reject) => {
+                    const deleteRequest = store.delete(alarm.id);
+                    deleteRequest.onsuccess = () => resolve();
+                    deleteRequest.onerror = (e) => reject(e);
+                });
+            }
+        }
         
         // เพิ่ม alarms ใหม่ทั้งหมด
         for (const alarm of alarms) {
@@ -82,11 +91,11 @@ const getAlarmsFromDB = async () => {
     }
 };
 
-// แสดงการแจ้งเตือนจาก Service Worker
+// แสดงการแจ้งเตือน
 const showNotificationFromSW = (title, options) => {
     const notificationOptions = {
         body: options.body || 'การแจ้งเตือน',
-        icon: options.icon || '/icon-192x192.png',
+        icon: '/icon-192x192.png',
         badge: '/icon-72x72.png',
         tag: options.tag || 'notification',
         data: options.data || {},
@@ -102,11 +111,16 @@ const showNotificationFromSW = (title, options) => {
 // ตรวจสอบและแจ้งเตือน alarms ที่ถึงเวลา
 const checkAndTriggerAlarms = async () => {
     try {
+        console.log('🔄 Service Worker: กำลังตรวจสอบ alarms...');
         const alarms = await getAlarmsFromDB();
         const now = new Date();
         
+        console.log(`🔍 พบ alarms ${alarms.length} รายการ`);
+        
         for (const alarm of alarms) {
             if (!alarm.triggered && new Date(alarm.datetime) <= now) {
+                console.log(`🔔 แจ้งเตือนถึงเวลา: ${alarm.title}`);
+                
                 // อัปเดตสถานะ alarm
                 alarm.triggered = true;
                 alarm.triggeredAt = new Date().toISOString();
@@ -127,6 +141,8 @@ const checkAndTriggerAlarms = async () => {
                         type: 'alarm',
                         alarmId: alarm.id,
                         alarmType: alarm.type,
+                        userId: alarm.userId,
+                        userName: alarm.userName,
                         url: self.location.origin
                     },
                     actions: [
@@ -141,24 +157,36 @@ const checkAndTriggerAlarms = async () => {
                     ]
                 });
                 
-                console.log(`🔔 Service Worker แจ้งเตือน: ${alarm.title}`);
+                console.log(`✅ แสดงการแจ้งเตือน: ${alarm.title}`);
                 
-                // ส่งข้อความกลับไปยังหน้าเว็บ
+                // ส่งข้อความกลับไปยังหน้าเว็บ (ถ้าเปิดอยู่)
                 const clients = await self.clients.matchAll();
                 clients.forEach(client => {
                     client.postMessage({
                         type: 'ALARM_TRIGGERED',
-                        alarm: alarm
+                        alarm: alarm,
+                        timestamp: Date.now()
                     });
                 });
+                
+                // อัปเดตสถานะใน Google Sheets ถ้าเป็น public alarm
+                if (alarm.type === 'public' && alarm.synced) {
+                    try {
+                        await updateAlarmInGoogleSheets(alarm.id);
+                    } catch (error) {
+                        console.error('❌ ไม่สามารถอัปเดตสถานะใน Google Sheets:', error);
+                    }
+                }
             }
         }
+        
+        console.log('✅ Service Worker: ตรวจสอบ alarms เสร็จสิ้น');
     } catch (error) {
         console.error('❌ เกิดข้อผิดพลาดในการตรวจสอบ alarms:', error);
     }
 };
 
-// บันทึก alarm ใหม่
+// บันทึก alarm เดียว
 const saveAlarm = async (alarm) => {
     try {
         const db = await openDatabase();
@@ -178,6 +206,16 @@ const saveAlarm = async (alarm) => {
     }
 };
 
+// อัปเดตสถานะ alarm ใน Google Sheets
+const updateAlarmInGoogleSheets = async (alarmId) => {
+    try {
+        const response = await fetch(`https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec?action=update_alarm&alarm_id=${alarmId}&status=triggered&timestamp=${Date.now()}`);
+        return response.ok;
+    } catch (error) {
+        throw error;
+    }
+};
+
 // ============================================
 // Service Worker Events
 // ============================================
@@ -190,8 +228,13 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('✅ Cache ถูกสร้างแล้ว');
-                return self.skipWaiting();
+                return cache.addAll([
+                    '/',
+                    '/index.html',
+                    '/manifest.json'
+                ]);
             })
+            .then(() => self.skipWaiting())
     );
 });
 
@@ -222,9 +265,21 @@ self.addEventListener('activate', (event) => {
                 clients.forEach(client => {
                     client.postMessage({
                         type: 'SERVICE_WORKER_READY',
-                        message: 'Service Worker พร้อมใช้งานแล้ว'
+                        message: 'Service Worker พร้อมใช้งานแล้ว',
+                        timestamp: Date.now()
                     });
                 });
+            })(),
+            
+            // เริ่มต้น Background Sync
+            (async () => {
+                try {
+                    const registration = await self.registration;
+                    await registration.sync.register('check-alarms');
+                    console.log('✅ Background Sync ลงทะเบียนสำเร็จ');
+                } catch (error) {
+                    console.log('⚠️ Background Sync ไม่รองรับ:', error);
+                }
             })()
         ])
     );
@@ -239,7 +294,12 @@ self.addEventListener('message', (event) => {
     switch (type) {
         case 'SYNC_ALARMS':
             saveAlarmsToDB(data.alarms).then(() => {
-                event.ports[0].postMessage({ success: true });
+                if (event.ports && event.ports[0]) {
+                    event.ports[0].postMessage({ success: true });
+                }
+                console.log(`✅ บันทึก alarms ของ ${data.userId} เรียบร้อย`);
+            }).catch(error => {
+                console.error('❌ เกิดข้อผิดพลาดในการบันทึก alarms:', error);
             });
             break;
             
@@ -250,7 +310,6 @@ self.addEventListener('message', (event) => {
             break;
             
         case 'CANCEL_ALARM':
-            // ลบ alarm จาก IndexedDB
             (async () => {
                 try {
                     const db = await openDatabase();
@@ -280,6 +339,7 @@ self.addEventListener('message', (event) => {
                 data: {
                     type: 'broadcast',
                     broadcastId: data.broadcast.id,
+                    sender: data.broadcast.senderName,
                     url: self.location.origin
                 }
             });
@@ -300,6 +360,11 @@ self.addEventListener('message', (event) => {
                 }
             });
             break;
+            
+        case 'CHECK_ALARMS':
+            // ตรวจสอบ alarms ทันที
+            checkAndTriggerAlarms();
+            break;
     }
 });
 
@@ -310,8 +375,8 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     
     const notificationData = event.notification.data || {};
+    const action = event.action;
     
-    // เปิดหน้าเว็บเมื่อคลิกการแจ้งเตือน
     event.waitUntil(
         self.clients.matchAll({
             type: 'window',
@@ -325,7 +390,9 @@ self.addEventListener('notificationclick', (event) => {
                     // ส่งข้อมูลการคลิกกลับไปยังหน้าเว็บ
                     client.postMessage({
                         type: 'NOTIFICATION_CLICKED',
-                        data: notificationData
+                        data: notificationData,
+                        action: action,
+                        timestamp: Date.now()
                     });
                     
                     return;
@@ -338,11 +405,6 @@ self.addEventListener('notificationclick', (event) => {
             }
         })
     );
-});
-
-// จัดการกับการกดปุ่มในการแจ้งเตือน
-self.addEventListener('notificationclose', (event) => {
-    console.log('❌ Notification closed:', event.notification.tag);
 });
 
 // Background Sync สำหรับตรวจสอบ alarms
@@ -369,7 +431,59 @@ self.addEventListener('periodicsync', (event) => {
             })
         );
     }
+    
+    if (event.tag === 'sync-public-alarms') {
+        console.log('🔄 Periodic Sync: กำลังซิงค์แจ้งเตือนสาธารณะจากเซิร์ฟเวอร์...');
+        
+        event.waitUntil(
+            fetchPublicAlarmsFromServer()
+        );
+    }
 });
 
+// ดึงแจ้งเตือนสาธารณะจากเซิร์ฟเวอร์
+const fetchPublicAlarmsFromServer = async () => {
+    try {
+        const response = await fetch(`https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec?action=get_public_alarms&timestamp=${Date.now()}`);
+        const result = await response.json();
+        
+        if (result.status === 'success' && result.alarms) {
+            console.log(`📡 ดึงแจ้งเตือนสาธารณะ ${result.alarms.length} รายการจากเซิร์ฟเวอร์`);
+            
+            // บันทึก alarms สาธารณะลงใน IndexedDB
+            const publicAlarms = result.alarms.map(alarm => ({
+                ...alarm,
+                type: 'public',
+                isExternal: true
+            }));
+            
+            await saveAlarmsToDB(publicAlarms);
+            
+            // แจ้งเตือนไปยัง clients ที่เปิดอยู่
+            const clients = await self.clients.matchAll();
+            clients.forEach(client => {
+                client.postMessage({
+                    type: 'NEW_PUBLIC_ALARMS',
+                    alarms: publicAlarms,
+                    count: publicAlarms.length,
+                    timestamp: Date.now()
+                });
+            });
+        }
+    } catch (error) {
+        console.error('❌ เกิดข้อผิดพลาดในการดึงแจ้งเตือนสาธารณะ:', error);
+    }
+};
+
+// ตั้งค่า interval สำหรับตรวจสอบ alarms ทุก 1 นาที
+setInterval(() => {
+    checkAndTriggerAlarms();
+}, 60000); // ทุก 1 นาที
+
 // ตอนเริ่มต้น Service Worker
-console.log('🎉 Service Worker โหลดสำเร็จแล้ว!');
+console.log('🎉 Service Worker โหลดสำเร็จแล้ว! เวอร์ชัน', VERSION);
+
+// ตรวจสอบ alarms ทันทีเมื่อโหลด
+setTimeout(() => {
+    checkAndTriggerAlarms();
+}, 5000);
