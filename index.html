@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>">
     
     <!-- PWA Configuration -->
-    <link rel="manifest" id="appManifest">
+    <link rel="manifest" href="manifest.json">
     
     <!-- CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -174,6 +174,23 @@
             display: none;
         }
         
+        /* Badge for app icon */
+        #appIconBadge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #FF3B30;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
         /* Alarm ringing animation */
         @keyframes ring {
             0% { transform: rotate(0deg); }
@@ -230,7 +247,7 @@
             color: white !important;
         }
         
-        /* Public alarm indicator */
+        /* NEW: Public alarm indicator */
         .public-alarm-indicator {
             background: linear-gradient(135deg, #10b981 0%, #047857 100%);
             color: white;
@@ -243,7 +260,7 @@
             gap: 4px;
         }
         
-        /* Real-time sync indicator */
+        /* NEW: Real-time sync indicator */
         .sync-indicator {
             position: fixed;
             bottom: 80px;
@@ -258,13 +275,6 @@
             gap: 6px;
             z-index: 50;
             animation: slideInRight 0.3s ease-out;
-        }
-        
-        /* Fix for small screens */
-        @media (max-width: 640px) {
-            .grid-cols-4 {
-                grid-template-columns: repeat(4, minmax(0, 1fr));
-            }
         }
     </style>
 </head>
@@ -329,6 +339,35 @@
     <div id="syncIndicator" class="sync-indicator hidden">
         <i class="fas fa-sync-alt fa-spin"></i>
         <span>กำลังซิงค์...</span>
+    </div>
+    
+    <!-- Push Notification (In-app) -->
+    <div id="pushNotification" class="fixed top-4 right-4 bg-gray-800 rounded-xl shadow-2xl border-l-4 border-blue-500 z-50 hidden max-w-sm slide-in">
+        <div class="p-4">
+            <div class="flex justify-between items-start">
+                <div class="flex items-start">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
+                        🔔
+                    </div>
+                    <div>
+                        <h3 id="pushTitle" class="font-bold text-white">การแจ้งเตือน</h3>
+                        <p id="pushMessage" class="text-gray-300 text-sm mt-1">ข้อความแจ้งเตือน</p>
+                        <p id="pushTime" class="text-xs text-gray-500 mt-2">ตอนนี้</p>
+                    </div>
+                </div>
+                <button onclick="closePushNotification()" class="text-gray-400 hover:text-white ml-4">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mt-4 flex space-x-2">
+                <button onclick="viewNotificationDetails()" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm text-white transition-colors">
+                    ดูรายละเอียด
+                </button>
+                <button onclick="closePushNotification()" class="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white transition-colors">
+                    ปิด
+                </button>
+            </div>
+        </div>
     </div>
     
     <!-- Main App -->
@@ -559,7 +598,7 @@
                     </div>
                     
                     <div class="flex items-center">
-                        <input type="checkbox" id="alarmVibrate" class="w-4 h-4 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500" checked>
+                        <input type="checkbox" id="alarmVibrate" class="w-4 h-4 text-blue-600 bg-gray-900 border-gray-700 rounded focus:ring-blue-500">
                         <label for="alarmVibrate" class="ml-2 text-sm text-gray-300">สั่นเมื่อแจ้งเตือน</label>
                     </div>
                     
@@ -640,6 +679,155 @@
             </div>
         </div>
         
+        <!-- Notifications Panel -->
+        <div id="notificationsPanel" class="notification-panel">
+            <div class="p-4 border-b border-gray-800 bg-gray-900">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">การแจ้งเตือน</h2>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="markAllAsRead()" class="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 bg-blue-900/20 rounded-lg transition-colors">
+                            <i class="fas fa-check-double mr-1"></i>อ่านทั้งหมด
+                        </button>
+                        <button onclick="closeNotificationPanel()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-sm mt-2" id="notificationsCount">0 การแจ้งเตือน</p>
+            </div>
+            <div id="notificationsList" class="flex-1 overflow-y-auto p-4">
+                <!-- Notifications will be loaded here -->
+                <div class="text-center py-10">
+                    <i class="fas fa-bell-slash text-4xl text-gray-500 mb-3"></i>
+                    <p class="text-gray-400">ไม่มีการแจ้งเตือน</p>
+                    <p class="text-sm text-gray-500 mt-2">เมื่อมีแจ้งเตือนใหม่จะปรากฏที่นี่</p>
+                </div>
+            </div>
+            <div class="p-4 border-t border-gray-800 bg-gray-900">
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="clearAllNotifications()" class="bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-trash mr-2"></i>ล้างทั้งหมด
+                    </button>
+                    <button onclick="exportNotifications()" class="bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-download mr-2"></i>บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="notification-panel">
+            <div class="p-4 border-b border-gray-800 bg-gray-900">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">ตั้งค่า</h2>
+                    <button onclick="closeSettingsPanel()" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="font-bold text-lg mb-3">การแจ้งเตือน</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">เสียงแจ้งเตือน</p>
+                                    <p class="text-sm text-gray-400">เปิดเสียงเมื่อมีแจ้งเตือน</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="soundEnabled" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">สั่นมือถือ</p>
+                                    <p class="text-sm text-gray-400">สั่นเมื่อมีแจ้งเตือน</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="vibrateEnabled" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">แจ้งเตือนด่วน</p>
+                                    <p class="text-sm text-gray-400">แสดงทันทีแม้ล็อคหน้าจอ</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="urgentNotifications" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-bold text-lg mb-3">การทำงานเบื้องหลัง</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">ตรวจสอบอัตโนมัติ</p>
+                                    <p class="text-sm text-gray-400">ตรวจสอบแจ้งเตือนแม้ปิดแอป</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="backgroundCheck" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium">Wake Lock</p>
+                                    <p class="text-sm text-gray-400">ป้องกันหน้าจอดับ</p>
+                                </div>
+                                <button onclick="toggleWakeLock()" id="wakeLockBtn" class="px-3 py-1 bg-green-600 text-white text-sm rounded-lg">
+                                    เปิด
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-bold text-lg mb-3">ข้อมูล</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">รหัสผู้ใช้</span>
+                                <span id="settingsUserId" class="font-mono text-sm">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">รหัสอุปกรณ์</span>
+                                <span id="settingsDeviceId" class="font-mono text-sm">-</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Service Worker</span>
+                                <span id="settingsSWStatus" class="text-green-400">ทำงาน</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">เวอร์ชัน</span>
+                                <span class="text-sm">1.4.0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-bold text-lg mb-3">จัดการข้อมูล</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportAllData()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors">
+                                <i class="fas fa-download mr-2"></i>สำรองข้อมูล
+                            </button>
+                            <button onclick="importData()" class="bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors">
+                                <i class="fas fa-upload mr-2"></i>นำเข้าข้อมูล
+                            </button>
+                        </div>
+                        <button onclick="resetApp()" class="w-full mt-3 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-trash-alt mr-2"></i>รีเซ็ตแอป
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Bottom Navigation -->
         <div class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 z-40">
             <div class="flex justify-around p-3">
@@ -676,7 +864,7 @@
         // ตัวแปรและค่าคงที่
         // ============================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
-        const VERSION = "2.0.0";
+        const VERSION = "1.4.0";
         
         let alarms = [];
         let notifications = [];
@@ -707,9 +895,6 @@
         // ============================================
         async function initApp() {
             console.log('🚀 กำลังเริ่มต้นระบบแจ้งเตือน... เวอร์ชัน', VERSION);
-            
-            // ตั้งค่า manifest สำหรับ PWA
-            setupManifest();
             
             // ตั้งค่าโหมดสี
             setupTheme();
@@ -765,34 +950,6 @@
             }, 2500);
         }
         
-        function setupManifest() {
-            const manifest = {
-                "name": "ระบบแจ้งเตือนรวมศูนย์",
-                "short_name": "Notification System",
-                "description": "ระบบแจ้งเตือนรวมศูนย์แบบข้ามเครื่อง ทำงานได้แม้ปิดแอปและล็อคหน้าจอ",
-                "start_url": "/",
-                "display": "standalone",
-                "background_color": "#1a1a2e",
-                "theme_color": "#1a1a2e",
-                "icons": [
-                    {
-                        "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>",
-                        "sizes": "192x192",
-                        "type": "image/svg+xml"
-                    },
-                    {
-                        "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>",
-                        "sizes": "512x512",
-                        "type": "image/svg+xml"
-                    }
-                ]
-            };
-            
-            const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-            const manifestURL = URL.createObjectURL(blob);
-            document.getElementById('appManifest').href = manifestURL;
-        }
-        
         function updateLoadingText(text, progress) {
             document.getElementById('loadingText').textContent = text;
             document.getElementById('loadingProgress').style.width = progress + '%';
@@ -823,6 +980,8 @@
             }
             
             document.getElementById('userName').textContent = userName;
+            document.getElementById('settingsUserId').textContent = userId.substring(0, 8) + '...';
+            document.getElementById('settingsDeviceId').textContent = deviceId.substring(0, 8) + '...';
             
             // ตรวจสอบประเภทอุปกรณ์
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -843,6 +1002,7 @@
             
             // อัปเดต UI
             updateAlarmsList();
+            updateNotificationsList();
             updateCounts();
             updateBadges();
             updateRecentBroadcasts();
@@ -869,6 +1029,27 @@
             document.getElementById('vibrateEnabled').checked = localStorage.getItem('vibrateEnabled') !== 'false';
             document.getElementById('urgentNotifications').checked = localStorage.getItem('urgentNotifications') !== 'false';
             document.getElementById('backgroundCheck').checked = localStorage.getItem('backgroundCheck') !== 'false';
+            
+            // อัปเดตการตั้งค่า
+            document.getElementById('soundEnabled').addEventListener('change', saveSettings);
+            document.getElementById('vibrateEnabled').addEventListener('change', saveSettings);
+            document.getElementById('urgentNotifications').addEventListener('change', saveSettings);
+            document.getElementById('backgroundCheck').addEventListener('change', saveSettings);
+            
+            // อัปเดต alarm type เมื่อเลือก
+            document.getElementById('alarmTypePersonal').addEventListener('change', function() {
+                if (this.checked) currentAlarmType = 'personal';
+            });
+            document.getElementById('alarmTypePublic').addEventListener('change', function() {
+                if (this.checked) currentAlarmType = 'public';
+            });
+        }
+        
+        function saveSettings() {
+            localStorage.setItem('soundEnabled', document.getElementById('soundEnabled').checked);
+            localStorage.setItem('vibrateEnabled', document.getElementById('vibrateEnabled').checked);
+            localStorage.setItem('urgentNotifications', document.getElementById('urgentNotifications').checked);
+            localStorage.setItem('backgroundCheck', document.getElementById('backgroundCheck').checked);
         }
         
         function startTimers() {
@@ -924,120 +1105,42 @@
         // Service Worker และ Background Notifications
         // ============================================
         async function initServiceWorker() {
-            if ('serviceWorker' in navigator) {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
                 try {
                     // ลงทะเบียน Service Worker
-                    serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
+                    serviceWorkerRegistration = await navigator.serviceWorker.register('sw.js');
                     console.log('✅ Service Worker ถูกติดตั้ง:', serviceWorkerRegistration);
                     
                     // รอจนกว่า Service Worker จะ active
-                    if (serviceWorkerRegistration.active) {
-                        isServiceWorkerReady = true;
-                        console.log('✅ Service Worker active');
-                        
-                        // ตั้งค่าการสื่อสาร
-                        setupServiceWorkerCommunication();
-                        
-                        // ส่ง alarms ไปยัง Service Worker
-                        await sendAlarmsToServiceWorker();
-                    }
+                    const registration = await navigator.serviceWorker.ready;
+                    isServiceWorkerReady = true;
+                    console.log('✅ Service Worker ready');
                     
+                    // ตั้งค่าการสื่อสาร
+                    setupServiceWorkerCommunication();
+                    
+                    // ส่ง alarms ไปยัง Service Worker
+                    await sendAlarmsToServiceWorker();
+                    
+                    document.getElementById('settingsSWStatus').textContent = 'ทำงาน';
+                    document.getElementById('settingsSWStatus').className = 'text-green-400';
                     document.getElementById('serviceWorkerStatus').innerHTML = '<i class="fas fa-cloud mr-1"></i>ทำงานเบื้องหลัง';
                     
                 } catch (error) {
                     console.error('❌ Service Worker registration failed:', error);
                     showAlert('warning', 'ไม่สามารถตั้งค่าแจ้งเตือนเบื้องหลังได้');
                     
-                    // พยายามสร้าง Service Worker แบบ inline
-                    createInlineServiceWorker();
+                    document.getElementById('settingsSWStatus').textContent = 'ผิดพลาด';
+                    document.getElementById('settingsSWStatus').className = 'text-red-400';
+                    document.getElementById('serviceWorkerStatus').innerHTML = '<i class="fas fa-ban mr-1"></i>เบื้องหลังไม่ทำงาน';
                 }
             } else {
-                console.log('❌ Service Worker not supported');
+                console.log('❌ Service Worker หรือ Push API ไม่รองรับ');
                 showAlert('warning', 'เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนเบื้องหลัง');
-            }
-        }
-        
-        function createInlineServiceWorker() {
-            try {
-                // สร้าง Service Worker แบบ inline สำหรับเบราว์เซอร์ที่รองรับ
-                const swCode = `
-                    self.addEventListener('install', (event) => {
-                        console.log('Service Worker: Installed');
-                        self.skipWaiting();
-                    });
-
-                    self.addEventListener('activate', (event) => {
-                        console.log('Service Worker: Activated');
-                        event.waitUntil(clients.claim());
-                    });
-
-                    self.addEventListener('message', (event) => {
-                        console.log('Service Worker: Message received', event.data);
-                        
-                        if (event.data.type === 'SYNC_ALARMS') {
-                            console.log('Syncing alarms with Service Worker');
-                        }
-                        
-                        if (event.data.type === 'SCHEDULE_ALARM') {
-                            console.log('Scheduling alarm in Service Worker');
-                        }
-                    });
-
-                    self.addEventListener('push', (event) => {
-                        console.log('Service Worker: Push received');
-                        
-                        const data = event.data ? event.data.json() : {};
-                        const title = data.title || 'การแจ้งเตือน';
-                        const options = {
-                            body: data.body || 'มีแจ้งเตือนใหม่',
-                            icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>',
-                            badge: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>',
-                            vibrate: [200, 100, 200],
-                            data: data
-                        };
-
-                        event.waitUntil(
-                            self.registration.showNotification(title, options)
-                        );
-                    });
-
-                    self.addEventListener('notificationclick', (event) => {
-                        console.log('Service Worker: Notification clicked');
-                        event.notification.close();
-
-                        event.waitUntil(
-                            clients.matchAll({type: 'window', includeUncontrolled: true})
-                            .then((clientList) => {
-                                if (clientList.length > 0) {
-                                    let client = clientList[0];
-                                    for (let i = 0; i < clientList.length; i++) {
-                                        if (clientList[i].focused) {
-                                            client = clientList[i];
-                                        }
-                                    }
-                                    return client.focus();
-                                }
-                                return clients.openWindow('/');
-                            })
-                        );
-                    });
-                `;
                 
-                const blob = new Blob([swCode], { type: 'application/javascript' });
-                const swURL = URL.createObjectURL(blob);
-                
-                navigator.serviceWorker.register(swURL).then(registration => {
-                    serviceWorkerRegistration = registration;
-                    isServiceWorkerReady = true;
-                    console.log('✅ Inline Service Worker ถูกติดตั้งแล้ว');
-                    
-                    document.getElementById('serviceWorkerStatus').innerHTML = '<i class="fas fa-cloud mr-1"></i>ทำงานเบื้องหลัง';
-                    
-                    // ส่ง alarms ไปยัง Service Worker
-                    sendAlarmsToServiceWorker();
-                });
-            } catch (error) {
-                console.error('❌ ไม่สามารถสร้าง Inline Service Worker:', error);
+                document.getElementById('settingsSWStatus').textContent = 'ไม่รองรับ';
+                document.getElementById('settingsSWStatus').className = 'text-yellow-400';
+                document.getElementById('serviceWorkerStatus').innerHTML = '<i class="fas fa-ban mr-1"></i>ไม่รองรับ';
             }
         }
         
@@ -1058,6 +1161,12 @@
                     case 'SERVICE_WORKER_READY':
                         console.log('✅ Service Worker พร้อมใช้งาน');
                         isServiceWorkerReady = true;
+                        break;
+                        
+                    case 'BACKGROUND_SYNC':
+                        console.log('🔄 Background Sync ทำงาน:', event.data);
+                        checkForPublicAlarms();
+                        checkForNewBroadcasts();
                         break;
                 }
             });
@@ -1101,11 +1210,15 @@
                     
                     document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-bolt mr-1"></i>หน้าจอตื่น';
                     document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded mr-2';
+                    document.getElementById('wakeLockBtn').textContent = 'ปิด';
+                    document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-red-600 text-white text-sm rounded-lg';
                     
                     wakeLock.addEventListener('release', () => {
                         console.log('⚠️ Wake Lock ถูกปล่อย');
                         document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-moon mr-1"></i>หน้าจอดับ';
                         document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded mr-2';
+                        document.getElementById('wakeLockBtn').textContent = 'เปิด';
+                        document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-green-600 text-white text-sm rounded-lg';
                     });
                     
                 } catch (err) {
@@ -1339,19 +1452,14 @@
                 });
             }
             
-            // ถ้าเป็นแจ้งเตือน "แจ้งทุกคน" ให้บันทึกลง Google Sheets
-            if (alarm.type === 'public') {
-                try {
-                    const saved = await saveToGoogleSheets(alarm, 'pending');
-                    alarm.synced = saved;
-                    localStorage.setItem('alarms', JSON.stringify(alarms));
-                    
-                    if (saved) {
-                        console.log('✅ บันทึกแจ้งเตือนสาธารณะสำเร็จ');
-                    }
-                } catch (error) {
-                    console.log('⚠️ ไม่สามารถบันทึกแจ้งเตือนสาธารณะ:', error);
-                }
+            // พยายามบันทึกลง Google Sheets
+            let saved = false;
+            try {
+                saved = await saveToGoogleSheets(alarm, 'created');
+                alarm.synced = saved;
+                localStorage.setItem('alarms', JSON.stringify(alarms));
+            } catch (error) {
+                console.log('⚠️ ไม่สามารถบันทึกลง Google Sheets:', error);
             }
             
             // รีเซ็ตฟอร์ม
@@ -1363,14 +1471,14 @@
             updateCounts();
             
             // แสดงผลสำเร็จ
-            const alarmTypeText = alarm.type === 'personal' ? 'ส่วนตัว' : 'แจ้งทุกคน';
-            showAlert('success', `ตั้งเวลา "${title}" สำเร็จ! (${alarmTypeText})`);
+            const alarmTypeText = alarmType === 'personal' ? 'ส่วนตัว' : 'แจ้งทุกคน';
+            showAlert('success', `ตั้งเวลา "${title}" สำเร็จ! (${alarmTypeText})` + (saved ? ' (บันทึกในระบบคลาวด์)' : ' (บันทึกเฉพาะในเครื่อง)'));
             
             // แสดง notification
             showNotification('ตั้งเวลาแล้ว: ' + title, `เวลา ${time} น. วันที่ ${date} (${alarmTypeText})`, 'alarm_created');
             
             // ถ้าเป็นแจ้งเตือนสาธารณะ ให้แจ้งเตือนเครื่องอื่นทันที
-            if (alarm.type === 'public') {
+            if (alarmType === 'public') {
                 // ตั้งค่าให้ trigger ในเครื่องอื่น
                 setTimeout(() => {
                     triggerPublicAlarmForOthers(alarm);
@@ -1378,7 +1486,7 @@
             }
             
             // สั่นมือถือถ้าเปิด
-            if (vibrate) {
+            if (vibrate && document.getElementById('vibrateEnabled').checked) {
                 vibrateDevice([100, 50, 100]);
             }
         });
@@ -1562,23 +1670,22 @@
             if (document.visibilityState === 'visible') {
                 // แสดงในแอป
                 const typeText = alarm.type === 'personal' ? ' (ส่วนตัว)' : ' (แจ้งทุกคน)';
-                showInAppNotification(alarm.title + typeText, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!', 'alarm');
+                showPushNotification(alarm.title + typeText, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!', 'alarm');
                 
                 // เล่นเสียง
-                playAlarmSound(alarm.sound);
+                if (document.getElementById('soundEnabled').checked) {
+                    playAlarmSound(alarm.sound);
+                }
                 
                 // สั่นถ้าเปิด
-                if (alarm.vibrate) {
+                if (alarm.vibrate && document.getElementById('vibrateEnabled').checked) {
                     vibrateDevice([1000, 500, 1000, 500, 1000]);
                 }
                 
                 // แสดง emergency alert สำหรับแจ้งเตือนด่วน
-                if (alarm.priority === 'high') {
+                if (document.getElementById('urgentNotifications').checked) {
                     showEmergencyAlert(alarm.title + typeText, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!');
                 }
-            } else {
-                // ถ้าแอปปิดอยู่ ให้แสดงการแจ้งเตือนเบื้องหลัง
-                showNotification(alarm.title, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!', 'alarm');
             }
             
             // เพิ่มใน notifications
@@ -1860,14 +1967,11 @@
             
             // สำหรับแอปที่เปิดอยู่
             if (document.visibilityState === 'visible') {
-                showInAppNotification(broadcast.title, broadcast.message, 'broadcast');
+                showNotification(broadcast.title, broadcast.message, 'broadcast');
                 
                 if (urgent) {
                     showEmergencyAlert(broadcast.title, broadcast.message);
                 }
-            } else {
-                // ถ้าแอปปิดอยู่ ให้แสดงการแจ้งเตือนเบื้องหลัง
-                showNotification(broadcast.title, broadcast.message, 'broadcast');
             }
             
             // เพิ่มใน notifications
@@ -1994,12 +2098,7 @@
                             if (!broadcasts.some(b => b.id === broadcast.id)) {
                                 broadcasts.unshift(broadcast);
                                 
-                                // แสดงการแจ้งเตือน
-                                if (document.visibilityState === 'visible') {
-                                    showInAppNotification(broadcast.title, broadcast.message, 'broadcast');
-                                } else {
-                                    showNotification(broadcast.title, broadcast.message, 'broadcast');
-                                }
+                                showNotification(broadcast.title, broadcast.message, 'broadcast');
                                 
                                 if (broadcast.urgent) {
                                     showEmergencyAlert(broadcast.title, broadcast.message);
@@ -2051,7 +2150,7 @@
                 const broadcastElement = document.createElement('div');
                 broadcastElement.className = 'bg-gray-800/50 rounded-lg p-3 hover:bg-gray-800 transition-colors cursor-pointer';
                 broadcastElement.onclick = () => {
-                    showInAppNotification(broadcast.title, broadcast.message, 'broadcast_history');
+                    showNotification(broadcast.title, broadcast.message, 'broadcast_history');
                 };
                 broadcastElement.innerHTML = `
                     <div class="flex items-start">
@@ -2085,8 +2184,8 @@
                 badge: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>',
                 tag: type + '_' + Date.now(),
                 requireInteraction: type.includes('urgent') || type.includes('alarm'),
-                silent: false,
-                vibrate: [200, 100, 200],
+                silent: !document.getElementById('soundEnabled').checked,
+                vibrate: document.getElementById('vibrateEnabled').checked ? [200, 100, 200] : undefined,
                 data: {
                     url: window.location.href,
                     type: type,
@@ -2104,6 +2203,10 @@
             notification.onclick = function() {
                 window.focus();
                 notification.close();
+                
+                if (type.includes('broadcast')) {
+                    openNotificationPanel();
+                }
             };
             
             setTimeout(() => {
@@ -2111,49 +2214,32 @@
             }, type.includes('urgent') ? 10000 : 5000);
         }
         
-        function showInAppNotification(title, message, type = 'info') {
-            // สร้าง notification element
-            const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-gray-800 rounded-xl shadow-2xl border-l-4 border-blue-500 z-50 max-w-sm slide-in';
-            notification.innerHTML = `
-                <div class="p-4">
-                    <div class="flex justify-between items-start">
-                        <div class="flex items-start">
-                            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
-                                🔔
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-white">${title}</h3>
-                                <p class="text-gray-300 text-sm mt-1">${message}</p>
-                                <p class="text-xs text-gray-500 mt-2">ตอนนี้</p>
-                            </div>
-                        </div>
-                        <button class="text-gray-400 hover:text-white ml-4 close-notification">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
+        function showPushNotification(title, message, type = 'info') {
+            document.getElementById('pushTitle').textContent = title;
+            document.getElementById('pushMessage').textContent = message;
+            document.getElementById('pushTime').textContent = 'ตอนนี้';
+            document.getElementById('pushNotification').classList.remove('hidden');
             
-            document.body.appendChild(notification);
-            
-            // ปิด notification เมื่อคลิกปุ่ม
-            notification.querySelector('.close-notification').addEventListener('click', () => {
-                notification.remove();
-            });
-            
-            // ปิดอัตโนมัติหลังจาก 5 วินาที
             setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
+                closePushNotification();
             }, 5000);
             
-            // เล่นเสียง
-            playNotificationSound();
+            if (document.getElementById('soundEnabled').checked) {
+                playNotificationSound();
+            }
             
-            // สั่นถ้าจำเป็น
-            vibrateDevice([200, 100, 200]);
+            if (document.getElementById('vibrateEnabled').checked) {
+                vibrateDevice([200, 100, 200]);
+            }
+        }
+        
+        function closePushNotification() {
+            document.getElementById('pushNotification').classList.add('hidden');
+        }
+        
+        function viewNotificationDetails() {
+            closePushNotification();
+            openNotificationPanel();
         }
         
         function showEmergencyAlert(title, message) {
@@ -2303,7 +2389,7 @@
         }
         
         function vibrateDevice(pattern) {
-            if (navigator.vibrate) {
+            if (navigator.vibrate && document.getElementById('vibrateEnabled').checked) {
                 navigator.vibrate(pattern);
             }
         }
@@ -2563,7 +2649,7 @@
             showNotification(`ทดสอบ: ${alarm.title}`, alarm.description || 'นี่คือการทดสอบการแจ้งเตือน', 'test');
             
             if (document.visibilityState === 'visible') {
-                showInAppNotification(`ทดสอบ: ${alarm.title + typeText}`, alarm.description || 'นี่คือการทดสอบการแจ้งเตือน', 'test');
+                showPushNotification(`ทดสอบ: ${alarm.title + typeText}`, alarm.description || 'นี่คือการทดสอบการแจ้งเตือน', 'test');
             }
             
             addNotification({
@@ -2579,8 +2665,6 @@
         }
         
         function testBackgroundNotification() {
-            showAlert('info', 'ทดสอบระบบแจ้งเตือนเบื้องหลัง...');
-            
             const testAlarm = {
                 id: 'test_bg_' + Date.now(),
                 title: 'ทดสอบการแจ้งเตือนเบื้องหลัง',
@@ -2602,7 +2686,7 @@
             }
             
             if (document.visibilityState === 'visible') {
-                showInAppNotification(testAlarm.title, testAlarm.description, 'test');
+                showPushNotification(testAlarm.title, testAlarm.description, 'test');
                 showEmergencyAlert(testAlarm.title, testAlarm.description);
             }
             
@@ -2615,6 +2699,8 @@
                 read: false,
                 urgent: true
             });
+            
+            showAlert('success', 'ส่งการทดสอบแล้ว! ลองปิดแอปหรือล็อคหน้าจอดู!');
             
             Swal.fire({
                 title: 'คำแนะนำการทดสอบ',
@@ -2668,37 +2754,133 @@
             updateBadges();
             updateCounts();
             updateAppIconBadge();
+            
+            if (document.getElementById('notificationsPanel').classList.contains('active')) {
+                updateNotificationsList();
+            }
+        }
+        
+        function updateNotificationsList() {
+            const container = document.getElementById('notificationsList');
+            const countElement = document.getElementById('notificationsCount');
+            
+            const unreadCount = notifications.filter(n => !n.read).length;
+            const totalCount = notifications.length;
+            
+            countElement.textContent = `${totalCount} การแจ้งเตือน (${unreadCount} ยังไม่ได้อ่าน)`;
+            
+            if (notifications.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10">
+                        <i class="fas fa-bell-slash text-4xl text-gray-500 mb-3"></i>
+                        <p class="text-gray-400">ไม่มีการแจ้งเตือน</p>
+                        <p class="text-sm text-gray-500 mt-2">เมื่อมีแจ้งเตือนใหม่จะปรากฏที่นี่</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            notifications.forEach(notification => {
+                const time = new Date(notification.time);
+                const timeAgo = getTimeAgo(time);
+                const isRead = notification.read;
+                
+                const notificationElement = document.createElement('div');
+                notificationElement.className = `bg-gray-800 rounded-lg p-4 mb-3 hover:bg-gray-750 transition-colors cursor-pointer ${!isRead ? 'border-l-4 border-blue-500' : ''}`;
+                notificationElement.onclick = () => markNotificationAsRead(notification.id);
+                notificationElement.innerHTML = `
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 rounded-full ${notification.type === 'alarm' ? (notification.alarmType === 'public' ? 'bg-green-600' : 'bg-blue-600') : notification.type === 'broadcast' ? (notification.urgent ? 'bg-red-600' : 'bg-purple-600') : 'bg-yellow-600'} flex items-center justify-center mr-3 flex-shrink-0">
+                            <i class="fas fa-${notification.type === 'alarm' ? 'clock' : notification.type === 'broadcast' ? 'broadcast-tower' : 'bell'} text-white"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-bold ${isRead ? 'text-gray-400' : 'text-white'}">${notification.title}</h3>
+                                ${notification.urgent ? '<span class="text-xs px-2 py-1 bg-red-900/30 text-red-300 rounded">ด่วน</span>' : ''}
+                            </div>
+                            <p class="text-gray-300 text-sm mt-1 line-clamp-2">${notification.message}</p>
+                            <div class="flex justify-between items-center mt-2">
+                                <p class="text-gray-500 text-xs">
+                                    <i class="far fa-clock mr-1"></i>
+                                    ${timeAgo}
+                                </p>
+                                ${!isRead ? '<span class="w-2 h-2 rounded-full bg-blue-500"></span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(notificationElement);
+            });
+        }
+        
+        function markNotificationAsRead(notificationId) {
+            const notification = notifications.find(n => n.id === notificationId);
+            if (notification && !notification.read) {
+                notification.read = true;
+                localStorage.setItem('notifications', JSON.stringify(notifications));
+                updateBadges();
+                updateCounts();
+                updateAppIconBadge();
+                updateNotificationsList();
+            }
+        }
+        
+        function markAllAsRead() {
+            notifications.forEach(notification => {
+                notification.read = true;
+            });
+            localStorage.setItem('notifications', JSON.stringify(notifications));
+            updateBadges();
+            updateCounts();
+            updateAppIconBadge();
+            updateNotificationsList();
+            
+            showAlert('success', 'ทำเครื่องหมายอ่านทั้งหมดแล้ว');
         }
         
         function openNotificationPanel() {
+            updateNotificationsList();
+            document.getElementById('notificationsPanel').classList.add('active');
+        }
+        
+        function closeNotificationPanel() {
+            document.getElementById('notificationsPanel').classList.remove('active');
+        }
+        
+        function clearAllNotifications() {
             Swal.fire({
-                title: 'การแจ้งเตือน',
-                html: `
-                    <div class="text-left max-h-96 overflow-y-auto">
-                        ${notifications.length === 0 ? 
-                            '<p class="text-center text-gray-400 py-8">ยังไม่มีการแจ้งเตือน</p>' : 
-                            notifications.map((n, i) => `
-                                <div class="mb-4 p-3 bg-gray-800 rounded-lg ${i === 0 ? 'border-l-4 border-blue-500' : ''}">
-                                    <h4 class="font-bold ${n.read ? 'text-gray-400' : 'text-white'}">${n.title}</h4>
-                                    <p class="text-gray-300 text-sm mt-1">${n.message}</p>
-                                    <p class="text-gray-500 text-xs mt-2">
-                                        <i class="far fa-clock mr-1"></i>${new Date(n.time).toLocaleString('th-TH')}
-                                    </p>
-                                </div>
-                            `).join('')
-                        }
-                    </div>
-                `,
-                showConfirmButton: true,
-                confirmButtonText: 'ปิด',
+                title: 'ยืนยันการล้าง',
+                text: 'ล้างการแจ้งเตือนทั้งหมดหรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ล้างทั้งหมด',
+                cancelButtonText: 'ยกเลิก',
                 background: '#1f2937',
                 color: '#e5e7eb'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    notifications = [];
+                    localStorage.setItem('notifications', JSON.stringify(notifications));
+                    updateBadges();
+                    updateCounts();
+                    updateAppIconBadge();
+                    updateNotificationsList();
+                    
+                    showAlert('success', 'ล้างการแจ้งเตือนทั้งหมดแล้ว');
+                }
             });
-            
-            // ทำเครื่องหมายว่าอ่านแล้ว
-            notifications.forEach(n => n.read = true);
-            localStorage.setItem('notifications', JSON.stringify(notifications));
-            updateBadges();
+        }
+        
+        // ============================================
+        // ฟังก์ชันจัดการ Settings Panel
+        // ============================================
+        function openSettingsPanel() {
+            document.getElementById('settingsPanel').classList.add('active');
+        }
+        
+        function closeSettingsPanel() {
+            document.getElementById('settingsPanel').classList.remove('active');
         }
         
         // ============================================
@@ -2769,6 +2951,22 @@
                 'monthly': 'ทุกเดือน'
             };
             return texts[repeat] || repeat;
+        }
+        
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (minutes < 1) return 'เมื่อสักครู่';
+            if (minutes < 60) return `${minutes} นาทีที่แล้ว`;
+            if (hours < 24) return `${hours} ชั่วโมงที่แล้ว`;
+            if (days < 7) return `${days} วันที่แล้ว`;
+            
+            return date.toLocaleDateString('th-TH');
         }
         
         function showConnectionStatus(connected, message, details) {
@@ -2919,22 +3117,16 @@
             }
             
             if (Notification.permission === 'default') {
-                // ขออนุญาตเมื่อผู้ใช้โต้ตอบกับแอป
                 document.addEventListener('click', function requestPermissionOnce() {
                     if (Notification.permission === 'default') {
                         Notification.requestPermission().then(permission => {
                             if (permission === 'granted') {
                                 console.log('✅ ได้รับอนุญาตการแจ้งเตือนแล้ว');
-                                showAlert('success', 'อนุญาตการแจ้งเตือนสำเร็จ');
-                            } else if (permission === 'denied') {
-                                showAlert('warning', 'กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์เพื่อรับการแจ้งเตือน');
                             }
                         });
                     }
                     document.removeEventListener('click', requestPermissionOnce);
                 });
-            } else if (Notification.permission === 'denied') {
-                showAlert('warning', 'กรุณาอนุญาตการแจ้งเตือนในเบราว์เซอร์เพื่อรับการแจ้งเตือน');
             }
         }
         
@@ -2986,128 +3178,18 @@
             showAlert('success', 'สำรองข้อมูลแจ้งเตือนสำเร็จ');
         }
         
-        function handleAlarmTriggered(alarm) {
-            console.log('🔔 Alarm triggered from Service Worker:', alarm.title);
+        function exportNotifications() {
+            const dataStr = JSON.stringify(notifications, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
             
-            const index = alarms.findIndex(a => a.id === alarm.id);
-            if (index !== -1) {
-                alarms[index].triggered = true;
-                alarms[index].triggeredAt = new Date().toISOString();
-                localStorage.setItem('alarms', JSON.stringify(alarms));
-            }
+            const exportFileDefaultName = `notifications_${new Date().toISOString().split('T')[0]}.json`;
             
-            const typeText = alarm.type === 'personal' ? ' (ส่วนตัว)' : ' (แจ้งทุกคน)';
-            addNotification({
-                id: 'sw_alarm_' + alarm.id,
-                type: 'alarm',
-                title: alarm.title + typeText,
-                message: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
-                time: new Date().toISOString(),
-                alarmId: alarm.id,
-                read: false,
-                urgent: true,
-                alarmType: alarm.type
-            });
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
             
-            if (document.visibilityState === 'visible') {
-                updateAlarmsList();
-                updateCounts();
-                updateBadges();
-            }
-        }
-        
-        function handleNotificationClicked(data) {
-            console.log('🔘 Notification clicked:', data);
-            
-            if (data.type === 'alarm') {
-                openNotificationPanel();
-            }
-        }
-        
-        function openSettingsPanel() {
-            Swal.fire({
-                title: 'ตั้งค่า',
-                html: `
-                    <div class="text-left space-y-4">
-                        <div class="bg-gray-800 rounded-lg p-4">
-                            <h4 class="font-bold text-white mb-3"><i class="fas fa-bell mr-2"></i>การแจ้งเตือน</h4>
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-gray-300">เสียงแจ้งเตือน</span>
-                                    <button onclick="toggleSetting('soundEnabled')" id="soundBtn" class="px-3 py-1 bg-green-600 rounded text-sm">
-                                        เปิด
-                                    </button>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-gray-300">สั่นมือถือ</span>
-                                    <button onclick="toggleSetting('vibrateEnabled')" id="vibrateBtn" class="px-3 py-1 bg-green-600 rounded text-sm">
-                                        เปิด
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-gray-800 rounded-lg p-4">
-                            <h4 class="font-bold text-white mb-3"><i class="fas fa-info-circle mr-2"></i>ข้อมูลระบบ</h4>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">รหัสผู้ใช้</span>
-                                    <span class="text-gray-300">${userId.substring(0, 8)}...</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">รหัสอุปกรณ์</span>
-                                    <span class="text-gray-300">${deviceId.substring(0, 8)}...</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-400">เวอร์ชัน</span>
-                                    <span class="text-gray-300">${VERSION}</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-gray-800 rounded-lg p-4">
-                            <h4 class="font-bold text-white mb-3"><i class="fas fa-database mr-2"></i>จัดการข้อมูล</h4>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button onclick="exportAllData()" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
-                                    <i class="fas fa-download mr-1"></i>สำรองข้อมูล
-                                </button>
-                                <button onclick="importData()" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-sm">
-                                    <i class="fas fa-upload mr-1"></i>นำเข้าข้อมูล
-                                </button>
-                            </div>
-                            <button onclick="resetApp()" class="w-full mt-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm">
-                                <i class="fas fa-trash-alt mr-1"></i>รีเซ็ตแอป
-                            </button>
-                        </div>
-                    </div>
-                `,
-                showConfirmButton: false,
-                showCloseButton: true,
-                background: '#1f2937',
-                color: '#e5e7eb',
-                width: 500
-            });
-            
-            // อัปเดตปุ่มตั้งค่า
-            updateSettingButtons();
-        }
-        
-        function toggleSetting(settingName) {
-            const currentValue = localStorage.getItem(settingName) !== 'false';
-            localStorage.setItem(settingName, !currentValue);
-            updateSettingButtons();
-            showAlert('success', 'อัปเดตการตั้งค่าแล้ว');
-        }
-        
-        function updateSettingButtons() {
-            const soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
-            const vibrateEnabled = localStorage.getItem('vibrateEnabled') !== 'false';
-            
-            document.getElementById('soundBtn').textContent = soundEnabled ? 'เปิด' : 'ปิด';
-            document.getElementById('soundBtn').className = `px-3 py-1 ${soundEnabled ? 'bg-green-600' : 'bg-red-600'} rounded text-sm`;
-            
-            document.getElementById('vibrateBtn').textContent = vibrateEnabled ? 'เปิด' : 'ปิด';
-            document.getElementById('vibrateBtn').className = `px-3 py-1 ${vibrateEnabled ? 'bg-green-600' : 'bg-red-600'} rounded text-sm`;
+            showAlert('success', 'สำรองข้อมูลการแจ้งเตือนสำเร็จ');
         }
         
         function exportAllData() {
@@ -3185,12 +3267,6 @@
                     localStorage.setItem('notifications', JSON.stringify(notifications));
                     localStorage.setItem('broadcasts', JSON.stringify(broadcasts));
                     
-                    if (data.user && data.user.name) {
-                        userName = data.user.name;
-                        localStorage.setItem('userName', userName);
-                        document.getElementById('userName').textContent = userName;
-                    }
-                    
                     loadAppData();
                     
                     showAlert('success', 'นำเข้าข้อมูลสำเร็จ');
@@ -3229,6 +3305,44 @@
             });
         }
         
+        function handleAlarmTriggered(alarm) {
+            console.log('🔔 Alarm triggered from Service Worker:', alarm.title);
+            
+            const index = alarms.findIndex(a => a.id === alarm.id);
+            if (index !== -1) {
+                alarms[index].triggered = true;
+                alarms[index].triggeredAt = new Date().toISOString();
+                localStorage.setItem('alarms', JSON.stringify(alarms));
+            }
+            
+            const typeText = alarm.type === 'personal' ? ' (ส่วนตัว)' : ' (แจ้งทุกคน)';
+            addNotification({
+                id: 'sw_alarm_' + alarm.id,
+                type: 'alarm',
+                title: alarm.title + typeText,
+                message: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
+                time: new Date().toISOString(),
+                alarmId: alarm.id,
+                read: false,
+                urgent: true,
+                alarmType: alarm.type
+            });
+            
+            if (document.visibilityState === 'visible') {
+                updateAlarmsList();
+                updateCounts();
+                updateBadges();
+            }
+        }
+        
+        function handleNotificationClicked(data) {
+            console.log('🔘 Notification clicked:', data);
+            
+            if (data.type === 'alarm') {
+                openNotificationPanel();
+            }
+        }
+        
         // ============================================
         // เริ่มต้นแอปพลิเคชัน
         // ============================================
@@ -3250,6 +3364,21 @@
                 releaseWakeLock();
             }
         });
+        
+        window.addEventListener('beforeunload', (e) => {
+            const hasUnsaved = alarms.some(a => !a.synced);
+            if (hasUnsaved) {
+                e.preventDefault();
+                e.returnValue = 'มีข้อมูลที่ยังไม่ได้บันทึกในระบบคลาวด์ คุณแน่ใจที่จะออกหรือไม่?';
+            }
+        });
+        
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                updateBadges();
+                updateAppIconBadge();
+            }
+        }, 60000);
         
         console.log('🎉 App initialized successfully');
     </script>
