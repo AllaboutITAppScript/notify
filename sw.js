@@ -1,24 +1,23 @@
 // Service Worker สำหรับระบบแจ้งเตือนรวมศูนย์
-const CACHE_NAME = 'notification-system-v1.2.0';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
-];
+const CACHE_NAME = 'notification-system-v2.0';
+const VERSION = '2.0.0';
+
+// ตัวแปรเก็บ alarms
+let scheduledAlarms = new Map();
 
 // ติดตั้ง Service Worker
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
+  console.log('[SW] 📥 Installing Service Worker v' + VERSION);
   
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching files');
-        return cache.addAll(urlsToCache);
+        console.log('[SW] 📦 Opened cache');
+        // ไม่ต้อง cache อะไรเพิ่มเติม ใช้ network-first strategy
+        return Promise.resolve();
       })
       .then(() => {
-        console.log('Service Worker: Installed');
+        console.log('[SW] ✅ Installed successfully');
         return self.skipWaiting();
       })
   );
@@ -26,283 +25,273 @@ self.addEventListener('install', (event) => {
 
 // เปิดใช้งาน Service Worker
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activated');
+  console.log('[SW] 🔥 Activated');
   
-  // ล้าง cache เก่า
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('Service Worker: Clearing old cache', cache);
-            return caches.delete(cache);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('Service Worker: Claiming clients');
-      return self.clients.claim();
+    Promise.all([
+      // ล้าง cache เก่า
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cache) => {
+            if (cache !== CACHE_NAME) {
+              console.log('[SW] 🗑️ Deleting old cache:', cache);
+              return caches.delete(cache);
+            }
+          })
+        );
+      }),
+      
+      // Claim clients ทั้งหมดทันที
+      self.clients.claim()
+    ]).then(() => {
+      console.log('[SW] 🚀 Ready to handle background tasks');
+      
+      // แจ้งแอปหลักว่า service worker พร้อมแล้ว
+      sendMessageToAllClients({
+        type: 'SERVICE_WORKER_READY',
+        message: 'Service Worker พร้อมทำงานในเบื้องหลัง'
+      });
     })
   );
-  
-  // แจ้งเตือนว่าพร้อมแล้ว
+});
+
+// ฟังก์ชันส่งข้อความไปยัง clients
+function sendMessageToAllClients(message) {
   self.clients.matchAll().then(clients => {
     clients.forEach(client => {
-      client.postMessage({
-        type: 'SERVICE_WORKER_READY',
-        message: 'Service Worker พร้อมใช้งาน'
-      });
+      client.postMessage(message);
     });
   });
-});
+}
 
-// ดักจับ fetch requests
-self.addEventListener('fetch', (event) => {
-  // สำหรับไฟล์ static ให้ใช้ cache-first strategy
-  if (event.request.url.includes('/icons/') || 
-      event.request.url.includes('/styles/') ||
-      event.request.url.includes('/scripts/')) {
-    event.respondWith(
-      caches.match(event.request)
-        .then((response) => {
-          return response || fetch(event.request);
-        })
-    );
-  }
-});
-
-// รับข้อความจากแอป
+// รับข้อความจากแอปหลัก
 self.addEventListener('message', (event) => {
-  console.log('Service Worker: Received message', event.data);
+  console.log('[SW] 📨 Message from client:', event.data.type);
   
-  switch (event.data.type) {
-    case 'APP_READY':
-      console.log('Service Worker: App is ready');
-      break;
-      
+  const data = event.data;
+  
+  switch (data.type) {
     case 'SCHEDULE_ALARM':
-      scheduleAlarmNotification(event.data.alarm);
+      handleScheduleAlarm(data.alarm);
       break;
       
     case 'SYNC_ALARMS':
-      syncAlarms(event.data.alarms);
+      handleSyncAlarms(data.alarms);
       break;
       
     case 'CANCEL_ALARM':
-      cancelAlarmNotification(event.data.alarmId);
+      handleCancelAlarm(data.alarmId);
       break;
       
     case 'TRIGGER_ALARM':
-      triggerAlarmNotification(event.data.alarm, event.data.urgent);
+      handleTriggerAlarm(data.alarm, data.urgent);
       break;
       
     case 'SEND_BROADCAST':
-      sendBroadcastNotification(event.data.broadcast);
+      handleSendBroadcast(data.broadcast);
+      break;
+      
+    case 'PING':
+      event.ports[0].postMessage({ type: 'PONG' });
+      break;
+      
+    case 'GET_SCHEDULED_ALARMS':
+      event.ports[0].postMessage({ 
+        type: 'SCHEDULED_ALARMS',
+        alarms: Array.from(scheduledAlarms.values())
+      });
       break;
   }
 });
 
-// ฟังก์ชัน schedule alarms
-function scheduleAlarmNotification(alarm) {
-  console.log('Service Worker: Scheduling alarm', alarm.title);
+// จัดการตั้งเวลาแจ้งเตือน
+function handleScheduleAlarm(alarm) {
+  console.log(`[SW] ⏰ Scheduling alarm: ${alarm.title}`, alarm);
   
   const alarmTime = new Date(alarm.datetime).getTime();
   const now = Date.now();
-  const delay = Math.max(0, alarmTime - now);
+  const delay = alarmTime - now;
   
-  if (delay > 0) {
-    // บันทึก alarm ใน IndexedDB หรือใช้ localStorage
-    saveAlarmToStorage(alarm);
-    
-    // ตั้งเวลาแจ้งเตือน
-    setTimeout(() => {
-      triggerAlarmNotification(alarm, true);
-    }, delay);
-    
-    console.log(`Service Worker: Alarm "${alarm.title}" scheduled in ${delay}ms`);
-  } else {
-    console.log('Service Worker: Alarm time has passed, triggering immediately');
-    triggerAlarmNotification(alarm, true);
+  if (delay <= 0) {
+    console.log('[SW] ⚡ Alarm time has passed, triggering immediately');
+    handleTriggerAlarm(alarm, true);
+    return;
   }
+  
+  // ตั้ง timeout สำหรับ alarm
+  const timeoutId = setTimeout(() => {
+    console.log(`[SW] 🔔 Alarm triggered: ${alarm.title}`);
+    handleTriggerAlarm(alarm, true);
+    scheduledAlarms.delete(alarm.id);
+  }, delay);
+  
+  // บันทึก alarm และ timeout ID
+  scheduledAlarms.set(alarm.id, {
+    ...alarm,
+    timeoutId: timeoutId,
+    scheduledTime: alarmTime
+  });
+  
+  console.log(`[SW] ✅ Alarm "${alarm.title}" scheduled in ${Math.round(delay/1000)} seconds`);
 }
 
-// ฟังก์ชัน sync alarms
-function syncAlarms(alarms) {
-  console.log('Service Worker: Syncing alarms', alarms.length);
+// จัดการ sync alarms
+function handleSyncAlarms(alarms) {
+  console.log(`[SW] 🔄 Syncing ${alarms.length} alarms`);
   
-  // ล้าง alarms เก่า
-  clearAllScheduledAlarms();
+  // ล้าง alarms เก่าทั้งหมด
+  scheduledAlarms.forEach((alarm, id) => {
+    clearTimeout(alarm.timeoutId);
+  });
+  scheduledAlarms.clear();
   
   // ตั้ง alarms ใหม่
   alarms.forEach(alarm => {
     if (!alarm.triggered) {
-      scheduleAlarmNotification(alarm);
+      handleScheduleAlarm(alarm);
     }
   });
-}
-
-// ฟังก์ชัน cancel alarm
-function cancelAlarmNotification(alarmId) {
-  console.log('Service Worker: Canceling alarm', alarmId);
-  // ในกรณีจริงควรใช้การ clear timeout
-  // แต่สำหรับ demo นี้เราจะใช้การลบจาก storage
-  removeAlarmFromStorage(alarmId);
-}
-
-// ฟังก์ชัน trigger alarm
-function triggerAlarmNotification(alarm, urgent = false) {
-  console.log('Service Worker: Triggering alarm', alarm.title);
   
+  console.log(`[SW] ✅ Scheduled ${scheduledAlarms.size} alarms`);
+}
+
+// จัดการยกเลิก alarm
+function handleCancelAlarm(alarmId) {
+  console.log(`[SW] ❌ Canceling alarm: ${alarmId}`);
+  
+  const alarm = scheduledAlarms.get(alarmId);
+  if (alarm) {
+    clearTimeout(alarm.timeoutId);
+    scheduledAlarms.delete(alarmId);
+    console.log('[SW] ✅ Alarm canceled');
+  }
+}
+
+// จัดการ trigger alarm
+function handleTriggerAlarm(alarm, urgent = false) {
+  console.log(`[SW] 🚨 Triggering alarm: ${alarm.title}`);
+  
+  const alarmTypeText = alarm.type === 'public' ? ' (แจ้งทุกคน)' : ' (ส่วนตัว)';
+  const title = alarm.title + alarmTypeText;
+  const body = alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!';
+  
+  // ตั้งค่า options สำหรับ notification
   const options = {
-    body: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
+    body: body,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-96x96.png',
-    tag: 'alarm_' + alarm.id,
-    requireInteraction: urgent,
-    silent: false,
-    vibrate: alarm.vibrate ? [1000, 500, 1000, 500, 1000] : undefined,
+    tag: `alarm_${alarm.id}_${Date.now()}`,
+    requireInteraction: true,
     data: {
       alarmId: alarm.id,
       type: 'alarm',
       alarmType: alarm.type,
       urgent: urgent,
-      time: Date.now()
+      time: Date.now(),
+      url: '/'
     },
-    // สำหรับการแจ้งเตือนขณะล็อคหน้าจอ
-    showTrigger: true
+    actions: [
+      {
+        action: 'view',
+        title: 'ดูรายละเอียด'
+      },
+      {
+        action: 'dismiss',
+        title: 'ปิด'
+      }
+    ],
+    // สำหรับ Android ให้ใช้ vibrate
+    vibrate: alarm.vibrate ? [1000, 500, 1000, 500, 1000] : undefined
   };
   
-  // ส่งการแจ้งเตือน
-  self.registration.showNotification(
-    alarm.title + (alarm.type === 'public' ? ' (แจ้งทุกคน)' : ' (ส่วนตัว)'),
-    options
-  ).then(() => {
-    console.log('Service Worker: Notification shown');
-    
-    // บอกแอปหลักว่า alarm ถูก triggered แล้ว
-    self.clients.matchAll().then(clients => {
-      clients.forEach(client => {
-        client.postMessage({
-          type: 'ALARM_TRIGGERED',
-          alarm: alarm
-        });
+  // ส่ง notification
+  self.registration.showNotification(title, options)
+    .then(() => {
+      console.log('[SW] 📢 Notification shown successfully');
+      
+      // บอกแอปหลักว่า alarm ถูก triggered แล้ว
+      sendMessageToAllClients({
+        type: 'ALARM_TRIGGERED',
+        alarm: alarm
       });
+      
+      // ลบ alarm จากรายการ scheduled
+      scheduledAlarms.delete(alarm.id);
+    })
+    .catch(error => {
+      console.error('[SW] ❌ Failed to show notification:', error);
     });
-    
-    // ลบ alarm จาก storage
-    removeAlarmFromStorage(alarm.id);
-    
-  }).catch(error => {
-    console.error('Service Worker: Failed to show notification', error);
-  });
 }
 
-// ฟังก์ชัน send broadcast
-function sendBroadcastNotification(broadcast) {
-  console.log('Service Worker: Sending broadcast', broadcast.title);
+// จัดการส่ง broadcast
+function handleSendBroadcast(broadcast) {
+  console.log(`[SW] 📡 Sending broadcast: ${broadcast.title}`);
   
   const options = {
     body: broadcast.message,
     icon: '/icons/icon-192x192.png',
     badge: '/icons/icon-96x96.png',
-    tag: 'broadcast_' + broadcast.id,
+    tag: `broadcast_${broadcast.id}_${Date.now()}`,
     requireInteraction: broadcast.urgent,
-    silent: !broadcast.urgent,
-    vibrate: broadcast.urgent ? [1000, 500, 1000, 500, 1000] : undefined,
     data: {
       broadcastId: broadcast.id,
       type: 'broadcast',
       urgent: broadcast.urgent,
-      time: Date.now()
+      time: Date.now(),
+      url: '/'
     },
-    showTrigger: true
+    actions: [
+      {
+        action: 'view',
+        title: 'ดูประกาศ'
+      },
+      {
+        action: 'dismiss',
+        title: 'ปิด'
+      }
+    ],
+    vibrate: broadcast.urgent ? [1000, 500, 1000, 500, 1000] : undefined
   };
   
-  self.registration.showNotification(broadcast.title, options);
-}
-
-// ฟังก์ชันจัดการ storage (แบบง่ายๆ)
-function saveAlarmToStorage(alarm) {
-  // ใช้ IndexedDB หรือ localStorage ในทางปฏิบัติ
-  // แต่สำหรับตัวอย่างนี้เราจะใช้ array ในการเก็บ
-  if (!self.alarms) {
-    self.alarms = [];
-  }
-  self.alarms.push(alarm);
-}
-
-function removeAlarmFromStorage(alarmId) {
-  if (self.alarms) {
-    self.alarms = self.alarms.filter(a => a.id !== alarmId);
-  }
-}
-
-function clearAllScheduledAlarms() {
-  self.alarms = [];
-}
-
-// ฟังก์ชัน Background Sync (ถ้ารองรับ)
-if ('sync' in self.registration) {
-  self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-data') {
-      console.log('Service Worker: Background sync triggered');
-      event.waitUntil(syncWithServer());
-    }
-  });
-}
-
-async function syncWithServer() {
-  try {
-    // ทำการ sync ข้อมูลกับเซิร์ฟเวอร์
-    // ในทางปฏิบัติควรเรียก API เพื่อ sync ข้อมูล
-    console.log('Service Worker: Syncing with server');
-    
-    // แจ้งเตือนแอปหลัก
-    self.clients.matchAll().then(clients => {
-      clients.forEach(client => {
-        client.postMessage({
-          type: 'BACKGROUND_SYNC',
-          message: 'Background sync completed'
-        });
-      });
+  self.registration.showNotification(broadcast.title, options)
+    .then(() => {
+      console.log('[SW] ✅ Broadcast notification sent');
+    })
+    .catch(error => {
+      console.error('[SW] ❌ Failed to send broadcast notification:', error);
     });
-    
-  } catch (error) {
-    console.error('Service Worker: Sync failed', error);
-  }
 }
 
 // จัดการเมื่อมีการคลิก notification
 self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification clicked', event.notification.data);
+  console.log('[SW] 👆 Notification clicked:', event.notification.data);
   
   event.notification.close();
   
   const data = event.notification.data;
   
-  // บอกแอปหลักว่า notification ถูกคลิก
+  if (event.action === 'dismiss') {
+    return;
+  }
+  
   event.waitUntil(
     self.clients.matchAll({
       type: 'window',
       includeUncontrolled: true
     }).then((clientList) => {
-      if (clientList.length > 0) {
-        let client = clientList[0];
-        for (let i = 0; i < clientList.length; i++) {
-          if (clientList[i].focused) {
-            client = clientList[i];
-            break;
-          }
+      // พยายามเปิดหน้าเว็บที่มีอยู่
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.postMessage({
+            type: 'NOTIFICATION_CLICKED',
+            data: data
+          });
+          return client.focus();
         }
-        
-        client.postMessage({
-          type: 'NOTIFICATION_CLICKED',
-          data: data
-        });
-        
-        return client.focus();
-      } else {
-        // ถ้าไม่มี client ที่เปิดอยู่ ให้เปิดหน้าเว็บใหม่
+      }
+      
+      // ถ้าไม่มี client ที่เปิดอยู่ ให้เปิดหน้าใหม่
+      if (self.clients.openWindow) {
         return self.clients.openWindow('/');
       }
     })
@@ -311,20 +300,67 @@ self.addEventListener('notificationclick', (event) => {
 
 // จัดการเมื่อ notification ปิด
 self.addEventListener('notificationclose', (event) => {
-  console.log('Service Worker: Notification closed', event.notification.data);
+  console.log('[SW] ❌ Notification closed:', event.notification.data);
 });
 
-// Periodic Sync (สำหรับการอัปเดตเป็นระยะ)
+// Background Sync (ถ้ารองรับ)
+if ('sync' in self.registration) {
+  self.addEventListener('sync', (event) => {
+    console.log(`[SW] 🔄 Background sync: ${event.tag}`);
+    
+    if (event.tag === 'sync-alarms') {
+      event.waitUntil(syncAlarmsWithServer());
+    }
+  });
+}
+
+// Periodic Background Sync (ถ้ารองรับ)
 if ('periodicSync' in self.registration) {
   self.addEventListener('periodicsync', (event) => {
-    if (event.tag === 'check-updates') {
-      console.log('Service Worker: Periodic sync for updates');
+    console.log(`[SW] ⏱️ Periodic sync: ${event.tag}`);
+    
+    if (event.tag === 'update-check') {
       event.waitUntil(checkForUpdates());
     }
   });
 }
 
+async function syncAlarmsWithServer() {
+  try {
+    console.log('[SW] 🔄 Syncing alarms with server');
+    // ในทางปฏิบัติควรเรียก API เพื่อ sync ข้อมูล
+    // สำหรับตอนนี้แค่ส่งข้อความไปยังแอปหลัก
+    sendMessageToAllClients({
+      type: 'BACKGROUND_SYNC_COMPLETE',
+      message: 'Background sync completed at ' + new Date().toLocaleString()
+    });
+  } catch (error) {
+    console.error('[SW] ❌ Sync failed:', error);
+  }
+}
+
 async function checkForUpdates() {
-  console.log('Service Worker: Checking for updates');
+  console.log('[SW] 🔍 Checking for updates');
   // ตรวจสอบการอัปเดต
 }
+
+// Periodic task สำหรับตรวจสอบ alarms
+setInterval(() => {
+  const now = Date.now();
+  let triggeredCount = 0;
+  
+  scheduledAlarms.forEach((alarm, id) => {
+    if (alarm.scheduledTime <= now) {
+      console.log(`[SW] ⏰ Found overdue alarm: ${alarm.title}`);
+      handleTriggerAlarm(alarm, true);
+      triggeredCount++;
+    }
+  });
+  
+  if (triggeredCount > 0) {
+    console.log(`[SW] 🎯 Triggered ${triggeredCount} overdue alarms`);
+  }
+}, 30000); // ตรวจสอบทุก 30 วินาที
+
+// แสดงสถานะเมื่อ service worker เริ่มทำงาน
+console.log('[SW] 🚀 Service Worker loaded and ready');
