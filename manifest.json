@@ -6,27 +6,40 @@
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
-  "orientation": "portrait",
-  "scope": "/",
+  "orientation": "any",
   "icons": [
     {
       "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>",
+      "src": "https://via.placeholder.com/192x192/667eea/ffffff?text=🔔",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512/667eea/ffffff?text=🔔",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/1280x720/1a1a2e/ffffff?text=ระบบแจ้งเตือนรวมศูนย์",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form": "wide"
     }
   ],
   "categories": ["productivity", "utilities"],
   "shortcuts": [
     {
-      "name": "เพิ่มแจ้งเตือน",
+      "name": "เพิ่มแจ้งเตือนใหม่",
       "short_name": "เพิ่ม",
       "description": "เพิ่มการแจ้งเตือนใหม่",
-      "url": "/#alarmFormSection",
+      "url": "/?action=add",
       "icons": [
         {
           "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>➕</text></svg>",
@@ -35,13 +48,13 @@
       ]
     },
     {
-      "name": "ส่งประกาศ",
-      "short_name": "ประกาศ",
-      "description": "ส่งประกาศไปทุกเครื่อง",
-      "url": "/#broadcastSection",
+      "name": "ดูแจ้งเตือน",
+      "short_name": "แจ้งเตือน",
+      "description": "ดูการแจ้งเตือนทั้งหมด",
+      "url": "/?action=notifications",
       "icons": [
         {
-          "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📢</text></svg>",
+          "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>",
           "sizes": "96x96"
         }
       ]
