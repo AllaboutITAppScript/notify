@@ -3381,6 +3381,57 @@
         }, 60000);
         
         console.log('🎉 App initialized successfully');
+
+        // ============================================
+// ตรวจสอบและตั้งค่า Background Sync
+// ============================================
+async function setupBackgroundSync() {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            
+            // ลงทะเบียน Background Sync
+            await registration.sync.register('check-alarms');
+            console.log('✅ Background Sync ลงทะเบียนสำเร็จ');
+            
+            // ตั้งค่า Periodic Sync (ถ้ารองรับ)
+            if ('periodicSync' in registration) {
+                try {
+                    await registration.periodicSync.register('check-public-alarms', {
+                        minInterval: 15 * 60 * 1000 // ทุก 15 นาที
+                    });
+                    console.log('✅ Periodic Sync ลงทะเบียนสำเร็จ');
+                } catch (error) {
+                    console.log('⚠️ Periodic Sync ไม่รองรับ:', error);
+                }
+            }
+            
+        } catch (error) {
+            console.error('❌ เกิดข้อผิดพลาดในการตั้งค่า Background Sync:', error);
+        }
+    } else {
+        console.log('⚠️ Background Sync ไม่รองรับในเบราว์เซอร์นี้');
+    }
+}
+
+// เรียกใช้หลังจาก Service Worker พร้อม
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(() => {
+        setupBackgroundSync();
+        
+        // ตั้งค่า interval สำหรับตรวจสอบ alarms ใน background
+        setInterval(() => {
+            if (document.visibilityState !== 'visible') {
+                // ส่งข้อความไปยัง Service Worker ให้ตรวจสอบ alarms
+                if (serviceWorkerRegistration?.active) {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'CHECK_ALARMS'
+                    });
+                }
+            }
+        }, 30000); // ตรวจสอบทุก 30 วินาที
+    });
+}
     </script>
 </body>
 </html>
