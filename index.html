@@ -276,6 +276,17 @@
             z-index: 50;
             animation: slideInRight 0.3s ease-out;
         }
+        
+        /* Wake Lock status indicator */
+        .wake-lock-active {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+            color: white !important;
+        }
+        
+        .wake-lock-inactive {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+            color: #d1d5db !important;
+        }
     </style>
 </head>
 <body>
@@ -805,7 +816,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-400">เวอร์ชัน</span>
-                                <span class="text-sm">1.4.0</span>
+                                <span class="text-sm">1.5.0</span>
                             </div>
                         </div>
                     </div>
@@ -864,7 +875,7 @@
         // ตัวแปรและค่าคงที่
         // ============================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
-        const VERSION = "1.4.0";
+        const VERSION = "1.5.0";
         
         let alarms = [];
         let notifications = [];
@@ -889,6 +900,7 @@
         let isOnline = true;
         let isServiceWorkerReady = false;
         let currentFilter = 'all';
+        let wakeLockEnabled = true; // ค่าเริ่มต้น
         
         // ============================================
         // เริ่มต้นแอปพลิเคชัน
@@ -1024,13 +1036,10 @@
             document.getElementById('alarmTypePersonal').checked = true;
             currentAlarmType = 'personal';
             
-            // ตั้งค่าค่าเริ่มต้นสำหรับเสียงและสั่น
-            document.getElementById('soundEnabled').checked = localStorage.getItem('soundEnabled') !== 'false';
-            document.getElementById('vibrateEnabled').checked = localStorage.getItem('vibrateEnabled') !== 'false';
-            document.getElementById('urgentNotifications').checked = localStorage.getItem('urgentNotifications') !== 'false';
-            document.getElementById('backgroundCheck').checked = localStorage.getItem('backgroundCheck') !== 'false';
+            // โหลดการตั้งค่าจาก localStorage
+            loadSettingsFromStorage();
             
-            // อัปเดตการตั้งค่า
+            // อัปเดตการตั้งค่าเมื่อเปลี่ยนค่า
             document.getElementById('soundEnabled').addEventListener('change', saveSettings);
             document.getElementById('vibrateEnabled').addEventListener('change', saveSettings);
             document.getElementById('urgentNotifications').addEventListener('change', saveSettings);
@@ -1045,11 +1054,35 @@
             });
         }
         
+        function loadSettingsFromStorage() {
+            // โหลดการตั้งค่าจาก localStorage
+            const soundEnabled = localStorage.getItem('soundEnabled');
+            const vibrateEnabled = localStorage.getItem('vibrateEnabled');
+            const urgentNotifications = localStorage.getItem('urgentNotifications');
+            const backgroundCheck = localStorage.getItem('backgroundCheck');
+            const wakeLockEnabledStorage = localStorage.getItem('wakeLockEnabled');
+            
+            // ตั้งค่าค่าเริ่มต้นถ้าไม่มีใน storage
+            document.getElementById('soundEnabled').checked = soundEnabled !== 'false';
+            document.getElementById('vibrateEnabled').checked = vibrateEnabled !== 'false';
+            document.getElementById('urgentNotifications').checked = urgentNotifications !== 'false';
+            document.getElementById('backgroundCheck').checked = backgroundCheck !== 'false';
+            
+            // ตั้งค่า Wake Lock
+            wakeLockEnabled = wakeLockEnabledStorage !== 'false';
+            
+            // ตรวจสอบ Wake Lock support และตั้งค่าตามที่บันทึกไว้
+            checkWakeLockSupport();
+        }
+        
         function saveSettings() {
             localStorage.setItem('soundEnabled', document.getElementById('soundEnabled').checked);
             localStorage.setItem('vibrateEnabled', document.getElementById('vibrateEnabled').checked);
             localStorage.setItem('urgentNotifications', document.getElementById('urgentNotifications').checked);
             localStorage.setItem('backgroundCheck', document.getElementById('backgroundCheck').checked);
+            localStorage.setItem('wakeLockEnabled', wakeLockEnabled);
+            
+            console.log('💾 บันทึกการตั้งค่าเรียบร้อยแล้ว');
         }
         
         function startTimers() {
@@ -1085,9 +1118,6 @@
                     document.getElementById('mainApp').classList.remove('hidden');
                     
                     console.log('✅ ระบบพร้อมใช้งาน');
-                    
-                    // ตรวจสอบ Wake Lock
-                    checkWakeLockSupport();
                     
                     // แสดง install prompt ถ้าจำเป็น
                     showInstallPrompt();
@@ -1189,51 +1219,82 @@
         }
         
         // ============================================
-        // Wake Lock API
+        // Wake Lock Management (แก้ไขให้บันทึกถาวร)
         // ============================================
+        
         async function checkWakeLockSupport() {
             if ('wakeLock' in navigator) {
                 console.log('✅ Wake Lock รองรับ');
-                await requestWakeLock();
+                
+                // โหลดสถานะ Wake Lock จาก localStorage
+                const savedWakeLockEnabled = localStorage.getItem('wakeLockEnabled');
+                wakeLockEnabled = savedWakeLockEnabled !== 'false'; // ค่าเริ่มต้นเป็น true ถ้าไม่มีค่า
+                
+                // ตั้งค่าตามค่าที่บันทึกไว้
+                if (wakeLockEnabled) {
+                    await requestWakeLock();
+                } else {
+                    // แสดงสถานะว่า Wake Lock ปิดอยู่
+                    updateWakeLockUI(false);
+                }
+                
+                // อัปเดตปุ่มใน settings
+                updateWakeLockButton();
+                
             } else {
                 console.log('❌ Wake Lock ไม่รองรับ');
                 document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-ban mr-1"></i>ไม่รองรับ';
-                document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded';
+                document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded mr-2 wake-lock-inactive';
+                document.getElementById('wakeLockBtn').textContent = 'ไม่รองรับ';
+                document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-gray-600 text-white text-sm rounded-lg';
+                document.getElementById('wakeLockBtn').disabled = true;
             }
         }
         
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
                 try {
+                    // ถ้ามี wakeLock เก่าอยู่ ให้ปล่อยก่อน
+                    if (wakeLock) {
+                        releaseWakeLock();
+                    }
+                    
                     wakeLock = await navigator.wakeLock.request('screen');
                     console.log('✅ Wake Lock ได้รับแล้ว');
                     
-                    document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-bolt mr-1"></i>หน้าจอตื่น';
-                    document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded mr-2';
-                    document.getElementById('wakeLockBtn').textContent = 'ปิด';
-                    document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-red-600 text-white text-sm rounded-lg';
+                    // บันทึกสถานะ
+                    wakeLockEnabled = true;
+                    localStorage.setItem('wakeLockEnabled', 'true');
+                    
+                    // อัปเดต UI
+                    updateWakeLockUI(true);
                     
                     wakeLock.addEventListener('release', () => {
                         console.log('⚠️ Wake Lock ถูกปล่อย');
-                        document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-moon mr-1"></i>หน้าจอดับ';
-                        document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded mr-2';
-                        document.getElementById('wakeLockBtn').textContent = 'เปิด';
-                        document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-green-600 text-white text-sm rounded-lg';
+                        
+                        // ถ้าเราปล่อยเอง (ไม่ใช่ระบบปล่อยให้) ให้อัปเดตสถานะ
+                        if (wakeLockEnabled) {
+                            // พยายามขอใหม่
+                            setTimeout(() => {
+                                if (wakeLockEnabled && document.visibilityState === 'visible') {
+                                    requestWakeLock();
+                                }
+                            }, 1000);
+                        } else {
+                            updateWakeLockUI(false);
+                        }
                     });
+                    
+                    // บันทึกการตั้งค่า
+                    saveSettings();
                     
                 } catch (err) {
                     console.log('❌ Wake Lock error:', err);
                     document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>ข้อผิดพลาด';
                     document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-red-900/30 text-red-300 rounded mr-2';
+                    document.getElementById('wakeLockBtn').textContent = 'ข้อผิดพลาด';
+                    document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-red-600 text-white text-sm rounded-lg';
                 }
-            }
-        }
-        
-        function toggleWakeLock() {
-            if (wakeLock) {
-                releaseWakeLock();
-            } else {
-                requestWakeLock();
             }
         }
         
@@ -1241,6 +1302,51 @@
             if (wakeLock !== null) {
                 wakeLock.release();
                 wakeLock = null;
+                
+                // บันทึกสถานะ
+                wakeLockEnabled = false;
+                localStorage.setItem('wakeLockEnabled', 'false');
+                
+                // อัปเดต UI
+                updateWakeLockUI(false);
+                
+                // บันทึกการตั้งค่า
+                saveSettings();
+            }
+        }
+        
+        function toggleWakeLock() {
+            if (wakeLockEnabled && wakeLock) {
+                releaseWakeLock();
+                showAlert('success', 'ปิด Wake Lock แล้ว');
+            } else {
+                requestWakeLock();
+                showAlert('success', 'เปิด Wake Lock แล้ว');
+            }
+        }
+        
+        function updateWakeLockUI(isActive) {
+            if (isActive) {
+                document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-bolt mr-1"></i>หน้าจอตื่น';
+                document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-green-900/30 text-green-300 rounded mr-2 wake-lock-active';
+                document.getElementById('wakeLockBtn').textContent = 'ปิด';
+                document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-red-600 text-white text-sm rounded-lg';
+            } else {
+                document.getElementById('wakeLockStatus').innerHTML = '<i class="fas fa-moon mr-1"></i>หน้าจอดับ';
+                document.getElementById('wakeLockStatus').className = 'text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded mr-2 wake-lock-inactive';
+                document.getElementById('wakeLockBtn').textContent = 'เปิด';
+                document.getElementById('wakeLockBtn').className = 'px-3 py-1 bg-green-600 text-white text-sm rounded-lg';
+            }
+        }
+        
+        function updateWakeLockButton() {
+            const wakeLockBtn = document.getElementById('wakeLockBtn');
+            if (wakeLockEnabled) {
+                wakeLockBtn.textContent = 'ปิด';
+                wakeLockBtn.className = 'px-3 py-1 bg-red-600 text-white text-sm rounded-lg';
+            } else {
+                wakeLockBtn.textContent = 'เปิด';
+                wakeLockBtn.className = 'px-3 py-1 bg-green-600 text-white text-sm rounded-lg';
             }
         }
         
@@ -3202,6 +3308,14 @@
                     name: userName,
                     deviceId: deviceId
                 },
+                settings: {
+                    soundEnabled: document.getElementById('soundEnabled').checked,
+                    vibrateEnabled: document.getElementById('vibrateEnabled').checked,
+                    urgentNotifications: document.getElementById('urgentNotifications').checked,
+                    backgroundCheck: document.getElementById('backgroundCheck').checked,
+                    wakeLockEnabled: wakeLockEnabled,
+                    theme: isDarkMode ? 'dark' : 'light'
+                },
                 exportDate: new Date().toISOString(),
                 version: VERSION
             };
@@ -3263,11 +3377,40 @@
                     if (data.notifications) notifications = data.notifications;
                     if (data.broadcasts) broadcasts = data.broadcasts;
                     
+                    if (data.settings) {
+                        // นำเข้าการตั้งค่า
+                        if (data.settings.soundEnabled !== undefined) {
+                            document.getElementById('soundEnabled').checked = data.settings.soundEnabled;
+                        }
+                        if (data.settings.vibrateEnabled !== undefined) {
+                            document.getElementById('vibrateEnabled').checked = data.settings.vibrateEnabled;
+                        }
+                        if (data.settings.urgentNotifications !== undefined) {
+                            document.getElementById('urgentNotifications').checked = data.settings.urgentNotifications;
+                        }
+                        if (data.settings.backgroundCheck !== undefined) {
+                            document.getElementById('backgroundCheck').checked = data.settings.backgroundCheck;
+                        }
+                        if (data.settings.wakeLockEnabled !== undefined) {
+                            wakeLockEnabled = data.settings.wakeLockEnabled;
+                            localStorage.setItem('wakeLockEnabled', wakeLockEnabled);
+                        }
+                        if (data.settings.theme) {
+                            isDarkMode = data.settings.theme === 'dark';
+                            localStorage.setItem('theme', data.settings.theme);
+                            applyTheme();
+                        }
+                        
+                        // บันทึกการตั้งค่าทั้งหมด
+                        saveSettings();
+                    }
+                    
                     localStorage.setItem('alarms', JSON.stringify(alarms));
                     localStorage.setItem('notifications', JSON.stringify(notifications));
                     localStorage.setItem('broadcasts', JSON.stringify(broadcasts));
                     
                     loadAppData();
+                    loadSettingsFromStorage(); // โหลดการตั้งค่าอีกครั้ง
                     
                     showAlert('success', 'นำเข้าข้อมูลสำเร็จ');
                 }
@@ -3344,6 +3487,38 @@
         }
         
         // ============================================
+        // Background Sync Management
+        // ============================================
+        async function setupBackgroundSync() {
+            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    
+                    // ลงทะเบียน Background Sync
+                    await registration.sync.register('check-alarms');
+                    console.log('✅ Background Sync ลงทะเบียนสำเร็จ');
+                    
+                    // ตั้งค่า Periodic Sync (ถ้ารองรับ)
+                    if ('periodicSync' in registration) {
+                        try {
+                            await registration.periodicSync.register('check-public-alarms', {
+                                minInterval: 15 * 60 * 1000 // ทุก 15 นาที
+                            });
+                            console.log('✅ Periodic Sync ลงทะเบียนสำเร็จ');
+                        } catch (error) {
+                            console.log('⚠️ Periodic Sync ไม่รองรับ:', error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ เกิดข้อผิดพลาดในการตั้งค่า Background Sync:', error);
+                }
+            } else {
+                console.log('⚠️ Background Sync ไม่รองรับในเบราว์เซอร์นี้');
+            }
+        }
+        
+        // ============================================
         // เริ่มต้นแอปพลิเคชัน
         // ============================================
         document.addEventListener('DOMContentLoaded', initApp);
@@ -3353,85 +3528,47 @@
                 updateBadges();
                 updateAppIconBadge();
                 
-                if ('wakeLock' in navigator && !wakeLock) {
-                    requestWakeLock();
+                // ถ้า Wake Lock เปิดอยู่และหน้าจอดับ ให้ขอใหม่
+                if (wakeLockEnabled && !wakeLock && 'wakeLock' in navigator) {
+                    setTimeout(() => {
+                        if (document.visibilityState === 'visible') {
+                            requestWakeLock();
+                        }
+                    }, 100);
                 }
                 
+                // ตรวจสอบข้อมูลใหม่
                 checkForPublicAlarms();
                 checkForNewBroadcasts();
                 
             } else {
-                releaseWakeLock();
+                // เมื่อแอปไม่แสดงผล
+                if (wakeLock && !wakeLockEnabled) {
+                    releaseWakeLock();
+                }
             }
         });
         
-        window.addEventListener('beforeunload', (e) => {
-            const hasUnsaved = alarms.some(a => !a.synced);
-            if (hasUnsaved) {
-                e.preventDefault();
-                e.returnValue = 'มีข้อมูลที่ยังไม่ได้บันทึกในระบบคลาวด์ คุณแน่ใจที่จะออกหรือไม่?';
-            }
-        });
-        
-        setInterval(() => {
-            if (document.visibilityState === 'visible') {
-                updateBadges();
-                updateAppIconBadge();
-            }
-        }, 60000);
+        // ตั้งค่า Background Sync เมื่อ Service Worker พร้อม
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(() => {
+                setupBackgroundSync();
+                
+                // ตั้งค่า interval สำหรับตรวจสอบ alarms ใน background
+                setInterval(() => {
+                    if (document.visibilityState !== 'visible') {
+                        // ส่งข้อความไปยัง Service Worker ให้ตรวจสอบ alarms
+                        if (serviceWorkerRegistration?.active) {
+                            serviceWorkerRegistration.active.postMessage({
+                                type: 'CHECK_ALARMS'
+                            });
+                        }
+                    }
+                }, 30000); // ตรวจสอบทุก 30 วินาที
+            });
+        }
         
         console.log('🎉 App initialized successfully');
-
-        // ============================================
-// ตรวจสอบและตั้งค่า Background Sync
-// ============================================
-async function setupBackgroundSync() {
-    if ('serviceWorker' in navigator && 'SyncManager' in window) {
-        try {
-            const registration = await navigator.serviceWorker.ready;
-            
-            // ลงทะเบียน Background Sync
-            await registration.sync.register('check-alarms');
-            console.log('✅ Background Sync ลงทะเบียนสำเร็จ');
-            
-            // ตั้งค่า Periodic Sync (ถ้ารองรับ)
-            if ('periodicSync' in registration) {
-                try {
-                    await registration.periodicSync.register('check-public-alarms', {
-                        minInterval: 15 * 60 * 1000 // ทุก 15 นาที
-                    });
-                    console.log('✅ Periodic Sync ลงทะเบียนสำเร็จ');
-                } catch (error) {
-                    console.log('⚠️ Periodic Sync ไม่รองรับ:', error);
-                }
-            }
-            
-        } catch (error) {
-            console.error('❌ เกิดข้อผิดพลาดในการตั้งค่า Background Sync:', error);
-        }
-    } else {
-        console.log('⚠️ Background Sync ไม่รองรับในเบราว์เซอร์นี้');
-    }
-}
-
-// เรียกใช้หลังจาก Service Worker พร้อม
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(() => {
-        setupBackgroundSync();
-        
-        // ตั้งค่า interval สำหรับตรวจสอบ alarms ใน background
-        setInterval(() => {
-            if (document.visibilityState !== 'visible') {
-                // ส่งข้อความไปยัง Service Worker ให้ตรวจสอบ alarms
-                if (serviceWorkerRegistration?.active) {
-                    serviceWorkerRegistration.active.postMessage({
-                        type: 'CHECK_ALARMS'
-                    });
-                }
-            }
-        }, 30000); // ตรวจสอบทุก 30 วินาที
-    });
-}
     </script>
 </body>
 </html>
