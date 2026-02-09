@@ -6,23 +6,17 @@
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
-  "orientation": "any",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://via.placeholder.com/192x192/667eea/ffffff?text=🔔",
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23667eea%22>🔔</text></svg>",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml"
     },
     {
-      "src": "https://via.placeholder.com/512x512/667eea/ffffff?text=🔔",
+      "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23667eea%22>🔔</text></svg>",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ],
   "categories": ["productivity", "utilities"],
@@ -31,13 +25,37 @@
       "name": "เพิ่มแจ้งเตือนใหม่",
       "short_name": "เพิ่ม",
       "description": "เพิ่มการแจ้งเตือนใหม่",
-      "url": "/?action=add"
+      "url": "/?action=new",
+      "icons": [{ "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%2310b981%22>➕</text></svg>", "sizes": "96x96" }]
     },
     {
-      "name": "ดูแจ้งเตือน",
+      "name": "ดูการแจ้งเตือน",
       "short_name": "แจ้งเตือน",
       "description": "ดูการแจ้งเตือนทั้งหมด",
-      "url": "/?action=notifications"
+      "url": "/?action=notifications",
+      "icons": [{ "src": "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22 fill=%22%23f59e0b%22>🔔</text></svg>", "sizes": "96x96" }]
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/540x720/1a1a2e/ffffff?text=ระบบแจ้งเตือนรวมศูนย์",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "https://via.placeholder.com/720x540/1a1a2e/ffffff?text=ระบบแจ้งเตือนรวมศูนย์",
+      "sizes": "720x540",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+alarm",
+      "url": "/?alarm=%s"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }
