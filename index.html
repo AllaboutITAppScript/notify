@@ -276,6 +276,21 @@
             z-index: 50;
             animation: slideInRight 0.3s ease-out;
         }
+        
+        /* NEW: Group Alarm Section */
+        .group-alarm-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        /* NEW: Alarm type indicators */
+        .alarm-type-private {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        }
+        
+        .alarm-type-public {
+            background: linear-gradient(135deg, #10b981, #047857);
+        }
     </style>
 </head>
 <body>
@@ -569,6 +584,22 @@
                         </div>
                     </div>
                     
+                    <!-- NEW: Group Alarm Buttons -->
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">เพิ่มแจ้งเตือนแบบกลุ่ม</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button type="button" onclick="createGroupAlarm('team')" class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm transition-colors">
+                                <i class="fas fa-users mr-1"></i>ทีม
+                            </button>
+                            <button type="button" onclick="createGroupAlarm('department')" class="bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm transition-colors">
+                                <i class="fas fa-building mr-1"></i>แผนก
+                            </button>
+                            <button type="button" onclick="createGroupAlarm('all')" class="bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg text-sm transition-colors">
+                                <i class="fas fa-globe mr-1"></i>ทั้งหมด
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div>
                         <label class="block text-gray-400 text-sm mb-2">ระดับความสำคัญ</label>
                         <div class="flex flex-wrap gap-2">
@@ -630,6 +661,42 @@
                     <i class="fas fa-clock text-3xl text-gray-500 mb-3"></i>
                     <p class="text-gray-400">ยังไม่มีกำหนดการแจ้งเตือน</p>
                     <p class="text-sm text-gray-500 mt-2">เพิ่มการแจ้งเตือนใหม่โดยใช้แบบฟอร์มด้านบน</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- NEW: Group Alarms Section -->
+        <div class="container mx-auto px-4 mb-8">
+            <div class="bg-gray-800 rounded-xl p-6">
+                <h2 class="text-lg font-bold mb-4">
+                    <i class="fas fa-users mr-2"></i>แจ้งเตือนกลุ่ม
+                </h2>
+                <div class="space-y-4">
+                    <div class="group-alarm-card rounded-lg p-4">
+                        <h3 class="font-bold text-blue-300 mb-2">สร้างแจ้งเตือนกลุ่มใหม่</h3>
+                        <p class="text-gray-300 text-sm mb-3">ส่งแจ้งเตือนไปยังกลุ่มต่างๆ ได้ทันที</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <button onclick="createGroupAlarm('team')" class="bg-blue-600 hover:bg-blue-700 rounded-lg p-4 flex flex-col items-center transition-colors">
+                                <i class="fas fa-users text-2xl mb-2"></i>
+                                <span class="font-medium">ทีมงาน</span>
+                                <span class="text-xs mt-1">แจ้งเตือนทีมของคุณ</span>
+                            </button>
+                            <button onclick="createGroupAlarm('department')" class="bg-green-600 hover:bg-green-700 rounded-lg p-4 flex flex-col items-center transition-colors">
+                                <i class="fas fa-building text-2xl mb-2"></i>
+                                <span class="font-medium">แผนก</span>
+                                <span class="text-xs mt-1">แจ้งเตือนทั้งแผนก</span>
+                            </button>
+                            <button onclick="createGroupAlarm('all')" class="bg-purple-600 hover:bg-purple-700 rounded-lg p-4 flex flex-col items-center transition-colors">
+                                <i class="fas fa-globe text-2xl mb-2"></i>
+                                <span class="font-medium">ทุกคน</span>
+                                <span class="text-xs mt-1">แจ้งเตือนทั้งหมด</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="groupAlarmsList" class="mt-6">
+                        <!-- Group alarms will appear here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -805,7 +872,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-400">เวอร์ชัน</span>
-                                <span class="text-sm">1.3.0</span>
+                                <span class="text-sm">2.0.0</span>
                             </div>
                         </div>
                     </div>
@@ -864,7 +931,7 @@
         // ตัวแปรและค่าคงที่
         // ============================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
-        const VERSION = "1.3.0";
+        const VERSION = "2.0.0";
         
         let alarms = [];
         let notifications = [];
@@ -1002,6 +1069,7 @@
             
             // อัปเดต UI
             updateAlarmsList();
+            updateGroupAlarmsList();
             updateNotificationsList();
             updateCounts();
             updateBadges();
@@ -1061,9 +1129,9 @@
             if (updateTimeInterval) clearInterval(updateTimeInterval);
             updateTimeInterval = setInterval(updateCurrentTime, 1000);
             
-            // เริ่มตรวจสอบแจ้งเตือนสาธารณะใหม่ (ทุก 10 วินาที)
+            // เริ่มตรวจสอบแจ้งเตือนสาธารณะใหม่ (ทุก 5 วินาที)
             if (checkPublicAlarmsInterval) clearInterval(checkPublicAlarmsInterval);
-            checkPublicAlarmsInterval = setInterval(checkForPublicAlarms, 10000);
+            checkPublicAlarmsInterval = setInterval(checkForPublicAlarms, 5000);
             
             // เริ่ม sync ข้อมูล
             if (syncDataInterval) clearInterval(syncDataInterval);
@@ -1385,6 +1453,216 @@
                     selectedBtn.className = 'px-4 py-2 bg-red-600 rounded-lg text-sm transition-colors';
                 }
             }
+        }
+        
+        // ============================================
+        // ฟังก์ชันใหม่: สร้างแจ้งเตือนแบบกลุ่ม
+        // ============================================
+        async function createGroupAlarm(groupType) {
+            const result = await Swal.fire({
+                title: `สร้างแจ้งเตือนสำหรับ${groupType === 'team' ? 'ทีม' : groupType === 'department' ? 'แผนก' : 'ทุกคน'}`,
+                html: `
+                    <div class="text-left space-y-3">
+                        <input id="groupTitle" type="text" placeholder="หัวข้อแจ้งเตือน" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg" required>
+                        <textarea id="groupMessage" rows="3" placeholder="ข้อความแจ้งเตือน" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg"></textarea>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input id="groupDate" type="date" class="p-3 bg-gray-800 border border-gray-700 rounded-lg" value="${new Date().toISOString().split('T')[0]}" required>
+                            <input id="groupTime" type="time" class="p-3 bg-gray-800 border border-gray-700 rounded-lg" value="${new Date().getHours().toString().padStart(2, '0')}:00" required>
+                        </div>
+                        <div class="text-xs text-gray-400">
+                            แจ้งเตือนนี้จะถูกส่งไป${groupType === 'team' ? 'ทีมของคุณ' : groupType === 'department' ? 'แผนกของคุณ' : 'ทุกคนในระบบ'}
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'ส่งแจ้งเตือน',
+                cancelButtonText: 'ยกเลิก',
+                background: '#1f2937',
+                color: '#e5e7eb',
+                preConfirm: () => {
+                    const title = document.getElementById('groupTitle').value;
+                    const message = document.getElementById('groupMessage').value;
+                    const date = document.getElementById('groupDate').value;
+                    const time = document.getElementById('groupTime').value;
+                    
+                    if (!title || !date || !time) {
+                        Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                        return false;
+                    }
+                    
+                    return { title, message, date, time };
+                }
+            });
+            
+            if (result.isConfirmed) {
+                const { title, message, date, time } = result.value;
+                
+                const datetime = new Date(`${date}T${time}`);
+                
+                const alarm = {
+                    id: 'group_alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                    title: `[กลุ่ม-${groupType === 'team' ? 'ทีม' : groupType === 'department' ? 'แผนก' : 'ทั้งหมด'}] ${title}`,
+                    description: message,
+                    date: date,
+                    time: time,
+                    datetime: datetime.toISOString(),
+                    type: 'public',
+                    groupType: groupType,
+                    priority: 'high',
+                    repeat: 'none',
+                    sound: 'urgent',
+                    vibrate: true,
+                    triggered: false,
+                    synced: false,
+                    createdAt: new Date().toISOString(),
+                    userId: userId,
+                    deviceId: deviceId,
+                    userName: userName,
+                    isGroupAlarm: true
+                };
+                
+                // บันทึกในเครื่อง
+                alarms.push(alarm);
+                localStorage.setItem('alarms', JSON.stringify(alarms));
+                
+                // ส่งไปยังเซิร์ฟเวอร์เพื่อแจ้งเตือนทุกคน
+                const sent = await sendGroupAlarmToServer(alarm);
+                
+                // ส่งไปยัง Service Worker
+                if (serviceWorkerRegistration?.active) {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'SCHEDULE_ALARM',
+                        alarm: alarm
+                    });
+                }
+                
+                // แสดงผลสำเร็จ
+                const groupName = groupType === 'team' ? 'ทีม' : groupType === 'department' ? 'แผนก' : 'ทุกคน';
+                showAlert('success', `ส่งแจ้งเตือนไปยัง${groupName}สำเร็จ!`);
+                
+                // อัปเดต UI
+                updateAlarmsList();
+                updateGroupAlarmsList();
+                updateCounts();
+            }
+        }
+        
+        // ============================================
+        // ฟังก์ชันใหม่: ส่งแจ้งเตือนกลุ่มไปยังเซิร์ฟเวอร์
+        // ============================================
+        async function sendGroupAlarmToServer(alarm) {
+            try {
+                const payload = {
+                    action: 'add_group_alarm',
+                    date: alarm.date,
+                    time: alarm.time,
+                    title: alarm.title,
+                    description: alarm.description || '',
+                    group_type: alarm.groupType,
+                    priority: alarm.priority,
+                    user_id: userId,
+                    user_name: userName,
+                    alarm_id: alarm.id,
+                    device_id: deviceId,
+                    timestamp: Date.now(),
+                    datetime: alarm.datetime
+                };
+                
+                const params = new URLSearchParams();
+                for (const key in payload) {
+                    if (payload[key] !== undefined && payload[key] !== null) {
+                        params.append(key, payload[key].toString());
+                    }
+                }
+                
+                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    console.log('✅ ส่งแจ้งเตือนกลุ่มสำเร็จ');
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('❌ ไม่สามารถส่งแจ้งเตือนกลุ่ม:', error);
+                return false;
+            }
+        }
+        
+        // ============================================
+        // ฟังก์ชันใหม่: อัปเดตรายการแจ้งเตือนกลุ่ม
+        // ============================================
+        function updateGroupAlarmsList() {
+            const container = document.getElementById('groupAlarmsList');
+            const groupAlarms = alarms.filter(alarm => alarm.isGroupAlarm && alarm.type === 'public');
+            
+            if (groupAlarms.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-gray-800/50 rounded-lg p-6 text-center">
+                        <i class="fas fa-users text-3xl text-gray-500 mb-3"></i>
+                        <p class="text-gray-400">ยังไม่มีแจ้งเตือนกลุ่ม</p>
+                        <p class="text-sm text-gray-500 mt-2">ใช้ปุ่มด้านบนเพื่อสร้างแจ้งเตือนกลุ่มใหม่</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '<h3 class="font-bold text-lg mb-3">แจ้งเตือนกลุ่มล่าสุด</h3>';
+            
+            const recentGroupAlarms = groupAlarms.slice(0, 5).sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
+            
+            recentGroupAlarms.forEach(alarm => {
+                const alarmDate = new Date(alarm.datetime);
+                const now = new Date();
+                const timeDiff = alarmDate - now;
+                const isPast = alarmDate < now;
+                const isTriggered = alarm.triggered;
+                
+                let timeStatus = '';
+                if (isTriggered) {
+                    timeStatus = 'แจ้งเตือนแล้ว';
+                } else if (isPast) {
+                    timeStatus = 'เลยเวลา';
+                } else if (timeDiff < 3600000) {
+                    timeStatus = 'เร็วๆนี้';
+                } else {
+                    timeStatus = 'กำลังรอ';
+                }
+                
+                const groupTypeText = alarm.groupType === 'team' ? 'ทีม' : alarm.groupType === 'department' ? 'แผนก' : 'ทั้งหมด';
+                
+                const alarmElement = document.createElement('div');
+                alarmElement.className = 'bg-gray-800/50 rounded-lg p-4 mb-3 hover:bg-gray-800 transition-colors';
+                alarmElement.innerHTML = `
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center mr-3 flex-shrink-0">
+                            <i class="fas fa-users text-white"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between items-start">
+                                <h4 class="font-bold text-white">${alarm.title}</h4>
+                                <span class="text-xs px-2 py-1 bg-purple-900/30 text-purple-300 rounded">
+                                    ${groupTypeText}
+                                </span>
+                            </div>
+                            <p class="text-gray-300 text-sm mt-1">${alarm.description || 'ไม่มีรายละเอียด'}</p>
+                            <div class="flex justify-between items-center mt-3">
+                                <span class="text-xs text-gray-500">
+                                    <i class="far fa-clock mr-1"></i>
+                                    ${alarmDate.toLocaleDateString('th-TH')} ${alarmDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
+                                </span>
+                                <span class="text-xs px-2 py-1 ${isTriggered ? 'bg-green-900/30 text-green-300' : isPast ? 'bg-gray-700 text-gray-300' : 'bg-yellow-900/30 text-yellow-300'} rounded">
+                                    ${timeStatus}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(alarmElement);
+            });
         }
         
         document.getElementById('alarmForm').addEventListener('submit', async function(e) {
@@ -1737,7 +2015,7 @@
                 showSyncIndicator();
                 
                 const payload = {
-                    action: 'get_public_alarms',
+                    action: 'get_all_public_alarms',
                     user_id: userId,
                     device_id: deviceId,
                     last_check: lastPublicAlarmCheck || 0,
@@ -1786,7 +2064,9 @@
                                     userId: publicAlarm.user_id,
                                     deviceId: publicAlarm.device_id,
                                     userName: publicAlarm.user_name,
-                                    isExternal: true
+                                    isExternal: true,
+                                    isGroupAlarm: publicAlarm.group_type ? true : false,
+                                    groupType: publicAlarm.group_type || null
                                 };
                                 
                                 alarms.push(newAlarm);
@@ -1807,9 +2087,10 @@
                                         }
                                         
                                         // แสดงการแจ้งเตือนว่าได้รับแจ้งเตือนสาธารณะใหม่
+                                        const groupText = newAlarm.isGroupAlarm ? `[กลุ่ม-${newAlarm.groupType || 'ทั่วไป'}] ` : '';
                                         showNotification(
                                             '📢 แจ้งเตือนสาธารณะใหม่',
-                                            `${newAlarm.title} จาก ${newAlarm.userName}`,
+                                            `${groupText}${newAlarm.title} จาก ${newAlarm.userName}`,
                                             'public_alarm'
                                         );
                                     } else {
@@ -1826,6 +2107,7 @@
                             
                             // อัปเดต UI
                             updateAlarmsList();
+                            updateGroupAlarmsList();
                             updateCounts();
                             
                             console.log(`✅ เพิ่ม ${newAlarmsAdded} แจ้งเตือนสาธารณะใหม่`);
@@ -2470,6 +2752,7 @@
                 const priorityColor = alarm.priority === 'low' ? 'blue' : alarm.priority === 'medium' ? 'yellow' : 'red';
                 
                 const isExternal = alarm.userId !== userId;
+                const isGroupAlarm = alarm.isGroupAlarm;
                 
                 const alarmElement = document.createElement('div');
                 alarmElement.className = `bg-gray-800 rounded-xl p-4 hover:bg-gray-750 transition-colors border-l-4 ${priorityClass}`;
@@ -2485,6 +2768,7 @@
                                         <h3 class="font-bold ${isTriggered ? 'text-gray-400' : 'text-white'}">
                                             ${alarm.title} 
                                             ${isExternal ? '<span class="public-alarm-indicator ml-2"><i class="fas fa-users mr-1"></i>จากภายนอก</span>' : ''}
+                                            ${isGroupAlarm ? '<span class="public-alarm-indicator ml-2 bg-purple-600"><i class="fas fa-users mr-1"></i>กลุ่ม</span>' : ''}
                                         </h3>
                                         <div class="flex space-x-1">
                                             <span class="text-xs px-2 py-1 ${typeClass} text-white rounded">
@@ -2628,6 +2912,7 @@
             }
             
             updateAlarmsList();
+            updateGroupAlarmsList();
             updateCounts();
             
             showAlert('success', 'ลบการแจ้งเตือนสำเร็จ');
@@ -3131,8 +3416,9 @@
                             <h4 class="font-bold text-blue-300 mb-2"><i class="fas fa-bell mr-2"></i>วิธีใช้งาน</h4>
                             <ol class="text-sm space-y-2">
                                 <li>1. <strong>ตั้งเวลาแจ้งเตือน</strong> - ใช้แบบฟอร์มด้านบน</li>
-                                <li>2. <strong>ส่งประกาศ</strong> - แจ้งเตือนไปทุกเครื่อง</li>
-                                <li>3. <strong>ติดตั้งแอป</strong> - สำหรับการแจ้งเตือนที่ดีขึ้น</li>
+                                <li>2. <strong>ส่งประกาศ</strong> - แจ้งเตือนไปทุกเครื่องทันที</li>
+                                <li>3. <strong>แจ้งเตือนกลุ่ม</strong> - ส่งไปยังทีม/แผนก/ทุกคน</li>
+                                <li>4. <strong>ติดตั้งแอป</strong> - สำหรับการแจ้งเตือนที่ดีขึ้น</li>
                             </ol>
                         </div>
                         
@@ -3143,6 +3429,11 @@
                                 <li><i class="fas fa-check-circle text-green-400 mr-2"></i>ติดตั้งเป็นแอป (Add to Home Screen)</li>
                                 <li><i class="fas fa-check-circle text-green-400 mr-2"></i>เปิดเสียงและสั่นในตั้งค่า</li>
                             </ul>
+                        </div>
+                        
+                        <div class="bg-purple-900/30 rounded-lg p-4">
+                            <h4 class="font-bold text-purple-300 mb-2"><i class="fas fa-users mr-2"></i>แจ้งเตือนแบบกลุ่ม</h4>
+                            <p class="text-sm">แจ้งเตือนตามวันที่เวลาจะถูกส่งไปยังทุกคนในกลุ่มที่เลือกอัตโนมัติ!</p>
                         </div>
                         
                         <p class="text-xs text-gray-400">ระบบนี้ทำงานได้แม้ปิดแอปและล็อคหน้าจอ!</p>
@@ -3322,6 +3613,7 @@
             
             if (document.visibilityState === 'visible') {
                 updateAlarmsList();
+                updateGroupAlarmsList();
                 updateCounts();
                 updateBadges();
             }
@@ -3365,12 +3657,14 @@
             }
         });
         
+        // ตรวจสอบแจ้งเตือนสาธารณะทุก 5 วินาทีเมื่อแอปเปิดอยู่
         setInterval(() => {
             if (document.visibilityState === 'visible') {
+                checkForPublicAlarms();
                 updateBadges();
                 updateAppIconBadge();
             }
-        }, 60000);
+        }, 5000);
         
         console.log('🎉 App initialized successfully');
     </script>
