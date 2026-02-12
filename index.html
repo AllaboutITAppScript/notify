@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     
     <style>
+        /* คง CSS เดิมไว้ทั้งหมด */
         * {
             margin: 0;
             padding: 0;
@@ -247,7 +248,7 @@
             color: white !important;
         }
         
-        /* NEW: Public alarm indicator */
+        /* Public alarm indicator */
         .public-alarm-indicator {
             background: linear-gradient(135deg, #10b981 0%, #047857 100%);
             color: white;
@@ -260,7 +261,7 @@
             gap: 4px;
         }
         
-        /* NEW: Real-time sync indicator */
+        /* Real-time sync indicator */
         .sync-indicator {
             position: fixed;
             bottom: 80px;
@@ -813,7 +814,7 @@
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-400">เวอร์ชัน</span>
-                                <span class="text-sm">2.0.0</span>
+                                <span class="text-sm">2.1.0</span>
                             </div>
                         </div>
                     </div>
@@ -872,7 +873,7 @@
         // ตัวแปรและค่าคงที่
         // ============================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
-        const VERSION = "2.0.0";
+        const VERSION = "2.1.0";
         
         let alarms = [];
         let notifications = [];
@@ -897,6 +898,10 @@
         let isOnline = true;
         let isServiceWorkerReady = false;
         let currentFilter = 'all';
+        
+        // เพิ่มตัวแปรสำหรับจัดการการแจ้งเตือนตามเวลา
+        let alarmTimeouts = {};
+        let alarmIntervals = {};
         
         // ============================================
         // เริ่มต้นแอปพลิเคชัน
@@ -1017,6 +1022,85 @@
             updateCounts();
             updateBadges();
             updateRecentBroadcasts();
+            
+            // ตั้งเวลาการแจ้งเตือนทั้งหมดใหม่
+            scheduleAllAlarms();
+        }
+        
+        // ฟังก์ชันใหม่: ตั้งเวลาการแจ้งเตือนทั้งหมด
+        function scheduleAllAlarms() {
+            // ยกเลิกเวลาทั้งหมดก่อน
+            clearAllAlarmSchedules();
+            
+            const now = new Date();
+            
+            alarms.forEach(alarm => {
+                if (!alarm.triggered) {
+                    const alarmTime = new Date(alarm.datetime);
+                    
+                    // ตรวจสอบว่าเวลายังไม่ผ่าน
+                    if (alarmTime > now) {
+                        scheduleAlarm(alarm);
+                        console.log(`⏰ ตั้งเวลาแจ้งเตือน: "${alarm.title}" เวลา ${alarmTime.toLocaleString('th-TH')}`);
+                    } else {
+                        // ถ้าเวลาผ่านไปแล้ว ให้ตรวจสอบว่าเป็นแจ้งเตือนที่เลยเวลาหรือไม่
+                        console.log(`⚠️ แจ้งเตือนเลยเวลา: "${alarm.title}" เวลา ${alarmTime.toLocaleString('th-TH')}`);
+                    }
+                }
+            });
+        }
+        
+        // ฟังก์ชันใหม่: ตั้งเวลาสำหรับการแจ้งเตือนเดียว
+        function scheduleAlarm(alarm) {
+            const alarmTime = new Date(alarm.datetime);
+            const now = new Date();
+            const timeDiff = alarmTime.getTime() - now.getTime();
+            
+            if (timeDiff <= 0) {
+                // ถ้าเวลาผ่านไปแล้ว ให้แจ้งเตือนทันที
+                triggerAlarm(alarm);
+                return;
+            }
+            
+            // ยกเลิกเวลาที่ตั้งไว้ก่อน (ถ้ามี)
+            if (alarmTimeouts[alarm.id]) {
+                clearTimeout(alarmTimeouts[alarm.id]);
+                delete alarmTimeouts[alarm.id];
+            }
+            
+            // ตั้งเวลาใหม่
+            alarmTimeouts[alarm.id] = setTimeout(() => {
+                triggerAlarm(alarm);
+                delete alarmTimeouts[alarm.id];
+            }, timeDiff);
+            
+            console.log(`✅ ตั้งเวลาแจ้งเตือน "${alarm.title}" ในอีก ${formatTimeRemaining(timeDiff)}`);
+        }
+        
+        // ฟังก์ชันใหม่: ยกเลิกเวลาทั้งหมด
+        function clearAllAlarmSchedules() {
+            Object.keys(alarmTimeouts).forEach(key => {
+                clearTimeout(alarmTimeouts[key]);
+                delete alarmTimeouts[key];
+            });
+            
+            Object.keys(alarmIntervals).forEach(key => {
+                clearInterval(alarmIntervals[key]);
+                delete alarmIntervals[key];
+            });
+        }
+        
+        // ฟังก์ชันใหม่: จัดรูปแบบเวลา
+        function formatTimeRemaining(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return `${days} วัน ${hours % 24} ชั่วโมง`;
+            if (hours > 0) return `${hours} ชั่วโมง ${minutes % 60} นาที`;
+            if (minutes > 0) return `${minutes} นาที ${seconds % 60} วินาที`;
+            return `${seconds} วินาที`;
         }
         
         function setupForm() {
@@ -1026,7 +1110,9 @@
             
             const nextHour = new Date();
             nextHour.setHours(nextHour.getHours() + 1);
-            document.getElementById('alarmTime').value = nextHour.getHours().toString().padStart(2, '0') + ':00';
+            nextHour.setMinutes(0, 0, 0);
+            document.getElementById('alarmTime').value = nextHour.getHours().toString().padStart(2, '0') + ':' + 
+                                                         nextHour.getMinutes().toString().padStart(2, '0');
             
             setRepeat('none');
             setPriority('medium');
@@ -1064,8 +1150,9 @@
         }
         
         function startTimers() {
-            // เริ่มจับเวลาแจ้งเตือน
+            // เริ่มจับเวลาแจ้งเตือน (ใช้ setTimeout แทน setInterval เพื่อความแม่นยำ)
             if (checkAlarmInterval) clearInterval(checkAlarmInterval);
+            // ใช้ setInterval เผื่อกรณีที่ setTimeout ล้มเหลว
             checkAlarmInterval = setInterval(checkAlarms, 1000);
             
             // เริ่มอัปเดตเวลา
@@ -1347,12 +1434,15 @@
                 const timeDiff = alarmDate - now;
                 const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
                 const minutesDiff = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const secondsDiff = Math.floor((timeDiff % (1000 * 60)) / 1000);
                 
                 let timeText = '';
                 if (hoursDiff > 0) {
                     timeText = `${hoursDiff} ชม. ${minutesDiff} นาที`;
+                } else if (minutesDiff > 0) {
+                    timeText = `${minutesDiff} นาที ${secondsDiff} วินาที`;
                 } else {
-                    timeText = `${minutesDiff} นาที`;
+                    timeText = `${secondsDiff} วินาที`;
                 }
                 
                 document.getElementById('nextAlarm').innerHTML = `
@@ -1435,7 +1525,7 @@
                 date: date,
                 time: time,
                 datetime: datetime.toISOString(),
-                type: alarmType, // 'personal' หรือ 'public'
+                type: alarmType,
                 priority: currentPriority,
                 repeat: currentRepeat,
                 sound: sound,
@@ -1451,6 +1541,9 @@
             // เพิ่มลงในรายการ
             alarms.push(alarm);
             localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            // ตั้งเวลาแจ้งเตือน
+            scheduleAlarm(alarm);
             
             // ส่งไปยัง Service Worker สำหรับแจ้งเตือนเบื้องหลัง
             if (serviceWorkerRegistration?.active) {
@@ -1487,7 +1580,6 @@
             
             // ถ้าเป็นแจ้งเตือนสาธารณะ ให้แจ้งเตือนเครื่องอื่นทันที
             if (alarmType === 'public') {
-                // ตั้งค่าให้ trigger ในเครื่องอื่น
                 setTimeout(() => {
                     triggerPublicAlarmForOthers(alarm);
                 }, 1000);
@@ -1532,7 +1624,7 @@
                     time: alarm.time,
                     title: alarm.title,
                     description: alarm.description || '',
-                    type: alarm.type, // 'personal' หรือ 'public'
+                    type: alarm.type,
                     priority: alarm.priority,
                     repeat: alarm.repeat,
                     status: status,
@@ -1544,7 +1636,6 @@
                     datetime: alarm.datetime
                 };
                 
-                // ถ้าเป็นแจ้งเตือนสาธารณะ ให้ใช้ action อื่น
                 if (alarm.type === 'public') {
                     payload.action = 'add_public_alarm';
                 } else {
@@ -1655,16 +1746,33 @@
         // ============================================
         function checkAlarms() {
             const now = new Date();
+            let triggered = false;
             
             alarms.forEach((alarm, index) => {
-                if (!alarm.triggered && new Date(alarm.datetime) <= now) {
-                    triggerAlarm(alarm);
+                if (!alarm.triggered) {
+                    const alarmTime = new Date(alarm.datetime);
+                    
+                    // ตรวจสอบความแม่นยำระดับวินาที
+                    if (alarmTime.getTime() <= now.getTime() && 
+                        alarmTime.getTime() > now.getTime() - 1000) { // แจ้งเตือนภายใน 1 วินาที
+                        triggerAlarm(alarm);
+                        triggered = true;
+                    }
                 }
             });
+            
+            // อัปเดต next alarm ทุกครั้งที่ตรวจสอบ
+            updateNextAlarm();
         }
         
         async function triggerAlarm(alarm) {
             console.log('🔔 แจ้งเตือน:', alarm.title, 'ประเภท:', alarm.type);
+            
+            // ป้องกันการแจ้งเตือนซ้ำ
+            if (alarm.triggered) {
+                console.log('⚠️ แจ้งเตือนนี้ถูกแจ้งไปแล้ว');
+                return;
+            }
             
             // อัปเดตสถานะ
             alarm.triggered = true;
@@ -1677,6 +1785,12 @@
             }
             
             localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            // ยกเลิกเวลาที่ตั้งไว้
+            if (alarmTimeouts[alarm.id]) {
+                clearTimeout(alarmTimeouts[alarm.id]);
+                delete alarmTimeouts[alarm.id];
+            }
             
             // ส่งไปยัง Service Worker สำหรับแจ้งเตือนเบื้องหลัง
             if (serviceWorkerRegistration?.active) {
@@ -1712,7 +1826,7 @@
             // เพิ่มใน notifications
             const typeText = alarm.type === 'personal' ? ' (ส่วนตัว)' : ' (แจ้งทุกคน)';
             addNotification({
-                id: 'alarm_' + alarm.id,
+                id: 'alarm_' + alarm.id + '_' + Date.now(),
                 type: 'alarm',
                 title: alarm.title + typeText,
                 message: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
@@ -1742,9 +1856,9 @@
             updateCounts();
             updateBadges();
             updateAppIconBadge();
+            updateNextAlarm();
         }
         
-        // ฟังก์ชันใหม่: Trigger public alarm สำหรับเครื่องอื่น
         async function triggerPublicAlarmForOthers(alarm) {
             if (alarm.type !== 'public') return;
             
@@ -1781,10 +1895,8 @@
                     const result = await response.json();
                     console.log('✅ บันทึกแจ้งเตือนสาธารณะสำเร็จ:', result);
                     
-                    // แสดงการแจ้งเตือนว่าส่งสำเร็จ
                     showAlert('success', 'ส่งแจ้งเตือนสาธารณะสำเร็จ! ทุกคนในระบบจะได้รับแจ้งเตือนนี้');
                     
-                    // อัปเดตสถานะในเครื่องนี้
                     alarm.synced = true;
                     const index = alarms.findIndex(a => a.id === alarm.id);
                     if (index !== -1) {
@@ -1806,7 +1918,6 @@
             }
         }
         
-        // ฟังก์ชันอัปเดตสถานะแจ้งเตือนสาธารณะ
         async function updatePublicAlarmStatus(alarmId, status = 'triggered') {
             if (!isOnline) return false;
             
@@ -1845,7 +1956,6 @@
             }
         }
         
-        // ฟังก์ชันใหม่: ตรวจสอบแจ้งเตือนสาธารณะใหม่
         async function checkForPublicAlarms() {
             if (!isOnline) {
                 console.log('⚠️ ออฟไลน์ ข้ามการตรวจสอบแจ้งเตือนสาธารณะ');
@@ -1882,11 +1992,9 @@
                         
                         let newAlarmsAdded = 0;
                         result.alarms.forEach(publicAlarm => {
-                            // ตรวจสอบว่าเคยมี alarm นี้แล้วหรือยัง
                             const exists = alarms.find(a => a.id === publicAlarm.id);
                             
                             if (!exists && publicAlarm.userId !== userId) {
-                                // เพิ่ม alarm สาธารณะใหม่
                                 const newAlarm = {
                                     id: publicAlarm.id,
                                     title: publicAlarm.title,
@@ -1913,16 +2021,15 @@
                                 alarms.push(newAlarm);
                                 newAlarmsAdded++;
                                 
-                                // บันทึกลง localStorage
                                 localStorage.setItem('alarms', JSON.stringify(alarms));
                                 
-                                // ถ้ายังไม่ถึงเวลาและยังไม่ถูกแจ้งเตือน
                                 if (!newAlarm.triggered && newAlarm.status === 'pending') {
                                     const alarmTime = new Date(newAlarm.datetime);
                                     const now = new Date();
                                     
                                     if (alarmTime > now) {
-                                        // ส่งไปยัง Service Worker
+                                        scheduleAlarm(newAlarm);
+                                        
                                         if (serviceWorkerRegistration?.active) {
                                             serviceWorkerRegistration.active.postMessage({
                                                 type: 'SCHEDULE_ALARM',
@@ -1930,7 +2037,6 @@
                                             });
                                         }
                                         
-                                        // แสดงการแจ้งเตือนว่าได้รับแจ้งเตือนสาธารณะใหม่
                                         const notificationMessage = `${newAlarm.title}\nจาก: ${newAlarm.userName}\nเวลา: ${newAlarm.date} ${newAlarm.time}`;
                                         
                                         showNotification(
@@ -1939,7 +2045,6 @@
                                             'public_alarm'
                                         );
                                         
-                                        // แสดงใน-app notification
                                         if (document.visibilityState === 'visible') {
                                             showPushNotification(
                                                 '📢 แจ้งเตือนสาธารณะใหม่',
@@ -1948,9 +2053,8 @@
                                             );
                                         }
                                         
-                                        // เพิ่มใน notifications
                                         addNotification({
-                                            id: 'public_alarm_' + newAlarm.id,
+                                            id: 'public_alarm_' + newAlarm.id + '_' + Date.now(),
                                             type: 'public_alarm',
                                             title: '📢 แจ้งเตือนสาธารณะใหม่',
                                             message: notificationMessage,
@@ -1959,7 +2063,6 @@
                                         });
                                         
                                     } else {
-                                        // ถ้าเวลาผ่านไปแล้ว ให้ trigger ทันที
                                         console.log(`⚠️ แจ้งเตือนสาธารณะเลยเวลาแล้ว: ${newAlarm.title}`);
                                         triggerAlarm(newAlarm);
                                     }
@@ -1968,19 +2071,16 @@
                         });
                         
                         if (newAlarmsAdded > 0) {
-                            // อัปเดต UI
                             updateAlarmsList();
                             updateCounts();
                             
                             console.log(`✅ เพิ่ม ${newAlarmsAdded} แจ้งเตือนสาธารณะใหม่`);
                             
-                            // แสดงผลสรุป
                             if (newAlarmsAdded > 0) {
                                 showAlert('info', `พบแจ้งเตือนสาธารณะใหม่ ${newAlarmsAdded} รายการ`);
                             }
                         }
                         
-                        // อัปเดตเวลาตรวจสอบล่าสุด
                         lastPublicAlarmCheck = Date.now();
                         localStorage.setItem('lastPublicAlarmCheck', lastPublicAlarmCheck);
                     } else {
@@ -1998,7 +2098,6 @@
             }
         }
         
-        // ฟังก์ชัน sync แรกเมื่อเปิดแอป
         async function syncPublicAlarmsOnStartup() {
             if (!isOnline) return;
             
@@ -2031,11 +2130,9 @@
                         
                         let newAlarmsAdded = 0;
                         result.alarms.forEach(publicAlarm => {
-                            // ตรวจสอบว่าเคยมี alarm นี้แล้วหรือยัง
                             const exists = alarms.find(a => a.id === publicAlarm.id);
                             
                             if (!exists && publicAlarm.userId !== userId) {
-                                // เพิ่ม alarm สาธารณะใหม่
                                 const newAlarm = {
                                     id: publicAlarm.id,
                                     title: publicAlarm.title,
@@ -2062,13 +2159,13 @@
                                 alarms.push(newAlarm);
                                 newAlarmsAdded++;
                                 
-                                // ถ้ายังไม่ถูกแจ้งเตือน ให้ตั้งเวลา
                                 if (!newAlarm.triggered && newAlarm.status === 'pending') {
                                     const alarmTime = new Date(newAlarm.datetime);
                                     const now = new Date();
                                     
                                     if (alarmTime > now) {
-                                        // ส่งไปยัง Service Worker
+                                        scheduleAlarm(newAlarm);
+                                        
                                         if (serviceWorkerRegistration?.active) {
                                             serviceWorkerRegistration.active.postMessage({
                                                 type: 'SCHEDULE_ALARM',
@@ -2076,7 +2173,6 @@
                                             });
                                         }
                                     } else {
-                                        // ถ้าเวลาผ่านไปแล้ว ให้ trigger ทันที
                                         triggerAlarm(newAlarm);
                                     }
                                 }
@@ -2084,16 +2180,13 @@
                         });
                         
                         if (newAlarmsAdded > 0) {
-                            // บันทึก alarms ใหม่
                             localStorage.setItem('alarms', JSON.stringify(alarms));
                             
-                            // อัปเดต UI
                             updateAlarmsList();
                             updateCounts();
                             
                             console.log(`✅ เพิ่ม ${newAlarmsAdded} แจ้งเตือนสาธารณะจากการซิงค์ครั้งแรก`);
                             
-                            // แสดงการแจ้งเตือน
                             showAlert('info', `ซิงค์แจ้งเตือนสาธารณะสำเร็จ (${newAlarmsAdded} รายการ)`);
                         }
                     }
@@ -2124,13 +2217,17 @@
                 id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
                 datetime: alarmDate.toISOString(),
                 date: alarmDate.toISOString().split('T')[0],
-                time: alarmDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                time: alarmDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
                 triggered: false,
-                synced: false
+                synced: false,
+                createdAt: new Date().toISOString()
             };
             
             alarms.push(newAlarm);
             localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            // ตั้งเวลาแจ้งเตือน
+            scheduleAlarm(newAlarm);
             
             // ส่งไปยัง Service Worker
             if (serviceWorkerRegistration?.active) {
@@ -2202,14 +2299,12 @@
                 urgent: urgent
             };
             
-            // เพิ่มใน local broadcasts
             broadcasts.unshift(broadcast);
             if (broadcasts.length > 100) {
                 broadcasts = broadcasts.slice(0, 100);
             }
             localStorage.setItem('broadcasts', JSON.stringify(broadcasts));
             
-            // ส่งไปยัง Service Worker สำหรับแจ้งเตือนเบื้องหลัง
             if (serviceWorkerRegistration?.active) {
                 serviceWorkerRegistration.active.postMessage({
                     type: 'SEND_BROADCAST',
@@ -2217,7 +2312,6 @@
                 });
             }
             
-            // สำหรับแอปที่เปิดอยู่
             if (document.visibilityState === 'visible') {
                 showNotification(broadcast.title, broadcast.message, 'broadcast');
                 
@@ -2226,7 +2320,6 @@
                 }
             }
             
-            // เพิ่มใน notifications
             addNotification({
                 id: broadcast.id,
                 type: 'broadcast',
@@ -2237,7 +2330,6 @@
                 urgent: urgent
             });
             
-            // พยายามบันทึกลง Google Sheets (เพื่อแจ้งเตือนเครื่องอื่น)
             try {
                 await saveBroadcastToSheets(title, message, urgent);
                 showAlert('success', 'ส่งประกาศสำเร็จ! (ทุกเครื่องจะได้รับประกาศนี้)');
@@ -2246,10 +2338,8 @@
                 showAlert('warning', 'ส่งประกาศเฉพาะเครื่องนี้สำเร็จ (ไม่สามารถแจ้งเครื่องอื่นได้ชั่วคราว)');
             }
             
-            // ล้างฟอร์ม
             clearBroadcast();
             
-            // อัปเดต UI
             updateRecentBroadcasts();
             updateCounts();
             updateBadges();
@@ -2309,13 +2399,9 @@
             try {
                 console.log('🔄 กำลังซิงค์ข้อมูลกับเซิร์ฟเวอร์...');
                 
-                // ซิงค์แจ้งเตือนสาธารณะ
                 await checkForPublicAlarms();
-                
-                // ซิงค์ประกาศ
                 await checkForNewBroadcasts();
                 
-                // อัปเดตเวลาล่าสุด
                 lastSyncTime = Date.now();
                 
                 console.log('✅ ซิงค์ข้อมูลเรียบร้อย');
@@ -2432,7 +2518,6 @@
         // ฟังก์ชันแสดงการแจ้งเตือน
         // ============================================
         function showNotification(title, message, type = 'info') {
-            // ตรวจสอบการอนุญาต
             if (Notification.permission !== 'granted') return;
             
             const options = {
@@ -2704,6 +2789,7 @@
                 const timeDiff = alarmDate - now;
                 const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
                 const minutesDiff = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const secondsDiff = Math.floor((timeDiff % (1000 * 60)) / 1000);
                 
                 let timeStatus = '';
                 let timeClass = '';
@@ -2715,20 +2801,20 @@
                     timeStatus = '<i class="fas fa-clock mr-1"></i>เลยเวลา';
                     timeClass = 'bg-gray-700 text-gray-300';
                 } else if (hoursDiff < 1) {
-                    timeStatus = `<i class="fas fa-hourglass-end mr-1"></i>${minutesDiff} นาที`;
+                    timeStatus = `<i class="fas fa-hourglass-end mr-1"></i>${minutesDiff} นาที ${secondsDiff} วินาที`;
                     timeClass = 'bg-red-900/30 text-red-300';
                 } else if (hoursDiff < 24) {
-                    timeStatus = `<i class="fas fa-hourglass-half mr-1"></i>${hoursDiff} ชม.`;
+                    timeStatus = `<i class="fas fa-hourglass-half mr-1"></i>${hoursDiff} ชม. ${minutesDiff} นาที`;
                     timeClass = 'bg-yellow-900/30 text-yellow-300';
                 } else {
                     const daysDiff = Math.floor(hoursDiff / 24);
-                    timeStatus = `<i class="fas fa-calendar mr-1"></i>${daysDiff} วัน`;
+                    timeStatus = `<i class="fas fa-calendar mr-1"></i>${daysDiff} วัน ${hoursDiff % 24} ชม.`;
                     timeClass = 'bg-blue-900/30 text-blue-300';
                 }
                 
-                const typeClass = alarm.type === 'personal' ? 'alarm-type-private' : 'alarm-type-public';
                 const typeIcon = alarm.type === 'personal' ? 'fa-user' : 'fa-users';
                 const typeText = alarm.type === 'personal' ? 'ส่วนตัว' : 'แจ้งทุกคน';
+                const typeColor = alarm.type === 'personal' ? 'blue' : 'green';
                 
                 const priorityClass = `priority-${alarm.priority}`;
                 const priorityText = alarm.priority === 'low' ? 'ต่ำ' : alarm.priority === 'medium' ? 'กลาง' : 'สูง';
@@ -2752,7 +2838,7 @@
                                             ${isExternal ? '<span class="public-alarm-indicator ml-2"><i class="fas fa-users mr-1"></i>จากภายนอก</span>' : ''}
                                         </h3>
                                         <div class="flex space-x-1">
-                                            <span class="text-xs px-2 py-1 ${typeClass} text-white rounded">
+                                            <span class="text-xs px-2 py-1 bg-${typeColor}-900/30 text-${typeColor}-300 rounded">
                                                 <i class="fas ${typeIcon} mr-1"></i>${typeText}
                                             </span>
                                             <span class="text-xs px-2 py-1 bg-${priorityColor}-900/30 text-${priorityColor}-300 rounded">
@@ -2768,7 +2854,7 @@
                                     <div class="flex items-center flex-wrap mt-3 gap-2">
                                         <span class="text-xs px-2 py-1 bg-blue-900/30 text-blue-300 rounded">
                                             <i class="far fa-clock mr-1"></i>
-                                            ${alarmDate.toLocaleDateString('th-TH', {day: 'numeric', month: 'short'})} 
+                                            ${alarmDate.toLocaleDateString('th-TH', {day: 'numeric', month: 'short', year: 'numeric'})} 
                                             ${alarmDate.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}
                                         </span>
                                         <span class="text-xs px-2 py-1 bg-purple-900/30 text-purple-300 rounded">
@@ -2857,7 +2943,6 @@
             const alarm = alarms.find(a => a.id === alarmId);
             if (!alarm) return;
             
-            // ตรวจสอบสิทธิ์ (ถ้าเป็น external alarm ไม่สามารถลบได้)
             if (alarm.isExternal) {
                 showAlert('error', 'คุณไม่มีสิทธิ์ลบแจ้งเตือนนี้ (เป็นแจ้งเตือนจากบุคคลอื่น)');
                 return;
@@ -2875,6 +2960,12 @@
             });
             
             if (!result.isConfirmed) return;
+            
+            // ยกเลิกเวลาที่ตั้งไว้
+            if (alarmTimeouts[alarm.id]) {
+                clearTimeout(alarmTimeouts[alarm.id]);
+                delete alarmTimeouts[alarm.id];
+            }
             
             if (alarm.synced) {
                 const deleted = await deleteFromGoogleSheets(alarm.id);
@@ -2895,6 +2986,7 @@
             
             updateAlarmsList();
             updateCounts();
+            updateNextAlarm();
             
             showAlert('success', 'ลบการแจ้งเตือนสำเร็จ');
         }
@@ -2927,7 +3019,7 @@
                 id: 'test_bg_' + Date.now(),
                 title: 'ทดสอบการแจ้งเตือนเบื้องหลัง',
                 description: 'นี่คือการทดสอบการทำงานของแจ้งเตือนแม้ปิดแอปและล็อคหน้าจอ',
-                datetime: new Date().toISOString(),
+                datetime: new Date(Date.now() + 5000).toISOString(), // 5 วินาที
                 type: 'personal',
                 priority: 'high',
                 triggered: false,
@@ -2935,30 +3027,30 @@
                 vibrate: true
             };
             
+            // ตั้งเวลาแจ้งเตือน
+            scheduleAlarm(testAlarm);
+            
             if (serviceWorkerRegistration?.active) {
                 serviceWorkerRegistration.active.postMessage({
-                    type: 'TRIGGER_ALARM',
-                    alarm: testAlarm,
-                    urgent: true
+                    type: 'SCHEDULE_ALARM',
+                    alarm: testAlarm
                 });
             }
             
             if (document.visibilityState === 'visible') {
-                showPushNotification(testAlarm.title, testAlarm.description, 'test');
-                showEmergencyAlert(testAlarm.title, testAlarm.description);
+                showPushNotification('ตั้งเวลาทดสอบแล้ว', 'ระบบจะแจ้งเตือนในอีก 5 วินาที', 'test');
             }
             
             addNotification({
                 id: 'test_bg_' + Date.now(),
                 type: 'test',
-                title: testAlarm.title,
-                message: testAlarm.description,
+                title: 'ตั้งเวลาทดสอบแจ้งเตือนเบื้องหลัง',
+                message: 'ระบบจะแจ้งเตือนในอีก 5 วินาที',
                 time: new Date().toISOString(),
-                read: false,
-                urgent: true
+                read: false
             });
             
-            showAlert('success', 'ส่งการทดสอบแล้ว! ลองปิดแอปหรือล็อคหน้าจอดู!');
+            showAlert('success', 'ตั้งเวลาทดสอบแล้ว! ระบบจะแจ้งเตือนในอีก 5 วินาที');
             
             Swal.fire({
                 title: 'คำแนะนำการทดสอบ',
@@ -2969,7 +3061,7 @@
                             <ol class="text-sm space-y-1">
                                 <li>1. ปิดแอปนี้ (ปิดแท็บเบราว์เซอร์)</li>
                                 <li>2. ล็อคหน้าจอโทรศัพท์</li>
-                                <li>3. รอสักครู่ (ประมาณ 30 วินาที)</li>
+                                <li>3. รอ 5 วินาที</li>
                                 <li>4. ควรได้ยินเสียงและเห็นการแจ้งเตือน</li>
                             </ol>
                         </div>
@@ -2978,12 +3070,12 @@
                             <h4 class="font-bold text-blue-300 mb-2"><i class="fas fa-desktop mr-2"></i>ทดสอบบนคอมพิวเตอร์</h4>
                             <ol class="text-sm space-y-1">
                                 <li>1. ปิดแท็บเบราว์เซอร์</li>
-                                <li>2. รอสักครู่</li>
+                                <li>2. รอ 5 วินาที</li>
                                 <li>3. ควรเห็นการแจ้งเตือนบนหน้าจอ</li>
                             </ol>
                         </div>
                         
-                        <p class="text-xs text-gray-400">ระบบจะทำงานได้ดีที่สุดเมื่ออนุญาตการแจ้งเตือนและติดตั้งเป็นแอป</p>
+                        <p class="text-xs text-gray-400">ระบบจะแจ้งเตือนในอีก 5 วินาที</p>
                     </div>
                 `,
                 icon: 'info',
@@ -3575,7 +3667,7 @@
             
             const typeText = alarm.type === 'personal' ? ' (ส่วนตัว)' : ' (แจ้งทุกคน)';
             addNotification({
-                id: 'sw_alarm_' + alarm.id,
+                id: 'sw_alarm_' + alarm.id + '_' + Date.now(),
                 type: 'alarm',
                 title: alarm.title + typeText,
                 message: alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!',
@@ -3590,6 +3682,7 @@
                 updateAlarmsList();
                 updateCounts();
                 updateBadges();
+                updateNextAlarm();
             }
         }
         
@@ -3618,6 +3711,9 @@
                 checkForPublicAlarms();
                 checkForNewBroadcasts();
                 
+                // ตรวจสอบเวลาที่ค้างอยู่อีกครั้ง
+                scheduleAllAlarms();
+                
             } else {
                 releaseWakeLock();
             }
@@ -3635,6 +3731,7 @@
             if (document.visibilityState === 'visible') {
                 updateBadges();
                 updateAppIconBadge();
+                updateNextAlarm();
             }
         }, 60000);
         
