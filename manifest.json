@@ -24,17 +24,15 @@
   ],
   "shortcuts": [
     {
-      "name": "เพิ่มการแจ้งเตือน",
+      "name": "เพิ่มแจ้งเตือน",
       "short_name": "เพิ่ม",
-      "description": "เพิ่มการแจ้งเตือนใหม่",
-      "url": "/?action=add",
+      "url": "/",
       "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E➕%3C/text%3E%3C/svg%3E", "sizes": "192x192" }]
     },
     {
       "name": "ส่งประกาศ",
       "short_name": "ประกาศ",
-      "description": "ส่งประกาศไปทุกเครื่อง",
-      "url": "/?action=broadcast",
+      "url": "/",
       "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📢%3C/text%3E%3C/svg%3E", "sizes": "192x192" }]
     }
   ]
