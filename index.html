@@ -243,6 +243,12 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+        
+        /* Alarm type styles - ลบ public ออก */
+        .alarm-type-private {
+            background: rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
     </style>
 </head>
 <body>
@@ -341,7 +347,7 @@
                             <div id="headerIconBadge" class="notification-badge hidden">0</div>
                         </div>
                         <div>
-                            <h1 class="font-bold text-lg">ระบบแจ้งเตือน</h1>
+                            <h1 class="font-bold text-lg">ระบบแจ้งเตือนส่วนตัว</h1>
                             <div class="flex items-center">
                                 <div id="statusDot" class="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
                                 <span id="statusText" class="text-xs online">ออนไลน์</span>
@@ -490,6 +496,9 @@
                         <label class="block text-gray-400 text-sm mb-2">รายละเอียด</label>
                         <textarea id="alarmDescription" rows="2" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" placeholder="รายละเอียดการแจ้งเตือน"></textarea>
                     </div>
+                    
+                    <!-- Alarm Type - ซ่อนไว้และให้เป็น Personal เสมอ -->
+                    <input type="hidden" id="alarmType" name="alarmType" value="personal">
                     
                     <div>
                         <label class="block text-gray-400 text-sm mb-2">ระดับความสำคัญ</label>
@@ -700,7 +709,7 @@
             </div>
         </div>
         
-        <!-- Bottom Navigation -->
+        <!-- Bottom Navigation - ลบ Broadcast ออก -->
         <div class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 z-40">
             <div class="flex justify-around p-3">
                 <button onclick="scrollToTop()" class="flex flex-col items-center text-gray-400 hover:text-white transition-colors p-2">
@@ -1205,7 +1214,8 @@
                 createdAt: new Date().toISOString(),
                 userId: userId,
                 deviceId: deviceId,
-                userName: userName
+                userName: userName,
+                type: 'personal' // กำหนดเป็น personal เสมอ
             };
             
             alarms.push(alarm);
@@ -1798,7 +1808,8 @@
                 priority: 'high',
                 triggered: false,
                 sound: 'urgent',
-                vibrate: true
+                vibrate: true,
+                type: 'personal'
             };
             
             if (serviceWorkerRegistration?.active) {
@@ -2013,7 +2024,8 @@
         function updateCounts() {
             document.getElementById('alarmCount').textContent = alarms.length;
             
-            const syncedCount = alarms.filter(alarm => alarm.synced).length;
+            // ลบ syncedCount ออก
+            const syncedCount = 0;
             document.getElementById('syncedCount').textContent = syncedCount;
             
             const unreadNotifications = notifications.filter(n => !n.read).length;
@@ -2448,11 +2460,7 @@
         });
         
         window.addEventListener('beforeunload', (e) => {
-            const hasUnsaved = alarms.some(a => !a.synced);
-            if (hasUnsaved) {
-                e.preventDefault();
-                e.returnValue = 'มีข้อมูลที่ยังไม่ได้บันทึกในระบบคลาวด์ คุณแน่ใจที่จะออกหรือไม่?';
-            }
+            // ลบการตรวจสอบ synced ออก
         });
         
         setInterval(() => {
