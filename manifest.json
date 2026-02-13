@@ -22,13 +22,6 @@
       "purpose": "any maskable"
     }
   ],
-  "permissions": [
-    "notifications",
-    "background-sync"
-  ],
-  "categories": ["productivity", "utilities"],
-  "display_override": ["window-controls-overlay", "standalone", "browser"],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "เพิ่มการแจ้งเตือน",
