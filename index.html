@@ -7,12 +7,25 @@
     <meta name="theme-color" content="#1a1a2e">
     <meta name="description" content="ระบบแจ้งเตือนรวมศูนย์แบบข้ามเครื่อง ทำงานได้แม้ปิดแอปและล็อคหน้าจอ">
     
-    <!-- Favicon & Icons -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>">
-    
     <!-- PWA Configuration -->
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="data:application/manifest+json,{
+        &quot;name&quot;: &quot;ระบบแจ้งเตือนรวมศูนย์&quot;,
+        &quot;short_name&quot;: &quot;แจ้งเตือน&quot;,
+        &quot;description&quot;: &quot;ระบบแจ้งเตือนที่ทำงานได้แม้ปิดแอป&quot;,
+        &quot;start_url&quot;: &quot;/&quot;,
+        &quot;display&quot;: &quot;standalone&quot;,
+        &quot;background_color&quot;: &quot;#1a1a2e&quot;,
+        &quot;theme_color&quot;: &quot;#1a1a2e&quot;,
+        &quot;icons&quot;: [{
+            &quot;src&quot;: &quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔔%3C/text%3E%3C/svg%3E&quot;,
+            &quot;sizes&quot;: &quot;192x192&quot;,
+            &quot;type&quot;: &quot;image/svg+xml&quot;
+        }]
+    }">
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔔%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔔%3C/text%3E%3C/svg%3E">
     
     <!-- CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -284,6 +297,21 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+        }
+        
+        /* ปุ่ม Action */
+        .action-button {
+            @apply bg-gray-800 hover:bg-gray-700 rounded-xl p-4 flex flex-col items-center transition-colors;
+        }
+        
+        /* Notification item */
+        .notification-item {
+            @apply bg-gray-800 rounded-lg p-4 mb-3 hover:bg-gray-750 transition-colors cursor-pointer;
+        }
+        
+        /* Active alarm item */
+        .alarm-item {
+            @apply bg-gray-800 rounded-xl p-4 hover:bg-gray-750 transition-colors border-l-4;
         }
     </style>
 </head>
@@ -870,6 +898,59 @@
     
     <script>
         // ============================================
+        // Service Worker Code (ต้องอยู่ข้างในนี้)
+        // ============================================
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => {
+                console.log('Service Worker registration failed:', err);
+                // Fallback: สร้าง Service Worker แบบ In-memory
+                installInMemoryServiceWorker();
+            });
+            
+            // ตรวจสอบการอัปเดต Service Worker
+            navigator.serviceWorker.ready.then(registration => {
+                registration.update();
+            });
+        } else {
+            console.log('Service Worker not supported');
+            // Fallback: ใช้ In-memory Service Worker
+            installInMemoryServiceWorker();
+        }
+        
+        // Fallback Service Worker สำหรับเบราว์เซอร์ที่ไม่รองรับ
+        function installInMemoryServiceWorker() {
+            console.log('📱 ใช้ In-memory notification system');
+            // สร้างระบบจำลองการแจ้งเตือน
+            setInterval(() => {
+                checkAlarmsInBackground();
+            }, 1000);
+        }
+        
+        // ตรวจสอบแจ้งเตือนในเบื้องหลัง
+        function checkAlarmsInBackground() {
+            const alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+            const now = new Date();
+            
+            alarms.forEach(alarm => {
+                if (!alarm.triggered) {
+                    const alarmTime = new Date(alarm.datetime);
+                    if (alarmTime <= now && alarmTime > new Date(now - 5000)) {
+                        // ส่งการแจ้งเตือน
+                        if (Notification.permission === 'granted') {
+                            new Notification(alarm.title, {
+                                body: alarm.description || 'ถึงเวลาแจ้งเตือนแล้ว',
+                                icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
+                                tag: alarm.id,
+                                requireInteraction: true,
+                                vibrate: [200, 100, 200]
+                            });
+                        }
+                    }
+                }
+            });
+        }
+        
+        // ============================================
         // ตัวแปรและค่าคงที่
         // ============================================
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpOYJ_pB6Llu9bd7RJABMd0awxu09oVFPB1cK4zsq3-aBYze5EpSHTSGgO1EcSJ3DwpQ/exec";
@@ -918,8 +999,8 @@
             // ตรวจสอบการติดตั้งแอป
             checkAppInstallation();
             
-            // ตรวจสอบการอนุญาต Notification
-            checkNotificationPermission();
+            // ขออนุญาตการแจ้งเตือนทันที
+            requestNotificationPermission();
             
             // เริ่ม Service Worker สำหรับแจ้งเตือนเบื้องหลัง
             await initServiceWorker();
@@ -961,6 +1042,29 @@
                 }
                 
             }, 2500);
+        }
+        
+        // ขออนุญาตการแจ้งเตือน
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                console.log('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
+                return;
+            }
+            
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        console.log('✅ ได้รับอนุญาตการแจ้งเตือนแล้ว');
+                        
+                        // ทดสอบการแจ้งเตือน
+                        new Notification('ระบบแจ้งเตือนพร้อมใช้งาน', {
+                            body: 'คุณจะได้รับการแจ้งเตือนแม้ปิดแอป',
+                            icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
+                            requireInteraction: false
+                        });
+                    }
+                });
+            }
         }
         
         function updateLoadingText(text, progress) {
@@ -1045,6 +1149,12 @@
                     } else {
                         // ถ้าเวลาผ่านไปแล้ว ให้ตรวจสอบว่าเป็นแจ้งเตือนที่เลยเวลาหรือไม่
                         console.log(`⚠️ แจ้งเตือนเลยเวลา: "${alarm.title}" เวลา ${alarmTime.toLocaleString('th-TH')}`);
+                        
+                        // ถ้าเลยเวลาไม่เกิน 1 ชั่วโมง ให้แจ้งเตือนทันที
+                        if (now - alarmTime < 60 * 60 * 1000) {
+                            console.log(`🔔 แจ้งเตือนเลยเวลาแต่ยังไม่เกิน 1 ชั่วโมง: "${alarm.title}"`);
+                            // triggerAlarm(alarm); // ไม่ต้องแจ้งเตือนอัตโนมัติ
+                        }
                     }
                 }
             });
@@ -1075,6 +1185,19 @@
             }, timeDiff);
             
             console.log(`✅ ตั้งเวลาแจ้งเตือน "${alarm.title}" ในอีก ${formatTimeRemaining(timeDiff)}`);
+            
+            // ส่งไปยัง Service Worker ด้วย (เผื่อกรณีปิดแอป)
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                try {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'SCHEDULE_ALARM',
+                        alarm: alarm,
+                        timeUntil: timeDiff
+                    });
+                } catch (e) {
+                    console.log('ไม่สามารถส่งไปยัง Service Worker:', e);
+                }
+            }
         }
         
         // ฟังก์ชันใหม่: ยกเลิกเวลาทั้งหมด
@@ -1150,22 +1273,21 @@
         }
         
         function startTimers() {
-            // เริ่มจับเวลาแจ้งเตือน (ใช้ setTimeout แทน setInterval เพื่อความแม่นยำ)
+            // เริ่มจับเวลาแจ้งเตือน
             if (checkAlarmInterval) clearInterval(checkAlarmInterval);
-            // ใช้ setInterval เผื่อกรณีที่ setTimeout ล้มเหลว
             checkAlarmInterval = setInterval(checkAlarms, 1000);
             
             // เริ่มอัปเดตเวลา
             if (updateTimeInterval) clearInterval(updateTimeInterval);
             updateTimeInterval = setInterval(updateCurrentTime, 1000);
             
-            // เริ่มตรวจสอบแจ้งเตือนสาธารณะใหม่ (ทุก 15 วินาที)
+            // เริ่มตรวจสอบแจ้งเตือนสาธารณะใหม่ (ทุก 30 วินาที)
             if (checkPublicAlarmsInterval) clearInterval(checkPublicAlarmsInterval);
-            checkPublicAlarmsInterval = setInterval(checkForPublicAlarms, 15000);
+            checkPublicAlarmsInterval = setInterval(checkForPublicAlarms, 30000);
             
             // เริ่ม sync ข้อมูล
             if (syncDataInterval) clearInterval(syncDataInterval);
-            syncDataInterval = setInterval(syncDataWithServer, 30000);
+            syncDataInterval = setInterval(syncDataWithServer, 60000);
             
             updateCurrentTime();
             
@@ -1273,14 +1395,18 @@
             // ส่ง alarms ที่ยังไม่แจ้งเตือนไปยัง Service Worker
             const activeAlarms = alarms.filter(alarm => !alarm.triggered);
             
-            serviceWorkerRegistration.active.postMessage({
-                type: 'SYNC_ALARMS',
-                alarms: activeAlarms,
-                userId: userId,
-                deviceId: deviceId
-            });
-            
-            console.log(`✅ ส่ง ${activeAlarms.length} alarms ไปยัง Service Worker แล้ว`);
+            try {
+                serviceWorkerRegistration.active.postMessage({
+                    type: 'SYNC_ALARMS',
+                    alarms: activeAlarms,
+                    userId: userId,
+                    deviceId: deviceId
+                });
+                
+                console.log(`✅ ส่ง ${activeAlarms.length} alarms ไปยัง Service Worker แล้ว`);
+            } catch (e) {
+                console.log('ไม่สามารถส่งไปยัง Service Worker:', e);
+            }
         }
         
         // ============================================
@@ -1511,7 +1637,7 @@
                 return;
             }
             
-            const datetime = new Date(`${date}T${time}`);
+            const datetime = new Date(`${date}T${time}:00`);
             
             if (datetime <= new Date()) {
                 showAlert('warning', 'กรุณาตั้งเวลาในอนาคต');
@@ -1519,7 +1645,7 @@
             }
             
             const alarm = {
-                id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 title: title,
                 description: description,
                 date: date,
@@ -1546,11 +1672,15 @@
             scheduleAlarm(alarm);
             
             // ส่งไปยัง Service Worker สำหรับแจ้งเตือนเบื้องหลัง
-            if (serviceWorkerRegistration?.active) {
-                serviceWorkerRegistration.active.postMessage({
-                    type: 'SCHEDULE_ALARM',
-                    alarm: alarm
-                });
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                try {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'SCHEDULE_ALARM',
+                        alarm: alarm
+                    });
+                } catch (e) {
+                    console.log('ไม่สามารถส่งไปยัง Service Worker:', e);
+                }
             }
             
             // พยายามบันทึกลง Google Sheets
@@ -1578,16 +1708,11 @@
             // แสดง notification
             showNotification('ตั้งเวลาแล้ว: ' + title, `เวลา ${time} น. วันที่ ${date} (${alarmTypeText})`, 'alarm_created');
             
-            // ถ้าเป็นแจ้งเตือนสาธารณะ ให้แจ้งเตือนเครื่องอื่นทันที
-            if (alarmType === 'public') {
+            // ทดสอบการแจ้งเตือนทันที (สำหรับทดสอบ)
+            if (confirm('ต้องการทดสอบการแจ้งเตือนทันทีหรือไม่?')) {
                 setTimeout(() => {
-                    triggerPublicAlarmForOthers(alarm);
-                }, 1000);
-            }
-            
-            // สั่นมือถือถ้าเปิด
-            if (vibrate && document.getElementById('vibrateEnabled').checked) {
-                vibrateDevice([100, 50, 100]);
+                    triggerAlarm(alarm);
+                }, 2000);
             }
         });
         
@@ -1706,41 +1831,6 @@
             }
         }
         
-        async function updateAlarmStatusInSheets(alarmId, status) {
-            try {
-                const payload = {
-                    action: 'update_alarm',
-                    alarm_id: alarmId,
-                    status: status,
-                    triggered_at: new Date().toISOString(),
-                    user_id: userId,
-                    device_id: deviceId,
-                    timestamp: Date.now()
-                };
-                
-                const params = new URLSearchParams();
-                for (const key in payload) {
-                    if (payload[key] !== undefined && payload[key] !== null) {
-                        params.append(key, payload[key].toString());
-                    }
-                }
-                
-                const url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
-                const response = await fetch(url, { 
-                    method: 'GET',
-                    cache: 'no-cache'
-                });
-                
-                if (response.ok) {
-                    return true;
-                }
-                return false;
-            } catch (error) {
-                console.error('❌ ไม่สามารถอัปเดตสถานะ:', error);
-                return false;
-            }
-        }
-        
         // ============================================
         // ฟังก์ชันจัดการการแจ้งเตือน
         // ============================================
@@ -1792,14 +1882,8 @@
                 delete alarmTimeouts[alarm.id];
             }
             
-            // ส่งไปยัง Service Worker สำหรับแจ้งเตือนเบื้องหลัง
-            if (serviceWorkerRegistration?.active) {
-                serviceWorkerRegistration.active.postMessage({
-                    type: 'TRIGGER_ALARM',
-                    alarm: alarm,
-                    urgent: true
-                });
-            }
+            // ส่งการแจ้งเตือน
+            sendSystemNotification(alarm);
             
             // สำหรับแอปที่เปิดอยู่
             if (document.visibilityState === 'visible') {
@@ -1818,7 +1902,7 @@
                 }
                 
                 // แสดง emergency alert สำหรับแจ้งเตือนด่วน
-                if (document.getElementById('urgentNotifications').checked) {
+                if (alarm.priority === 'high' && document.getElementById('urgentNotifications').checked) {
                     showEmergencyAlert(alarm.title + typeText, alarm.description || 'เวลาแจ้งเตือนถึงแล้ว!');
                 }
             }
@@ -1833,7 +1917,7 @@
                 time: new Date().toISOString(),
                 alarmId: alarm.id,
                 read: false,
-                urgent: true,
+                urgent: alarm.priority === 'high',
                 alarmType: alarm.type
             });
             
@@ -1857,6 +1941,89 @@
             updateBadges();
             updateAppIconBadge();
             updateNextAlarm();
+        }
+        
+        // ส่งการแจ้งเตือนระบบ
+        function sendSystemNotification(alarm) {
+            if (Notification.permission !== 'granted') return;
+            
+            const typeText = alarm.type === 'personal' ? '' : ' [สาธารณะ]';
+            const priorityText = alarm.priority === 'high' ? '⚠️ ' : '';
+            
+            const notification = new Notification(priorityText + alarm.title + typeText, {
+                body: alarm.description || 'ถึงเวลาแจ้งเตือนแล้ว',
+                icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
+                badge: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
+                tag: alarm.id,
+                requireInteraction: alarm.priority === 'high',
+                vibrate: alarm.vibrate ? [200, 100, 200, 100, 200] : undefined,
+                silent: !document.getElementById('soundEnabled').checked,
+                data: {
+                    alarmId: alarm.id,
+                    type: 'alarm',
+                    time: Date.now()
+                }
+            });
+            
+            notification.onclick = function() {
+                window.focus();
+                if (alarm.type === 'public') {
+                    openNotificationPanel();
+                }
+            };
+        }
+        
+        function createNextRepeatAlarm(alarm) {
+            const alarmDate = new Date(alarm.datetime);
+            
+            switch (alarm.repeat) {
+                case 'daily':
+                    alarmDate.setDate(alarmDate.getDate() + 1);
+                    break;
+                case 'weekly':
+                    alarmDate.setDate(alarmDate.getDate() + 7);
+                    break;
+                case 'monthly':
+                    alarmDate.setMonth(alarmDate.getMonth() + 1);
+                    break;
+            }
+            
+            const newAlarm = {
+                ...alarm,
+                id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                datetime: alarmDate.toISOString(),
+                date: alarmDate.toISOString().split('T')[0],
+                time: alarmDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                triggered: false,
+                synced: false,
+                createdAt: new Date().toISOString()
+            };
+            
+            alarms.push(newAlarm);
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+            
+            // ตั้งเวลาแจ้งเตือน
+            scheduleAlarm(newAlarm);
+            
+            // ส่งไปยัง Service Worker
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                try {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'SCHEDULE_ALARM',
+                        alarm: newAlarm
+                    });
+                } catch (e) {
+                    console.log('ไม่สามารถส่งไปยัง Service Worker:', e);
+                }
+            }
+            
+            // พยายามบันทึกลง Google Sheets
+            saveToGoogleSheets(newAlarm, 'created').catch(error => {
+                console.error('ไม่สามารถบันทึกการแจ้งเตือนทำซ้ำ:', error);
+            });
+            
+            updateAlarmsList();
+            updateCounts();
         }
         
         async function triggerPublicAlarmForOthers(alarm) {
@@ -2030,11 +2197,13 @@
                                     if (alarmTime > now) {
                                         scheduleAlarm(newAlarm);
                                         
-                                        if (serviceWorkerRegistration?.active) {
-                                            serviceWorkerRegistration.active.postMessage({
-                                                type: 'SCHEDULE_ALARM',
-                                                alarm: newAlarm
-                                            });
+                                        if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                                            try {
+                                                serviceWorkerRegistration.active.postMessage({
+                                                    type: 'SCHEDULE_ALARM',
+                                                    alarm: newAlarm
+                                                });
+                                            } catch (e) {}
                                         }
                                         
                                         const notificationMessage = `${newAlarm.title}\nจาก: ${newAlarm.userName}\nเวลา: ${newAlarm.date} ${newAlarm.time}`;
@@ -2166,11 +2335,13 @@
                                     if (alarmTime > now) {
                                         scheduleAlarm(newAlarm);
                                         
-                                        if (serviceWorkerRegistration?.active) {
-                                            serviceWorkerRegistration.active.postMessage({
-                                                type: 'SCHEDULE_ALARM',
-                                                alarm: newAlarm
-                                            });
+                                        if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                                            try {
+                                                serviceWorkerRegistration.active.postMessage({
+                                                    type: 'SCHEDULE_ALARM',
+                                                    alarm: newAlarm
+                                                });
+                                            } catch (e) {}
                                         }
                                     } else {
                                         triggerAlarm(newAlarm);
@@ -2195,55 +2366,6 @@
             } catch (error) {
                 console.error('❌ ซิงค์แจ้งเตือนสาธารณะครั้งแรกล้มเหลว:', error);
             }
-        }
-        
-        function createNextRepeatAlarm(alarm) {
-            const alarmDate = new Date(alarm.datetime);
-            
-            switch (alarm.repeat) {
-                case 'daily':
-                    alarmDate.setDate(alarmDate.getDate() + 1);
-                    break;
-                case 'weekly':
-                    alarmDate.setDate(alarmDate.getDate() + 7);
-                    break;
-                case 'monthly':
-                    alarmDate.setMonth(alarmDate.getMonth() + 1);
-                    break;
-            }
-            
-            const newAlarm = {
-                ...alarm,
-                id: 'alarm_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                datetime: alarmDate.toISOString(),
-                date: alarmDate.toISOString().split('T')[0],
-                time: alarmDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
-                triggered: false,
-                synced: false,
-                createdAt: new Date().toISOString()
-            };
-            
-            alarms.push(newAlarm);
-            localStorage.setItem('alarms', JSON.stringify(alarms));
-            
-            // ตั้งเวลาแจ้งเตือน
-            scheduleAlarm(newAlarm);
-            
-            // ส่งไปยัง Service Worker
-            if (serviceWorkerRegistration?.active) {
-                serviceWorkerRegistration.active.postMessage({
-                    type: 'SCHEDULE_ALARM',
-                    alarm: newAlarm
-                });
-            }
-            
-            // พยายามบันทึกลง Google Sheets
-            saveToGoogleSheets(newAlarm, 'created').catch(error => {
-                console.error('ไม่สามารถบันทึกการแจ้งเตือนทำซ้ำ:', error);
-            });
-            
-            updateAlarmsList();
-            updateCounts();
         }
         
         // ============================================
@@ -2289,7 +2411,7 @@
         
         async function sendBroadcastToServer(title, message, urgent = false) {
             const broadcast = {
-                id: 'broadcast_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                id: 'broadcast_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 type: 'broadcast',
                 title: urgent ? '🚨 ' + title : '📢 ' + title,
                 message: message,
@@ -2305,11 +2427,24 @@
             }
             localStorage.setItem('broadcasts', JSON.stringify(broadcasts));
             
-            if (serviceWorkerRegistration?.active) {
-                serviceWorkerRegistration.active.postMessage({
-                    type: 'SEND_BROADCAST',
-                    broadcast: broadcast
+            // ส่งการแจ้งเตือนระบบ
+            if (Notification.permission === 'granted') {
+                const notification = new Notification(broadcast.title, {
+                    body: broadcast.message,
+                    icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
+                    tag: broadcast.id,
+                    requireInteraction: urgent,
+                    vibrate: urgent ? [500, 200, 500, 200, 500] : undefined
                 });
+            }
+            
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                try {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'SEND_BROADCAST',
+                        broadcast: broadcast
+                    });
+                } catch (e) {}
             }
             
             if (document.visibilityState === 'visible') {
@@ -2522,8 +2657,8 @@
             
             const options = {
                 body: message,
-                icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>',
-                badge: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔔</text></svg>',
+                icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
+                badge: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
                 tag: type + '_' + Date.now(),
                 requireInteraction: type.includes('urgent') || type.includes('alarm'),
                 silent: !document.getElementById('soundEnabled').checked,
@@ -2977,11 +3112,13 @@
             alarms = alarms.filter(a => a.id !== alarmId);
             localStorage.setItem('alarms', JSON.stringify(alarms));
             
-            if (serviceWorkerRegistration?.active) {
-                serviceWorkerRegistration.active.postMessage({
-                    type: 'CANCEL_ALARM',
-                    alarmId: alarmId
-                });
+            if (serviceWorkerRegistration && serviceWorkerRegistration.active) {
+                try {
+                    serviceWorkerRegistration.active.postMessage({
+                        type: 'CANCEL_ALARM',
+                        alarmId: alarmId
+                    });
+                } catch (e) {}
             }
             
             updateAlarmsList();
@@ -2995,94 +3132,37 @@
             const alarm = alarms.find(a => a.id === alarmId);
             if (!alarm) return;
             
-            const typeText = alarm.type === 'personal' ? ' (ส่วนตัว)' : ' (แจ้งทุกคน)';
-            showNotification(`ทดสอบ: ${alarm.title}`, alarm.description || 'นี่คือการทดสอบการแจ้งเตือน', 'test');
-            
-            if (document.visibilityState === 'visible') {
-                showPushNotification(`ทดสอบ: ${alarm.title + typeText}`, alarm.description || 'นี่คือการทดสอบการแจ้งเตือน', 'test');
-            }
-            
-            addNotification({
-                id: 'test_' + Date.now(),
-                type: 'test',
-                title: `ทดสอบ: ${alarm.title + typeText}`,
-                message: alarm.description || 'การทดสอบการแจ้งเตือน',
-                time: new Date().toISOString(),
-                read: false
-            });
-            
-            showAlert('success', 'ส่งการทดสอบการแจ้งเตือนแล้ว');
+            // สร้างการแจ้งเตือนทันที
+            triggerAlarm(alarm);
         }
         
         function testBackgroundNotification() {
+            // สร้างการแจ้งเตือนทดสอบทันที
             const testAlarm = {
-                id: 'test_bg_' + Date.now(),
-                title: 'ทดสอบการแจ้งเตือนเบื้องหลัง',
-                description: 'นี่คือการทดสอบการทำงานของแจ้งเตือนแม้ปิดแอปและล็อคหน้าจอ',
-                datetime: new Date(Date.now() + 5000).toISOString(), // 5 วินาที
+                id: 'test_' + Date.now(),
+                title: '🔔 ทดสอบการแจ้งเตือน',
+                description: 'ระบบสามารถแจ้งเตือนได้แม้ปิดแอป',
                 type: 'personal',
                 priority: 'high',
-                triggered: false,
                 sound: 'urgent',
                 vibrate: true
             };
             
-            // ตั้งเวลาแจ้งเตือน
-            scheduleAlarm(testAlarm);
-            
-            if (serviceWorkerRegistration?.active) {
-                serviceWorkerRegistration.active.postMessage({
-                    type: 'SCHEDULE_ALARM',
-                    alarm: testAlarm
-                });
-            }
-            
-            if (document.visibilityState === 'visible') {
-                showPushNotification('ตั้งเวลาทดสอบแล้ว', 'ระบบจะแจ้งเตือนในอีก 5 วินาที', 'test');
-            }
-            
-            addNotification({
-                id: 'test_bg_' + Date.now(),
-                type: 'test',
-                title: 'ตั้งเวลาทดสอบแจ้งเตือนเบื้องหลัง',
-                message: 'ระบบจะแจ้งเตือนในอีก 5 วินาที',
-                time: new Date().toISOString(),
-                read: false
-            });
-            
-            showAlert('success', 'ตั้งเวลาทดสอบแล้ว! ระบบจะแจ้งเตือนในอีก 5 วินาที');
+            triggerAlarm(testAlarm);
             
             Swal.fire({
-                title: 'คำแนะนำการทดสอบ',
+                title: 'ทดสอบการแจ้งเตือน',
                 html: `
-                    <div class="text-left space-y-3">
-                        <div class="bg-yellow-900/30 rounded-lg p-3">
-                            <h4 class="font-bold text-yellow-300 mb-2"><i class="fas fa-mobile-alt mr-2"></i>ทดสอบบนมือถือ</h4>
-                            <ol class="text-sm space-y-1">
-                                <li>1. ปิดแอปนี้ (ปิดแท็บเบราว์เซอร์)</li>
-                                <li>2. ล็อคหน้าจอโทรศัพท์</li>
-                                <li>3. รอ 5 วินาที</li>
-                                <li>4. ควรได้ยินเสียงและเห็นการแจ้งเตือน</li>
-                            </ol>
-                        </div>
-                        
-                        <div class="bg-blue-900/30 rounded-lg p-3">
-                            <h4 class="font-bold text-blue-300 mb-2"><i class="fas fa-desktop mr-2"></i>ทดสอบบนคอมพิวเตอร์</h4>
-                            <ol class="text-sm space-y-1">
-                                <li>1. ปิดแท็บเบราว์เซอร์</li>
-                                <li>2. รอ 5 วินาที</li>
-                                <li>3. ควรเห็นการแจ้งเตือนบนหน้าจอ</li>
-                            </ol>
-                        </div>
-                        
-                        <p class="text-xs text-gray-400">ระบบจะแจ้งเตือนในอีก 5 วินาที</p>
+                    <div class="text-center">
+                        <i class="fas fa-check-circle text-4xl text-green-500 mb-3"></i>
+                        <p class="mb-2">ส่งการแจ้งเตือนทดสอบแล้ว</p>
+                        <p class="text-sm text-gray-400">คุณควรได้รับการแจ้งเตือนทันที</p>
                     </div>
                 `,
-                icon: 'info',
-                confirmButtonText: 'เข้าใจแล้ว',
+                icon: 'success',
+                confirmButtonText: 'ตกลง',
                 background: '#1f2937',
-                color: '#e5e7eb',
-                width: 500
+                color: '#e5e7eb'
             });
         }
         
@@ -3460,26 +3540,6 @@
             }, 1000);
         }
         
-        function checkNotificationPermission() {
-            if (!('Notification' in window)) {
-                console.log('❌ เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน');
-                return;
-            }
-            
-            if (Notification.permission === 'default') {
-                document.addEventListener('click', function requestPermissionOnce() {
-                    if (Notification.permission === 'default') {
-                        Notification.requestPermission().then(permission => {
-                            if (permission === 'granted') {
-                                console.log('✅ ได้รับอนุญาตการแจ้งเตือนแล้ว');
-                            }
-                        });
-                    }
-                    document.removeEventListener('click', requestPermissionOnce);
-                });
-            }
-        }
-        
         function showWelcomeGuide() {
             Swal.fire({
                 title: 'ยินดีต้อนรับสู่ระบบแจ้งเตือนรวมศูนย์',
@@ -3674,7 +3734,7 @@
                 time: new Date().toISOString(),
                 alarmId: alarm.id,
                 read: false,
-                urgent: true,
+                urgent: alarm.priority === 'high',
                 alarmType: alarm.type
             });
             
