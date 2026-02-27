@@ -1,233 +1,181 @@
-// sw.js - Service Worker สำหรับการแจ้งเตือนเบื้องหลัง
-const CACHE_NAME = 'notification-system-v1';
-const VERSION = '2.1.0';
-
-// ติดตั้ง Service Worker
-self.addEventListener('install', (event) => {
-  console.log('✅ Service Worker ถูกติดตั้ง');
-  self.skipWaiting();
+// Google Apps Script Code
+function doGet(e) {
+  const action = e.parameter.action;
   
-  // เคลียร์ cache เก่า
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
-
-// เปิดใช้งาน Service Worker
-self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker ทำงานแล้ว');
-  event.waitUntil(clients.claim());
-  
-  // ส่งสัญญาณว่า Service Worker พร้อมทำงาน
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => {
-      client.postMessage({
-        type: 'SERVICE_WORKER_READY',
-        version: VERSION
-      });
-    });
-  });
-});
-
-// จัดการข้อความจาก main app
-self.addEventListener('message', (event) => {
-  console.log('📨 Service Worker ได้รับข้อความ:', event.data);
-  
-  switch(event.data.type) {
-    case 'SCHEDULE_ALARM':
-      scheduleAlarm(event.data.alarm);
-      break;
-      
-    case 'SYNC_ALARMS':
-      syncAlarms(event.data.alarms);
-      break;
-      
-    case 'CANCEL_ALARM':
-      cancelAlarm(event.data.alarmId);
-      break;
-      
-    case 'SEND_BROADCAST':
-      sendBroadcast(event.data.broadcast);
-      break;
+  if (action === 'update_status') {
+    return updateStatus(e);
   }
-});
+  
+  if (action === 'get_online_devices') {
+    return getOnlineDevices(e);
+  }
+  
+  if (action === 'send_message') {
+    return sendMessage(e);
+  }
+  
+  if (action === 'get_messages') {
+    return getMessages(e);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'error',
+    message: 'Invalid action'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
 
-// จัดเก็บเวลาที่ตั้งไว้
-const scheduledAlarms = {};
+function updateStatus(e) {
+  const deviceId = e.parameter.deviceId;
+  const userName = e.parameter.userName;
+  const status = e.parameter.status;
+  const timestamp = parseInt(e.parameter.timestamp);
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('devices');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('devices');
+    sheet.appendRow(['deviceId', 'userName', 'status', 'lastSeen']);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  let found = false;
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === deviceId) {
+      sheet.getRange(i + 1, 3).setValue(status);
+      sheet.getRange(i + 1, 4).setValue(timestamp);
+      found = true;
+      break;
+    }
+  }
+  
+  if (!found) {
+    sheet.appendRow([deviceId, userName, status, timestamp]);
+  }
+  
+  // ลบอุปกรณ์ที่ offline นานเกิน 5 นาที
+  const fiveMinutesAgo = Date.now() - 300000;
+  for (let i = data.length - 1; i >= 1; i--) {
+    const lastSeen = data[i][3];
+    if (lastSeen && lastSeen < fiveMinutesAgo) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
 
-// ตั้งเวลาแจ้งเตือน
-function scheduleAlarm(alarm) {
-  const alarmTime = new Date(alarm.datetime).getTime();
+function getOnlineDevices(e) {
+  const currentDevice = e.parameter.currentDevice;
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('devices');
+  
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      devices: []
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const devices = [];
   const now = Date.now();
-  const delay = alarmTime - now;
   
-  if (delay <= 0) {
-    // ถ้าเลยเวลาแล้ว ให้แจ้งเตือนทันที
-    triggerAlarm(alarm);
-    return;
-  }
-  
-  // ยกเลิกอันเก่าถ้ามี
-  if (scheduledAlarms[alarm.id]) {
-    clearTimeout(scheduledAlarms[alarm.id]);
-    delete scheduledAlarms[alarm.id];
-  }
-  
-  // ตั้งเวลาใหม่
-  scheduledAlarms[alarm.id] = setTimeout(() => {
-    triggerAlarm(alarm);
-    delete scheduledAlarms[alarm.id];
-  }, delay);
-  
-  console.log(`⏰ Service Worker: ตั้งเวลา "${alarm.title}" ในอีก ${Math.round(delay/1000)} วินาที`);
-}
-
-// ซิงค์รายการแจ้งเตือน
-function syncAlarms(alarms) {
-  // ยกเลิกทั้งหมดก่อน
-  Object.keys(scheduledAlarms).forEach(id => {
-    clearTimeout(scheduledAlarms[id]);
-    delete scheduledAlarms[id];
-  });
-  
-  // ตั้งเวลาใหม่
-  alarms.forEach(alarm => {
-    scheduleAlarm(alarm);
-  });
-  
-  console.log(`✅ Service Worker: ซิงค์ ${alarms.length} รายการแจ้งเตือน`);
-}
-
-// ยกเลิกการแจ้งเตือน
-function cancelAlarm(alarmId) {
-  if (scheduledAlarms[alarmId]) {
-    clearTimeout(scheduledAlarms[alarmId]);
-    delete scheduledAlarms[alarmId];
-    console.log(`✅ Service Worker: ยกเลิกแจ้งเตือน ${alarmId}`);
-  }
-}
-
-// ส่งการแจ้งเตือน
-function triggerAlarm(alarm) {
-  console.log('🔔 Service Worker: กำลังแจ้งเตือน', alarm.title);
-  
-  // ส่งแจ้งเตือน
-  self.registration.showNotification(alarm.title, {
-    body: alarm.description || 'ถึงเวลาแจ้งเตือนแล้ว',
-    icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
-    badge: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
-    tag: alarm.id,
-    requireInteraction: alarm.priority === 'high',
-    vibrate: alarm.vibrate ? [200, 100, 200, 100, 200] : undefined,
-    data: {
-      alarmId: alarm.id,
-      type: 'alarm',
-      time: Date.now()
-    }
-  });
-  
-  // ส่งไปยัง client ที่เปิดอยู่
-  self.clients.matchAll().then(clients => {
-    clients.forEach(client => {
-      client.postMessage({
-        type: 'ALARM_TRIGGERED',
-        alarm: alarm
+  for (let i = 1; i < data.length; i++) {
+    const deviceId = data[i][0];
+    if (deviceId === currentDevice) continue;
+    
+    const status = data[i][2];
+    const lastSeen = data[i][3];
+    
+    if (status === 'online' && lastSeen && (now - lastSeen) < 60000) {
+      devices.push({
+        deviceId: deviceId,
+        userName: data[i][1],
+        lastSeen: lastSeen
       });
-    });
-  });
-}
-
-// ส่ง broadcast
-function sendBroadcast(broadcast) {
-  self.registration.showNotification(broadcast.title, {
-    body: broadcast.message,
-    icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
-    badge: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
-    tag: broadcast.id,
-    requireInteraction: broadcast.urgent,
-    vibrate: broadcast.urgent ? [500, 200, 500, 200, 500] : undefined,
-    data: {
-      broadcastId: broadcast.id,
-      type: 'broadcast',
-      time: Date.now()
-    }
-  });
-}
-
-// จัดการเมื่อคลิกการแจ้งเตือน
-self.addEventListener('notificationclick', (event) => {
-  console.log('🔘 คลิกการแจ้งเตือน:', event.notification);
-  
-  event.notification.close();
-  
-  // เปิดแอป
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then(clientList => {
-        if (clientList.length > 0) {
-          return clientList[0].focus();
-        }
-        return clients.openWindow('/');
-      })
-      .then(client => {
-        if (client) {
-          client.postMessage({
-            type: 'NOTIFICATION_CLICKED',
-            data: event.notification.data
-          });
-        }
-      })
-  );
-});
-
-// จัดการเมื่อปิดการแจ้งเตือน
-self.addEventListener('notificationclose', (event) => {
-  console.log('❌ ปิดการแจ้งเตือน:', event.notification);
-});
-
-// จัดการ push notification จาก server
-self.addEventListener('push', (event) => {
-  console.log('📡 ได้รับ push notification:', event);
-  
-  let data = { title: 'การแจ้งเตือน', body: 'มีข้อความใหม่' };
-  
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data.body = event.data.text();
     }
   }
   
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
-      badge: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ctext y=\'.9em\' font-size=\'90\'%3E🔔%3C/text%3E%3C/svg%3E',
-      vibrate: [200, 100, 200]
-    })
-  );
-});
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    devices: devices
+  })).setMimeType(ContentService.MimeType.JSON);
+}
 
-// fetch event (สำหรับ offline support)
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
-  );
-});
+function sendMessage(e) {
+  const deviceId = e.parameter.deviceId;
+  const userName = e.parameter.userName;
+  const type = e.parameter.type;
+  const data = e.parameter.data;
+  const timestamp = parseInt(e.parameter.timestamp);
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('messages');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('messages');
+    sheet.appendRow(['id', 'deviceId', 'userName', 'type', 'data', 'timestamp']);
+  }
+  
+  const messageId = 'msg_' + timestamp + '_' + Math.random().toString(36).substr(2, 5);
+  sheet.appendRow([messageId, deviceId, userName, type, data, timestamp]);
+  
+  // เก็บไว้แค่ 100 ข้อความล่าสุด
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 100) {
+    sheet.deleteRow(2);
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    messageId: messageId
+  })).setMimeType(ContentService.MimeType.JSON);
+}
 
-console.log('🚀 Service Worker พร้อมทำงาน');
+function getMessages(e) {
+  const deviceId = e.parameter.deviceId;
+  const lastId = parseInt(e.parameter.lastId) || 0;
+  
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName('messages');
+  
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      messages: []
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  const messages = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    const msgId = data[i][0];
+    const msgDeviceId = data[i][1];
+    const timestamp = data[i][5];
+    
+    // ไม่ส่งข้อความของตัวเองกลับ
+    if (msgDeviceId === deviceId) continue;
+    
+    if (timestamp > lastId) {
+      messages.push({
+        id: msgId,
+        deviceId: msgDeviceId,
+        userName: data[i][2],
+        type: data[i][3],
+        data: data[i][4],
+        timestamp: timestamp
+      });
+    }
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'success',
+    messages: messages
+  })).setMimeType(ContentService.MimeType.JSON);
+}
